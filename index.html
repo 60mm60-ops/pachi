@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>パチ文字工房 — パチ文字ジェネレーター</title>
+<title>激アツ文字工房 — パチ文字ジェネレーター</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Shippori+Mincho+B1:wght@800&family=Kaisei+Tokumin:wght@800&family=DotGothic16&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 .hint{color:var(--sub);font-size:11px;margin:8px 0 0;line-height:1.5;}
 #cv.brush-active{cursor:crosshair; touch-action:none;}
 #zoomBar{
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   padding:6px 14px; border-bottom:1px solid var(--line); background:var(--panel);
 }
 #zoomBar input[type=range]{flex:1; accent-color:var(--gold);}
@@ -155,6 +155,9 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 <div id="main">
   <div id="previewWrap">
     <div id="zoomBar">
+      <button class="ghost" id="btnUndo" title="元に戻す" style="padding:4px 12px" disabled>↩︎</button>
+      <button class="ghost" id="btnRedo" title="やり直す" style="padding:4px 12px" disabled>↪︎</button>
+      <span style="width:1px;align-self:stretch;background:var(--line);margin:3px 2px"></span>
       <button class="ghost" id="zoomOut" style="padding:4px 12px">−</button>
       <input type="range" id="viewZoom" min="25" max="400" value="100">
       <button class="ghost" id="zoomIn" style="padding:4px 12px">＋</button>
@@ -163,8 +166,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
     </div>
     <div id="stage"><canvas id="cv"></canvas></div>
     <div id="exportBar">
-      <button class="ghost" id="btnUndo" title="元に戻す" disabled>↩︎</button>
-      <button class="ghost" id="btnRedo" title="やり直す" disabled>↪︎</button>
       <button class="primary" id="btnExport">透過PNGを保存</button>
       <label class="chk" style="margin-top:0"><input type="checkbox" id="expBg"><span>背景を含める</span></label>
       <label class="chk" style="margin-top:0"><span style="color:var(--sub)">倍率</span>
@@ -270,15 +271,28 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
     <details open><summary>✏️ ブラシで直描き</summary><div class="sec">
       <p class="hint">スライダーの自動処理じゃなく、プレビュー上を直接なぞって狙った場所に効果を置ける。金属反射は「基準点」をタップして押し出し方向へドラッグ＝角度が今の押し出し角度にスナップして伸びる。角度スライダーを後で変えても追従する。</p>
       <label class="chk"><input type="checkbox" id="brushMode"><span>ブラシモードON（プレビューに直接描く）</span></label>
-      <div class="row"><label>ブラシ種類</label>
-        <select id="brushType">
-          <option value="metal-hi">金属反射（明・角度追従）</option>
-          <option value="metal-mid">金属反射（中間色・角度追従）</option>
-          <option value="metal-lo">金属反射（暗・角度追従）</option>
-          <option value="spark">スパークル</option>
+      <div class="row"><label>ブラシ系統</label>
+        <select id="brushCategory">
+          <option value="metal">金属反射（角度追従）</option>
+          <option value="glow">光り物（スパークル・稲妻）</option>
           <option value="eraser">消しゴム</option>
         </select>
       </div>
+      <div class="row" id="brushTypeRow"><label>種類</label>
+        <select id="brushType"></select>
+      </div>
+      <div class="row" id="brushShapeRow"><label>形状</label>
+        <select id="brushShape">
+          <option value="cross">十字（4条＋斜め）</option>
+          <option value="star6">6条スター</option>
+          <option value="star8">8条スター</option>
+          <option value="diamond">ダイヤ（鋭い2条）</option>
+          <option value="dot">玉ボケ（光条なし）</option>
+          <option value="mixed">ミックス</option>
+        </select>
+      </div>
+      <div class="row" id="brushSpacingRow"><label>間隔</label><input type="range" id="brushSpacing" min="10" max="200" value="60"><span class="val" data-for="brushSpacing"></span></div>
+      <div class="row" id="brushScatterRow"><label>散布</label><input type="range" id="brushScatter" min="0" max="120" value="0"><span class="val" data-for="brushScatter"></span></div>
       <div class="row"><label>サイズ</label>
         <button class="ghost" id="btnSizeDown" style="padding:4px 10px">−</button>
         <input type="range" id="brushSize" min="4" max="80" value="20" style="flex:1">
@@ -286,7 +300,13 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         <span class="val" data-for="brushSize"></span></div>
       <div class="row"><label>流量</label><input type="range" id="brushFlow" min="1" max="100" value="40"><span class="val" data-for="brushFlow"></span></div>
       <div class="row"><label>色</label><input type="color" id="brushColor" value="#ffffff"></div>
-      <label class="chk"><input type="checkbox" id="brushMaskOff"><span>マスクOFF（面にもはみ出して描ける）</span></label>
+      <div class="row"><label>描画範囲</label>
+        <select id="brushMask">
+          <option value="face">文字のメインカラーのみ</option>
+          <option value="full">縁まで描画</option>
+          <option value="off">マスクOFF（はみ出し放題）</option>
+        </select>
+      </div>
       <div class="row" style="align-items:flex-start; flex-direction:column; gap:6px; margin-top:12px">
         <label style="width:auto">レイヤー（クリックで選択・チェックで表示切替）</label>
         <div id="layerList" style="width:100%"></div>
@@ -687,7 +707,8 @@ function drawChars(g, L, mode, dx=0, dy=0, styleFn=null){
 }
 
 /* ---------- 面レイヤー生成（fill→bevel→texture→bolt→gloss） ---------- */
-function buildFaceLayer(W,H,offX,offY,L,scale){
+function buildFaceLayer(W,H,offX,offY,L,scale,quality){
+  quality = quality || "high";
   const c=document.createElement("canvas"); c.width=W; c.height=H;
   const g=c.getContext("2d");
   g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
@@ -743,7 +764,8 @@ function buildFaceLayer(W,H,offX,offY,L,scale){
   }
 
   // 2.5) 水銀: ぼかしハイトマップ→ジグザグのクロームカーブでシャープな反射縞に戻す
-  if(P.pLiquid>0){
+  // getImageDataの全ピクセルループが重いので、ドラッグ中(low)はスキップ
+  if(P.pLiquid>0 && quality==="high"){
     const hm=document.createElement("canvas"); hm.width=W; hm.height=H;
     const hg=hm.getContext("2d");
     hg.translate(offX,offY); hg.scale(scale,scale);
@@ -814,7 +836,7 @@ function buildFaceLayer(W,H,offX,offY,L,scale){
   }
 
   // 4) 稲妻（面内クリップ。「はみ出す」オン時はdraw側で最前面に描く）
-  if(P.pBolt>0 && !P.pBoltOver && P.pView!=="nofx"){
+  if(P.pBolt>0 && !P.pBoltOver && P.pView!=="nofx" && quality==="high"){
     g.globalCompositeOperation="source-atop";
     drawBolts(g,L,false);
     g.globalCompositeOperation="source-over";
@@ -895,7 +917,8 @@ function computeCanvasSize(L){
   };
 }
 
-function draw(targetCtx, scale, withBg){
+function draw(targetCtx, scale, withBg, quality){
+  quality = quality || "high";
   readParams();
   const mg=targetCtx;
   // 計測用
@@ -997,17 +1020,22 @@ function draw(targetCtx, scale, withBg){
         P.pExDepth,P.pExAngle,P.pExSpec,P.pExLight,P.pExSpecW,P.pExFlash,P.pExC1,P.pExC2,
         P.pSeed,P.pLiquidBands,P.pArch,P.pTilt,P.pJitR,P.pJitY,P.pJitSeed,maxOW,scale,cw,ch,
         P.outlines,P.pGlowOn,P.pGlowBlur,offX,offY]);
-      let refl;
+      let refl=null;
       if(sideCache.key===sideKey){ refl=sideCache.canvas; }
-      else{
+      else if(quality==="high"){
+        // 高品質時のみ重い再計算を実行してキャッシュ
         refl=buildSideSheen(cw,ch,offX,offY,L,scale,maxOW,ux,uy,d);
         sideCache.key=sideKey; sideCache.canvas=refl;
       }
-      mg.save();
-      mg.setTransform(1,0,0,1,0,0);
-      mg.globalAlpha=Math.min(1,Math.pow(P.pExSpec/100,.65));
-      mg.drawImage(refl,0,0);
-      mg.restore();
+      // 低品質(ドラッグ中)でキャッシュミスなら側面ツヤは一旦省略（手を離すと復活）。
+      // ブラシ操作中は側面パラメータ不変でキャッシュヒットするので描かれる。
+      if(refl){
+        mg.save();
+        mg.setTransform(1,0,0,1,0,0);
+        mg.globalAlpha=Math.min(1,Math.pow(P.pExSpec/100,.65));
+        mg.drawImage(refl,0,0);
+        mg.restore();
+      }
     }
   }
 
@@ -1040,12 +1068,11 @@ function draw(targetCtx, scale, withBg){
   }
 
   // ④ 面レイヤー合成
-  const face=buildFaceLayer(cw,ch,offX,offY,L,scale);
+  const face=buildFaceLayer(cw,ch,offX,offY,L,scale,quality);
   if(showFace) mg.drawImage(face,0,0);
 
-  // 手描きブラシ用マスク: charMask=全体（グロー+立体+縁+面）、
-  // sideMask=側面のみ（面「と」前面位置の縁取りの両方を引く＝フチにもはみ出させない）
-  const charMask=snapshotCanvas(mg.canvas);
+  // 手描きブラシ用マスク:
+  // sideMask=側面のみ（金属反射用）、frontMask=面＋前面縁（グロー抜き、スパークル中心判定・稲妻クリップ用）
   const frontMask=document.createElement("canvas"); frontMask.width=cw; frontMask.height=ch;
   {
     const fmg=frontMask.getContext("2d");
@@ -1064,7 +1091,7 @@ function draw(targetCtx, scale, withBg){
   }
 
   // ④.5 はみ出し稲妻（文字の上を横切って全体に走る）
-  if(P.pBolt>0 && P.pBoltOver && showFx){
+  if(P.pBolt>0 && P.pBoltOver && showFx && quality==="high"){
     mg.save();
     mg.translate(offX,offY); mg.scale(scale,scale);
     drawBolts(mg,L,true);
@@ -1072,13 +1099,14 @@ function draw(targetCtx, scale, withBg){
   }
 
   // ⑤ 十字スパークル（最前面、面のエッジ優先で配置）
-  if(showFx) scatterSparkles(mg,face,cw,ch,scale);
+  // getImageDataの走査が重いので、ドラッグ中(low)はスキップ
+  if(showFx && quality==="high") scatterSparkles(mg,face,cw,ch,scale);
 
   // ⑥ 手描きブラシ（レイヤーごとに合成。金属反射は側面マスクでクリップ＝面まで明るくしない）
   const liveLayers = currentStroke
     ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
     : brushLayers;
-  renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, charMask, $("brushMaskOff").checked);
+  renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value);
 
   // ライブプレビュー描画時のみ、ブラシのポインタ座標変換用にレイアウトを記録
   if(mg.canvas===cv) lastLayout={offX,offY,scale,cw,ch};
@@ -1253,21 +1281,17 @@ function drawBolts(g,L,over){
 }
 
 /* ---------- 十字スパークル ---------- */
+// 加算合成(lighter)で描く前提。呼び出し側でcomposite="lighter"にしてある。
+// 暗い下敷きは加算では効かない（暗色を足しても明るくなるだけ）ので置かない。
+// 光は「重なった芯が自然に白飛びする」加算本来の挙動で立たせる。
 function drawSparkle(g,x,y,r,color,rot,shape){
   g.save(); g.translate(x,y); g.rotate(rot);
   const [cr,cg,cb]=hex(color);
   const lenK=P.pSparkLen/100;
-  // 暗いハロー（明色背景でも埋もれないための下敷き。白ハローの手前に薄く）
-  const dhalo=g.createRadialGradient(0,0,0,0,0,r*.75);
-  dhalo.addColorStop(0,"rgba(20,15,10,.35)");
-  dhalo.addColorStop(.5,"rgba(20,15,10,.15)");
-  dhalo.addColorStop(1,"rgba(20,15,10,0)");
-  g.fillStyle=dhalo;
-  g.beginPath(); g.arc(0,0,r*.75,0,7); g.fill();
-  // 色つきハロー
+  // 色つきハロー: 芯の白→スパーク色→透明。加算なので中心ほど光る
   const halo=g.createRadialGradient(0,0,0,0,0,r*.6);
-  halo.addColorStop(0,"rgba(255,255,255,.95)");
-  halo.addColorStop(.4,`rgba(${cr},${cg},${cb},.5)`);
+  halo.addColorStop(0,"rgba(255,255,255,.9)");
+  halo.addColorStop(.35,`rgba(${cr},${cg},${cb},.55)`);
   halo.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
   g.fillStyle=halo;
   g.beginPath(); g.arc(0,0,r*.6,0,7); g.fill();
@@ -1277,27 +1301,26 @@ function drawSparkle(g,x,y,r,color,rot,shape){
     g.quadraticCurveTo(-w,0,0,-len); g.closePath();
     g.fillStyle=fill; g.fill();
   };
-  // 光条は「暗い縁取り版を少し太く」→「白本体」の2度描き。
-  // 明るい背景でも輪郭が立って埋もれない（Photoshopの境界線と同じ理屈）。
-  const spikePair=(len,w)=>{ spike(len,w*1.7,"rgba(15,10,5,.55)"); spike(len,w,"rgba(255,255,255,.96)"); };
+  // 光条は白の加算1本描き。中央のコアと重なった根元が白飛びして芯が立つ
+  const sp=(len,w)=>spike(len,w,"rgba(255,255,255,.92)");
   if(shape==="dot"){
     // ハローとコアのみ（玉ボケ）
   }else if(shape==="star6"){
-    for(let k=0;k<3;k++){ spikePair(r*lenK,r*.075); g.rotate(Math.PI/3); }
+    for(let k=0;k<3;k++){ sp(r*lenK,r*.075); g.rotate(Math.PI/3); }
   }else if(shape==="star8"){
-    for(let k=0;k<4;k++){ spikePair((k%2?r*.6:r)*lenK,r*.07); g.rotate(Math.PI/4); }
+    for(let k=0;k<4;k++){ sp((k%2?r*.6:r)*lenK,r*.07); g.rotate(Math.PI/4); }
   }else if(shape==="diamond"){
-    spikePair(r*1.35*lenK,r*.05);
-    g.rotate(Math.PI/2); spikePair(r*1.35*lenK,r*.05);
+    sp(r*1.35*lenK,r*.05);
+    g.rotate(Math.PI/2); sp(r*1.35*lenK,r*.05);
   }else{ // cross: 縦横長＋斜め45°短
-    spikePair(r*lenK,r*.085);
-    g.rotate(Math.PI/2); spikePair(r*lenK,r*.085);
-    g.rotate(Math.PI/4); spikePair(r*.45*lenK,r*.05);
-    g.rotate(Math.PI/2); spikePair(r*.45*lenK,r*.05);
+    sp(r*lenK,r*.085);
+    g.rotate(Math.PI/2); sp(r*lenK,r*.085);
+    g.rotate(Math.PI/4); sp(r*.45*lenK,r*.05);
+    g.rotate(Math.PI/2); sp(r*.45*lenK,r*.05);
   }
-  // 中心コア
+  // 中心コア（芯の白飛び）
   g.fillStyle="#ffffff";
-  g.beginPath(); g.arc(0,0,r*.07,0,7); g.fill();
+  g.beginPath(); g.arc(0,0,r*.1,0,7); g.fill();
   g.restore();
 }
 function scatterSparkles(mg, face, cw, ch, scale){
@@ -1310,6 +1333,8 @@ function scatterSparkles(mg, face, cw, ch, scale){
   const edgeRate=P.pSparkEdge/100;
   const varK=P.pSparkVar/100;
   let placed=0, tries=0;
+  mg.save();
+  mg.globalCompositeOperation="lighter"; // 光り物なので加算合成
   while(placed<P.pSparkN && tries<P.pSparkN*80){
     tries++;
     const x=rnd()*cw, y=rnd()*ch;
@@ -1328,6 +1353,7 @@ function scatterSparkles(mg, face, cw, ch, scale){
     drawSparkle(mg,x,y,r,P.pSparkC,(rnd()-.5)*.5,shape);
     placed++;
   }
+  mg.restore();
 }
 
 /* ---------- 手描きブラシ（金属反射・スパークルを狙った場所に置く） ----------
@@ -1359,12 +1385,15 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
   tg.beginPath(); tg.arc(x,y,r,0,7); tg.fill();
 }
 
-function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, charMask, maskOff){
+function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, maskMode){
+  // maskMode: "face"=面のみ / "full"=面＋縁 / "off"=クリップなし
+  const clipCanvas = maskMode==="face" ? faceMask : frontMask; // 中心判定・ピクセルクリップの基準
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
   for(const layer of layers){
     if(!layer.visible || !layer.strokes.length) continue;
     const metal = layer.strokes.filter(s=>s.type==="metal-hi"||s.type==="metal-mid"||s.type==="metal-lo");
     const spark = layer.strokes.filter(s=>s.type==="spark");
+    const bolt  = layer.strokes.filter(s=>s.type==="bolt");
 
     if(metal.length){
       const tmp=document.createElement("canvas"); tmp.width=mg.canvas.width; tmp.height=mg.canvas.height;
@@ -1388,7 +1417,7 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, charMask, m
           }
         }
       }
-      if(!maskOff){
+      if(maskMode!=="off"){
         tg.globalCompositeOperation="destination-in";
         tg.drawImage(sideMask,0,0);
       }
@@ -1398,17 +1427,88 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, charMask, m
     }
 
     if(spark.length){
-      mg.save(); mg.setTransform(1,0,0,1,0,0);
-      const shapes=["cross","star6","dot"];
+      const cwv=mg.canvas.width, chv=mg.canvas.height;
+      const tmp=document.createElement("canvas"); tmp.width=cwv; tmp.height=chv;
+      const tg=tmp.getContext("2d");
+      tg.globalCompositeOperation="lighter"; // 粒同士は加算
+      // 中心判定用マスク（面のみ or 面＋縁、グロー抜き）。OFF時は判定せず全部描く
+      let fmData=null;
+      const onFace=(sx,sy)=>{
+        if(maskMode==="off") return true;
+        if(!fmData) fmData=clipCanvas.getContext("2d").getImageData(0,0,cwv,chv).data;
+        const ix=sx|0, iy=sy|0;
+        if(ix<0||iy<0||ix>=cwv||iy>=chv) return false;
+        return fmData[(iy*cwv+ix)*4+3] > 40; // スタンプ中心が文字面上か
+      };
+      const shapes=["cross","star6","star8","dot"];
       for(const st of spark){
-        const rnd=mulberry32(Math.max(1,(st.points.length*97+st.size*13+1)|0));
-        for(const p of st.points){
-          if(rnd() > st.flow/100) continue; // 流量=経路上での配置密度
-          const x=offX+p.x*scale, y=offY+p.y*scale;
-          drawSparkle(mg, x, y, st.size*scale*.8, st.color, (rnd()-.5)*.6, shapes[(rnd()*shapes.length)|0]);
+        const shapeSel=st.shape||"mixed";
+        const scatter=(st.scatter||0)/100;
+        // 間隔=サイズに対する割合(%)をローカル座標の歩幅に
+        const stepLocal=Math.max(2, st.size*((st.spacing||60)/100));
+        const rnd=mulberry32(Math.max(1,(st.points.length*97+st.size*13+((st.spacing||60)|0)+1)|0));
+        // ドラッグ経路を等間隔サンプリング＝スタンプ位置列（フォトショの間隔ブラシ）
+        const stamps=[];
+        if(st.points.length<=1){
+          const p=st.points[0]; stamps.push({x:p.x,y:p.y,nx:0,ny:1});
+        }else{
+          let acc=0;
+          for(let i=0;i<st.points.length-1;i++){
+            const a=st.points[i], b=st.points[i+1];
+            const dx=b.x-a.x, dy=b.y-a.y;
+            const segLen=Math.hypot(dx,dy)||1;
+            const nx=-dy/segLen, ny=dx/segLen; // 経路の法線（散布方向）
+            while(acc<segLen){
+              const t=acc/segLen;
+              stamps.push({x:a.x+dx*t, y:a.y+dy*t, nx, ny});
+              acc+=stepLocal;
+            }
+            acc-=segLen;
+          }
+        }
+        for(const s of stamps){
+          if(st.flow<100 && rnd() > st.flow/100) continue; // 流量=密度の微調整（間引き）
+          const off=(rnd()*2-1)*scatter*st.size; // 散布: 経路の法線方向へばらす
+          const lx=s.x+s.nx*off, ly=s.y+s.ny*off;
+          const sx=offX+lx*scale, sy=offY+ly*scale;
+          if(!onFace(sx,sy)) continue; // 中心が面上のスタンプだけ（光条のはみ出しは許容）
+          const shp = shapeSel==="mixed" ? shapes[(rnd()*shapes.length)|0] : shapeSel;
+          drawSparkle(tg, sx, sy, st.size*scale*.8, st.color, (rnd()-.5)*.6, shp);
         }
       }
-      mg.restore();
+      mg.save(); mg.setTransform(1,0,0,1,0,0); mg.globalCompositeOperation="lighter";
+      mg.drawImage(tmp,0,0); mg.restore();
+    }
+
+    if(bolt.length){
+      // 稲妻ブラシ: なぞった経路を法線方向にジグザグ化してstrokeBoltで加算描画
+      const tmp=document.createElement("canvas"); tmp.width=mg.canvas.width; tmp.height=mg.canvas.height;
+      const tg=tmp.getContext("2d");
+      tg.globalCompositeOperation="lighter";
+      for(const st of bolt){
+        if(!st.points || st.points.length<2) continue;
+        const rnd=mulberry32(Math.max(1,(st.points.length*131+((st.size*7)|0)+3)));
+        const jag=st.size*(.25+ (st.flow/100)*.6); // 流量=乱れの大きさ
+        const pts=[];
+        for(let i=0;i<st.points.length-1;i++){
+          const a=st.points[i], b=st.points[i+1];
+          const dx=b.x-a.x, dy=b.y-a.y;
+          const segLen=Math.hypot(dx,dy)||1;
+          const nx=-dy/segLen, ny=dx/segLen; // 経路の法線
+          const div=Math.max(1, Math.round(segLen/Math.max(2,st.size*.6)));
+          for(let j=0;j<div;j++){
+            const t=j/div;
+            const off=(rnd()*2-1)*jag*((i===0&&j===0)?0:1); // 始点は乱さない
+            pts.push([offX+(a.x+dx*t+nx*off)*scale, offY+(a.y+dy*t+ny*off)*scale]);
+          }
+        }
+        const last=st.points[st.points.length-1];
+        pts.push([offX+last.x*scale, offY+last.y*scale]);
+        strokeBolt(tg, pts, Math.max(1, st.size*scale*.05), st.color, st.size*scale*.7);
+      }
+      if(maskMode!=="off"){ tg.globalCompositeOperation="destination-in"; tg.drawImage(clipCanvas,0,0); }
+      mg.save(); mg.setTransform(1,0,0,1,0,0); mg.globalCompositeOperation="lighter";
+      mg.drawImage(tmp,0,0); mg.restore();
     }
   }
 }
@@ -1465,13 +1565,47 @@ $("btnLayerDown").addEventListener("click",()=>{
 
 /* ---------- 描画インタラクション ---------- */
 let brushDrawing=false;
-$("brushType").addEventListener("change",()=>{
-  const t=$("brushType").value;
-  if(t==="metal-hi") $("brushColor").value="#ffffff";
-  else if(t==="metal-mid") $("brushColor").value="#d9a441";
-  else if(t==="metal-lo") $("brushColor").value="#140a04";
-  else if(t==="spark") $("brushColor").value="#ffe9c0";
-});
+// ブラシ系統ごとの種類リスト。金属反射系と光り物系(スパークル・稲妻)を分離。
+const BRUSH_TYPES={
+  metal:[["metal-hi","反射・明"],["metal-mid","反射・中間"],["metal-lo","反射・暗"]],
+  glow:[["spark","スパークル"],["bolt","稲妻"]],
+  eraser:[["eraser","消しゴム"]],
+};
+const BRUSH_COLORS={ "metal-hi":"#ffffff","metal-mid":"#d9a441","metal-lo":"#140a04",
+  "spark":"#ffe9c0","bolt":"#9adfff" };
+// ユーザーが色を手動で選んだら、以後その系統では推奨色で上書きしない
+let brushColorTouched=false;
+function applyBrushTypeColor(){
+  if(brushColorTouched) return; // 自分で選んだ色を尊重
+  const c=BRUSH_COLORS[$("brushType").value];
+  if(c) $("brushColor").value=c;
+}
+// 系統に応じて種類selectの中身を作り直す（元の選択はできれば維持）
+function fillBrushTypes(){
+  const cat=$("brushCategory").value;
+  const sel=$("brushType"), keep=sel.value;
+  sel.innerHTML="";
+  for(const [v,label] of BRUSH_TYPES[cat]){
+    const o=document.createElement("option"); o.value=v; o.textContent=label; sel.appendChild(o);
+  }
+  if([...sel.options].some(o=>o.value===keep)) sel.value=keep;
+  $("brushTypeRow").style.display = cat==="eraser" ? "none" : "flex";
+  applyBrushTypeColor();
+  updateBrushRows();
+}
+// スパークルのときだけ形状・間隔・散布を表示（稲妻/金属/消しゴムでは隠す）
+function updateBrushRows(){
+  const isSpark = ($("brushCategory").value==="glow" && $("brushType").value==="spark");
+  ["brushShapeRow","brushSpacingRow","brushScatterRow"].forEach(id=>{
+    $(id).style.display = isSpark ? "flex" : "none";
+  });
+}
+// 系統を変えたら推奨色から始める / 種類変更は同系統内なので色維持
+$("brushCategory").addEventListener("change",()=>{ brushColorTouched=false; fillBrushTypes(); onInput(); });
+$("brushType").addEventListener("change",()=>{ applyBrushTypeColor(); updateBrushRows(); });
+// 色ピッカーを触ったら以後尊重。プレビューも即更新
+$("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDraw("low"); });
+$("brushMask").addEventListener("change",()=>requestDraw());
 $("brushMode").addEventListener("change",()=>{
   cv.classList.toggle("brush-active", $("brushMode").checked);
 });
@@ -1482,7 +1616,7 @@ $("btnSizeDown").addEventListener("click",()=>{ $("brushSize").value=Math.max(4,
 $("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(80,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
 // brushSize/brushFlowはP側のパラメータではない(=draw()を経由しない)ため、
 // 動かした瞬間にラベルが更新されない不具合があった。専用に直接更新する。
-["brushSize","brushFlow"].forEach(id=>{
+["brushSize","brushFlow","brushSpacing","brushScatter"].forEach(id=>{
   $(id).addEventListener("input",()=>updateBrushLabel(id));
 });
 
@@ -1492,14 +1626,18 @@ cv.addEventListener("pointerdown", e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   brushDrawing=true;
   const p=screenToLocal(e.clientX,e.clientY);
-  const type=$("brushType").value;
+  const type=($("brushCategory").value==="eraser") ? "eraser" : $("brushType").value;
   const base={ type, color:$("brushColor").value, size:+$("brushSize").value, flow:+$("brushFlow").value };
   if(type==="metal-hi"||type==="metal-mid"||type==="metal-lo"){
     currentStroke={...base, anchor:p, reach:0}; // 角度追従型: 基準点のみ記録、伸びはdragで決める
+  }else if(type==="spark"){
+    // スパークルはスタンプ配置: 形状・間隔・散布を保持
+    currentStroke={...base, points:[p],
+      shape:$("brushShape").value, spacing:+$("brushSpacing").value, scatter:+$("brushScatter").value};
   }else{
     currentStroke={...base, points:[p]};
   }
-  requestDraw();
+  requestDraw("low");
 }, {passive:false});
 cv.addEventListener("pointermove", e=>{
   if(!brushDrawing||!currentStroke) return;
@@ -1517,7 +1655,7 @@ cv.addEventListener("pointermove", e=>{
     if(Math.hypot(p.x-last.x,p.y-last.y)<minDist) return;
     currentStroke.points.push(p);
   }
-  requestDraw();
+  requestDraw("low");
 }, {passive:false});
 // iOS Safariはpointer/touchのpreventDefaultがpassiveリスナーだと無効になるため、
 // ブラシモード中はtouchstart/touchmoveも明示的にブロックしてページのゴム跳ね・揺れを止める
@@ -1544,7 +1682,7 @@ function endBrushStroke(){
     buildLayerUI();
   }
   currentStroke=null;
-  requestDraw();
+  requestDraw("high");
 }
 cv.addEventListener("pointerup", endBrushStroke);
 cv.addEventListener("pointerleave", endBrushStroke);
@@ -1567,18 +1705,34 @@ $("zoomOut").addEventListener("click",()=>{ $("viewZoom").value=Math.max(25,+$("
 $("zoomIn").addEventListener("click",()=>{ $("viewZoom").value=Math.min(400,+$("viewZoom").value+25); applyZoom(); });
 $("zoomReset").addEventListener("click",()=>{ $("viewZoom").value=100; applyZoom(); });
 
-/* ---------- プレビュー更新 ---------- */
-let rafPending=false;
-function requestDraw(){
-  if(rafPending) return;
-  rafPending=true;
-  requestAnimationFrame(()=>{
-    rafPending=false;
-    const s=draw(ctx,1,true);
-    $("sizeNote").textContent=`${s.W}×${s.H}px（×${$("expScale").value}で保存）`;
-  });
+/* ---------- プレビュー更新（プログレッシブ描画） ----------
+   ドラッグ中は quality="low"（水銀・側面ツヤ・スパークル・稲妻を省いた骨組み）
+   ＋解像度0.6で即描画。操作が止まった瞬間に一度だけ quality="high" で
+   フル解像度の完成品に差し替える。「触ってる最中に完成品は要らない」設計。 */
+let rafPending=false, nextQuality="high", idleTimer=null;
+const PREVIEW_LOW_SCALE=0.6;
+function requestDraw(quality){
+  if(quality==="low"||quality==="high") nextQuality=quality;
+  if(!rafPending){
+    rafPending=true;
+    requestAnimationFrame(()=>{
+      rafPending=false;
+      const q=nextQuality; nextQuality="high";
+      // ブラシ操作中は跡がボケないよう等倍。スライダー操作中のみ0.6に落とす。
+      const pScale=(q==="low" && !brushDrawing) ? PREVIEW_LOW_SCALE : 1;
+      const s=draw(ctx,pScale,true,q);
+      if(q==="high"){
+        $("sizeNote").textContent=`${s.W}×${s.H}px（×${$("expScale").value}で保存）`;
+      }
+    });
+  }
+  // 低品質で描いたら、操作が止まったタイミングで一度だけ高品質に仕上げる
+  if(quality==="low"){
+    clearTimeout(idleTimer);
+    idleTimer=setTimeout(()=>requestDraw("high"), 180);
+  }
 }
-function onInput(){requestDraw();}
+function onInput(){requestDraw("low");}
 
 /* ---------- 書き出し ---------- */
 $("btnExport").addEventListener("click",()=>{
@@ -1697,6 +1851,12 @@ function applyState(json){
     if(el.type==="checkbox") el.checked=v; else el.value=v;
   }
   if(!brushLayers.some(l=>l.id===activeLayerId)) activeLayerId=brushLayers[0].id;
+  // ブラシ種類はcategory依存で動的生成なので、復元後に整合を取り直す
+  // 復元色を推奨色で潰さないよう touched を立ててから再構築する
+  brushColorTouched=true;
+  fillBrushTypes();
+  if(s.brushType && [...$("brushType").options].some(o=>o.value===s.brushType)) $("brushType").value=s.brushType;
+  if(s.brushColor!==undefined) $("brushColor").value=s.brushColor;
   buildLayerUI();
   requestDraw();
 }
@@ -1767,6 +1927,7 @@ $("btnShareUrl").addEventListener("click",async()=>{
 /* ---------- 初期化 ---------- */
 buildOutlineUI();
 buildLayerUI();
+fillBrushTypes();
 applyZoom();
 lastState=snapshot(); updateUndoBtns();
 [...rangeIds,...otherIds].forEach(id=>$(id).addEventListener("input",onInput));
@@ -1781,7 +1942,7 @@ Promise.all(FONT_LIST.map(f=>document.fonts.load(f).catch(()=>[])))
     $("fontStatus").textContent = ok>0 ? `Webフォント ${ok}/${FONT_LIST.length} 読込済` : "Webフォント読込失敗（システムフォントで動作）";
     requestDraw();
   });
-document.fonts.ready.then(requestDraw);
+document.fonts.ready.then(()=>requestDraw());
 requestDraw();
 </script>
 </body>
