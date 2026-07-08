@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>パチ文字工房 — パチ文字ジェネレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Shippori+Mincho+B1:wght@800&family=Kaisei+Tokumin:wght@800&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#151220; --panel:#1e1a2b; --panel2:#262133; --line:#37304a;
+  --txt:#ddd8ea; --sub:#8f88a4; --gold:#e8b64c; --gold-dim:#a37c2a;
+  --accent:#ff5a3c; --radius:10px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%; overscroll-behavior:none;}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  font-size:13px; line-height:1.5;
+}
+#app{display:flex; flex-direction:column; height:100%;}
+
+/* ── header ── */
+header{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border-bottom:1px solid var(--line);
+  background:var(--panel);
+}
+header h1{
+  font-family:"Reggae One",serif; font-size:17px; font-weight:400;
+  background:linear-gradient(180deg,#fff3c0,#e8b64c 45%,#8f6316 55%,#ffd76a);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  letter-spacing:.06em;
+}
+header .tag{color:var(--sub); font-size:11px;}
+#fontStatus{margin-left:auto; font-size:11px; color:var(--sub);}
+
+/* ── layout ── */
+#main{display:flex; flex:1; min-height:0;}
+#previewWrap{
+  flex:1; display:flex; flex-direction:column; min-width:0;
+}
+#stage{
+  flex:1; display:flex; align-items:center; justify-content:center;
+  overflow:auto; padding:18px; overscroll-behavior:contain;
+  background:
+    linear-gradient(45deg,#232030 25%,transparent 25%,transparent 75%,#232030 75%),
+    linear-gradient(45deg,#232030 25%,transparent 25%,transparent 75%,#232030 75%),
+    #1b1826;
+  background-size:22px 22px; background-position:0 0,11px 11px;
+}
+#cv{max-width:100%; max-height:100%; image-rendering:auto;}
+#exportBar{
+  display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  padding:10px 14px; border-top:1px solid var(--line); background:var(--panel);
+}
+#panel{
+  width:320px; overflow-y:auto; border-left:1px solid var(--line);
+  background:var(--panel); padding-bottom:40px;
+}
+
+/* ── controls ── */
+details{border-bottom:1px solid var(--line);}
+details summary{
+  cursor:pointer; padding:10px 14px; font-weight:700; font-size:12px;
+  color:var(--gold); letter-spacing:.08em; user-select:none;
+  list-style:none; display:flex; align-items:center;
+}
+details summary::-webkit-details-marker{display:none;}
+details summary::before{content:"▸"; margin-right:7px; color:var(--gold-dim); transition:transform .15s;}
+details[open] summary::before{transform:rotate(90deg);}
+.sec{padding:2px 14px 14px;}
+.row{display:flex; align-items:center; gap:8px; margin-top:9px;}
+.row label{width:86px; flex-shrink:0; color:var(--sub); font-size:12px;}
+.row input[type=range]{flex:1; accent-color:var(--gold); min-width:0;}
+.row .val{width:42px; text-align:right; font-variant-numeric:tabular-nums; color:var(--txt); font-size:12px;}
+.row input[type=color]{
+  width:32px; height:26px; border:1px solid var(--line); border-radius:6px;
+  background:none; padding:1px; cursor:pointer;
+}
+.row select, .row input[type=text]{
+  flex:1; background:var(--panel2); color:var(--txt);
+  border:1px solid var(--line); border-radius:6px; padding:5px 8px; font-size:12px;
+}
+textarea{
+  width:100%; background:var(--panel2); color:var(--txt);
+  border:1px solid var(--line); border-radius:6px; padding:8px;
+  font-size:15px; resize:vertical; min-height:52px; margin-top:9px;
+  font-family:inherit;
+}
+.row input[type=checkbox]{accent-color:var(--gold); width:16px; height:16px;}
+.chk{display:flex; align-items:center; gap:7px; margin-top:9px; cursor:pointer;}
+.chk span{color:var(--txt);}
+
+/* preset chips */
+#presets{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px;}
+#presets button{
+  background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+  padding:6px 11px; border-radius:20px; cursor:pointer; font-size:12px;
+  transition:border-color .12s;
+}
+#presets button:hover{border-color:var(--gold);}
+
+button.primary{
+  background:linear-gradient(180deg,#ffdf8a,#e8b64c 50%,#c08a1e);
+  color:#3a2600; font-weight:700; border:none; border-radius:8px;
+  padding:9px 18px; cursor:pointer; font-size:13px; letter-spacing:.05em;
+}
+button.primary:active{transform:translateY(1px);}
+button.ghost{
+  background:none; border:1px solid var(--line); color:var(--sub);
+  border-radius:8px; padding:8px 14px; cursor:pointer; font-size:12px;
+}
+button.ghost:hover{color:var(--txt); border-color:var(--sub);}
+#exportBar .note{color:var(--sub); font-size:11px;}
+
+/* outline slot */
+.oslot{display:flex; align-items:center; gap:7px; margin-top:8px;}
+.oslot input[type=range]{flex:1; accent-color:var(--gold); min-width:0;}
+.oslot .val{width:30px; text-align:right; font-size:12px; color:var(--txt);}
+
+@media (max-width:760px){
+  #main{flex-direction:column;}
+  #panel{width:100%; border-left:none; border-top:1px solid var(--line); max-height:52vh;}
+  #stage{min-height:200px; padding:10px;}
+}
+:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+.hint{color:var(--sub);font-size:11px;margin:8px 0 0;line-height:1.5;}
+#cv.brush-active{cursor:crosshair; touch-action:none;}
+#zoomBar{
+  display:flex; align-items:center; gap:8px;
+  padding:6px 14px; border-bottom:1px solid var(--line); background:var(--panel);
+}
+#zoomBar input[type=range]{flex:1; accent-color:var(--gold);}
+#zoomBar #zoomLabel{color:var(--sub); font-size:11px; width:38px; text-align:right;}
+.layerRow{
+  display:flex; align-items:center; gap:8px; padding:6px 8px; margin-bottom:4px;
+  border-radius:6px; border:1px solid transparent; cursor:pointer;
+}
+.layerRow.active{background:var(--panel2); border-color:var(--gold-dim);}
+.layerRow input[type=checkbox]{accent-color:var(--gold); flex-shrink:0;}
+.layerName{font-size:12px; color:var(--txt); flex:1;}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>激アツ文字工房</h1>
+  <span class="tag">パチ文字ジェネレーター</span>
+  <span id="fontStatus">フォント読込中…</span>
+</header>
+
+<div id="main">
+  <div id="previewWrap">
+    <div id="zoomBar">
+      <button class="ghost" id="zoomOut" style="padding:4px 12px">−</button>
+      <input type="range" id="viewZoom" min="25" max="400" value="100">
+      <button class="ghost" id="zoomIn" style="padding:4px 12px">＋</button>
+      <span id="zoomLabel">100%</span>
+      <button class="ghost" id="zoomReset">リセット</button>
+    </div>
+    <div id="stage"><canvas id="cv"></canvas></div>
+    <div id="exportBar">
+      <button class="ghost" id="btnUndo" title="元に戻す" disabled>↩︎</button>
+      <button class="ghost" id="btnRedo" title="やり直す" disabled>↪︎</button>
+      <button class="primary" id="btnExport">透過PNGを保存</button>
+      <label class="chk" style="margin-top:0"><input type="checkbox" id="expBg"><span>背景を含める</span></label>
+      <label class="chk" style="margin-top:0"><span style="color:var(--sub)">倍率</span>
+        <select id="expScale" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
+          <option value="1">×1</option><option value="2" selected>×2</option><option value="3">×3</option>
+        </select>
+      </label>
+      <span class="note" id="sizeNote"></span>
+    </div>
+  </div>
+
+  <div id="panel">
+    <details open><summary>テキスト・フォント</summary><div class="sec">
+      <textarea id="pText" rows="2">激アツ!!</textarea>
+      <div class="row"><label>フォント</label>
+        <select id="pFont">
+          <option value="system-heavy" selected>システム極太ゴシック</option>
+          <option value="Reggae One">Reggae One（勘亭流風）</option>
+          <option value="RocknRoll One">RocknRoll One（丸ゴ極太）</option>
+          <option value="Rampart One">Rampart One（立体袋文字）</option>
+          <option value="Shippori Mincho B1">しっぽり明朝B1 極太</option>
+          <option value="Kaisei Tokumin">解星 特ミン 極太</option>
+          <option value="DotGothic16">ドットゴシック16</option>
+        </select>
+      </div>
+      <div class="row"><label>サイズ</label><input type="range" id="pSize" min="40" max="300" value="150"><span class="val" data-for="pSize"></span></div>
+      <div class="row"><label>字間</label><input type="range" id="pSpacing" min="-30" max="60" value="0"><span class="val" data-for="pSpacing"></span></div>
+      <div class="row"><label>行間</label><input type="range" id="pLineH" min="80" max="160" value="105"><span class="val" data-for="pLineH"></span></div>
+    </div></details>
+
+    <details open><summary>プリセット</summary><div class="sec">
+      <p class="hint">構成ごと一括適用。ここから始めて下のセクションで微調整するのがおすすめ。</p>
+      <div id="presets"></div>
+    </div></details>
+
+    <details open><summary>塗り（面）</summary><div class="sec">
+      <p class="hint">文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「水銀」は液体クローム（ぼかし→急峻カーブ）、「輝きの暴れ」は文字ごとにグラデ位相を乱す。</p>
+      <div class="row"><label>グラデ</label>
+        <select id="pFill">
+          <option value="metalGold">リアルメタル金</option>
+          <option value="metalSilver">リアルメタル銀</option>
+          <option value="metalCopper">リアルメタル銅</option>
+          <option value="gold">ゴールド</option>
+          <option value="silver">シルバー</option>
+          <option value="fire">炎</option>
+          <option value="lava">溶岩レッド</option>
+          <option value="crimson">激アツ赤</option>
+          <option value="rainbow">虹</option>
+          <option value="chromePink">クロームピンク</option>
+          <option value="chromeBlue">クロームブルー</option>
+          <option value="diamond">ダイヤ（白銀）</option>
+          <option value="custom">カスタム2色</option>
+        </select>
+      </div>
+      <div class="row" id="customFillRow" style="display:none"><label>カスタム色</label>
+        <input type="color" id="pFillC1" value="#ffe37a"><input type="color" id="pFillC2" value="#b34700">
+      </div>
+      <div class="row"><label>角度</label><input type="range" id="pFillAngle" min="0" max="360" value="90"><span class="val" data-for="pFillAngle"></span></div>
+      <div class="row"><label>繰り返し</label><input type="range" id="pFillRepeat" min="1" max="6" value="1"><span class="val" data-for="pFillRepeat"></span></div>
+      <div class="row"><label>テクスチャ</label>
+        <select id="pTex">
+          <option value="none">なし</option>
+          <option value="fire">炎ノイズ</option>
+          <option value="lava">溶岩（ひび割れ）</option>
+          <option value="plasma">プラズマ雲</option>
+          <option value="glitter">ラメ（グリッター）</option>
+          <option value="facet">ダイヤカット（多面体）</option>
+        </select>
+      </div>
+      <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><span class="val" data-for="pTexInt"></span></div>
+      <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="10" value="4"><span class="val" data-for="pTexScale"></span></div>
+      <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><span class="val" data-for="pVary"></span></div>
+      <div class="row"><label>水銀</label><input type="range" id="pLiquid" min="0" max="100" value="0"><span class="val" data-for="pLiquid"></span></div>
+      <div class="row"><label>水銀色 明/暗</label><input type="color" id="pLiquidC1" value="#ffffff"><input type="color" id="pLiquidC2" value="#2a3140"></div>
+      <div class="row"><label>丸み</label><input type="range" id="pLiquidR" min="4" max="60" value="14"><span class="val" data-for="pLiquidR"></span></div>
+      <div class="row"><label>反射縞</label><input type="range" id="pLiquidBands" min="1" max="4" value="2"><span class="val" data-for="pLiquidBands"></span></div>
+      <div class="row"><label>メタルツヤ</label><input type="range" id="pMetal" min="0" max="100" value="0"><span class="val" data-for="pMetal"></span></div>
+      <div class="row"><label>映り込み色</label><input type="color" id="pMetalC" value="#ffb060"></div>
+      <div class="row"><label>シード</label><input type="range" id="pSeed" min="1" max="99" value="7"><span class="val" data-for="pSeed"></span></div>
+    </div></details>
+
+    <details open><summary>縁取り（外側から）</summary><div class="sec" id="outlineSec">
+      <p class="hint" style="margin:8px 14px 0">多重の境界線。PSの境界線（ストローク）を外側から4本まで。</p>
+      <!-- slots injected -->
+    </div></details>
+
+    <details open><summary>立体押し出し</summary><div class="sec">
+      <p class="hint">文字の厚み（側面）。ずらしコピーの積層＝パチ文字職人の力技をコード化。「側面ツヤ」が金属光沢の本体。</p>
+      <div class="row"><label>深さ</label><input type="range" id="pExDepth" min="0" max="40" value="14"><span class="val" data-for="pExDepth"></span></div>
+      <div class="row"><label>方向</label><input type="range" id="pExAngle" min="0" max="360" value="115"><span class="val" data-for="pExAngle"></span></div>
+      <div class="row"><label>色（手前）</label><input type="color" id="pExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="pExC2" value="#2b1600"></div>
+      <div class="row"><label>ベベル</label><input type="range" id="pBevel" min="0" max="10" value="3"><span class="val" data-for="pBevel"></span></div>
+      <div class="row"><label>側面バンド</label><input type="range" id="pExBand" min="0" max="4" value="0"><span class="val" data-for="pExBand"></span></div>
+      <div class="row"><label>側面ツヤ</label><input type="range" id="pExSpec" min="0" max="100" value="0"><span class="val" data-for="pExSpec"></span></div>
+      <label class="chk"><input type="checkbox" id="pExRefl" checked><span>側面メタル縞（映り込み風バンディング）</span></label>
+      <div class="row"><label>ランダム閃き</label><input type="range" id="pExFlash" min="0" max="20" value="6"><span class="val" data-for="pExFlash"></span></div>
+      <div class="row"><label>照り返し</label><input type="range" id="pRim" min="0" max="100" value="0"><span class="val" data-for="pRim"></span></div>
+      <div class="row"><label>照り返し色</label><input type="color" id="pRimC" value="#ffcc66"></div>
+      <div class="row"><label>光源角度</label><input type="range" id="pExLight" min="0" max="360" value="315"><span class="val" data-for="pExLight"></span></div>
+      <div class="row"><label>ツヤ幅</label><input type="range" id="pExSpecW" min="2" max="30" value="14"><span class="val" data-for="pExSpecW"></span></div>
+    </div></details>
+
+    <details open><summary>✏️ ブラシで直描き</summary><div class="sec">
+      <p class="hint">スライダーの自動処理じゃなく、プレビュー上を直接なぞって狙った場所に効果を置ける。金属反射は「基準点」をタップして押し出し方向へドラッグ＝角度が今の押し出し角度にスナップして伸びる。角度スライダーを後で変えても追従する。</p>
+      <label class="chk"><input type="checkbox" id="brushMode"><span>ブラシモードON（プレビューに直接描く）</span></label>
+      <div class="row"><label>ブラシ種類</label>
+        <select id="brushType">
+          <option value="metal-hi">金属反射（明・角度追従）</option>
+          <option value="metal-mid">金属反射（中間色・角度追従）</option>
+          <option value="metal-lo">金属反射（暗・角度追従）</option>
+          <option value="spark">スパークル</option>
+          <option value="eraser">消しゴム</option>
+        </select>
+      </div>
+      <div class="row"><label>サイズ</label>
+        <button class="ghost" id="btnSizeDown" style="padding:4px 10px">−</button>
+        <input type="range" id="brushSize" min="4" max="80" value="20" style="flex:1">
+        <button class="ghost" id="btnSizeUp" style="padding:4px 10px">＋</button>
+        <span class="val" data-for="brushSize"></span></div>
+      <div class="row"><label>流量</label><input type="range" id="brushFlow" min="1" max="100" value="40"><span class="val" data-for="brushFlow"></span></div>
+      <div class="row"><label>色</label><input type="color" id="brushColor" value="#ffffff"></div>
+      <label class="chk"><input type="checkbox" id="brushMaskOff"><span>マスクOFF（面にもはみ出して描ける）</span></label>
+      <div class="row" style="align-items:flex-start; flex-direction:column; gap:6px; margin-top:12px">
+        <label style="width:auto">レイヤー（クリックで選択・チェックで表示切替）</label>
+        <div id="layerList" style="width:100%"></div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
+          <button class="ghost" id="btnLayerAdd">＋追加</button>
+          <button class="ghost" id="btnLayerDup">複製</button>
+          <button class="ghost" id="btnLayerDel">削除</button>
+          <button class="ghost" id="btnLayerUp">↑</button>
+          <button class="ghost" id="btnLayerDown">↓</button>
+        </div>
+      </div>
+      <button class="ghost" id="btnClearBrush" style="margin-top:10px">選択中レイヤーを全消去</button>
+    </div></details>
+
+
+    <details><summary>光り物エフェクト</summary><div class="sec">
+      <p class="hint">グロー・光沢・稲妻・スパークル。PSの光彩（外側）＋自作ブラシに相当。</p>
+      <label class="chk"><input type="checkbox" id="pGlowOn" checked><span>外側グロー</span></label>
+      <div class="row"><label>グロー色</label><input type="color" id="pGlowC" value="#ff8c00">
+        <input type="range" id="pGlowBlur" min="2" max="60" value="24" style="flex:1"><span class="val" data-for="pGlowBlur"></span></div>
+      <label class="chk"><input type="checkbox" id="pGlossOn" checked><span>光沢スイープ（斜め帯）</span></label>
+      <div class="row"><label>位置</label><input type="range" id="pGlossPos" min="0" max="100" value="35"><span class="val" data-for="pGlossPos"></span></div>
+      <div class="row"><label>幅</label><input type="range" id="pGlossW" min="4" max="60" value="18"><span class="val" data-for="pGlossW"></span></div>
+      <div class="row"><label>不透明度</label><input type="range" id="pGlossA" min="0" max="100" value="55"><span class="val" data-for="pGlossA"></span></div>
+      <div class="row"><label>稲妻</label><input type="range" id="pBolt" min="0" max="10" value="0"><span class="val" data-for="pBolt"></span></div>
+      <div class="row"><label>稲妻色</label><input type="color" id="pBoltC" value="#9adfff">
+        <label style="width:auto">太さ</label><input type="range" id="pBoltW" min="1" max="10" value="4" style="flex:1"><span class="val" data-for="pBoltW"></span></div>
+      <div class="row"><label>枝分かれ</label><input type="range" id="pBoltBranch" min="0" max="5" value="2"><span class="val" data-for="pBoltBranch"></span></div>
+      <div class="row"><label>乱れ</label><input type="range" id="pBoltRough" min="10" max="100" value="50"><span class="val" data-for="pBoltRough"></span></div>
+      <label class="chk"><input type="checkbox" id="pBoltOver"><span>文字からはみ出す（最前面に走らせる）</span></label>
+      <div class="row"><label>スパークル</label><input type="range" id="pSparkN" min="0" max="60" value="0"><span class="val" data-for="pSparkN"></span></div>
+      <div class="row"><label>形状</label>
+        <select id="pSparkShape">
+          <option value="cross">十字（4条＋斜め）</option>
+          <option value="star6">6条スター</option>
+          <option value="star8">8条スター</option>
+          <option value="diamond">ダイヤ（鋭い2条）</option>
+          <option value="dot">玉ボケ（光条なし）</option>
+          <option value="mixed">ミックス</option>
+        </select>
+      </div>
+      <div class="row"><label>大きさ</label><input type="range" id="pSparkSize" min="4" max="40" value="14"><span class="val" data-for="pSparkSize"></span></div>
+      <div class="row"><label>光条の長さ</label><input type="range" id="pSparkLen" min="50" max="220" value="100"><span class="val" data-for="pSparkLen"></span></div>
+      <div class="row"><label>ばらつき</label><input type="range" id="pSparkVar" min="0" max="100" value="60"><span class="val" data-for="pSparkVar"></span></div>
+      <div class="row"><label>エッジ配置</label><input type="range" id="pSparkEdge" min="0" max="100" value="70"><span class="val" data-for="pSparkEdge"></span></div>
+      <div class="row"><label>スパーク色</label><input type="color" id="pSparkC" value="#ffd7f0">
+        <label style="width:auto">配置</label><input type="range" id="pSparkSeed" min="1" max="99" value="5" style="flex:1"><span class="val" data-for="pSparkSeed"></span></div>
+    </div></details>
+
+    <details><summary>変形</summary><div class="sec">
+      <p class="hint">アーチ・傾き・文字ごとの暴れ。パチ文字らしい躍動はここ。</p>
+      <div class="row"><label>アーチ</label><input type="range" id="pArch" min="-60" max="60" value="0"><span class="val" data-for="pArch"></span></div>
+      <div class="row"><label>傾き</label><input type="range" id="pTilt" min="-30" max="30" value="0"><span class="val" data-for="pTilt"></span></div>
+      <div class="row"><label>暴れ・回転</label><input type="range" id="pJitR" min="0" max="20" value="0"><span class="val" data-for="pJitR"></span></div>
+      <div class="row"><label>暴れ・上下</label><input type="range" id="pJitY" min="0" max="30" value="0"><span class="val" data-for="pJitY"></span></div>
+      <div class="row"><label>暴れシード</label><input type="range" id="pJitSeed" min="1" max="99" value="3"><span class="val" data-for="pJitSeed"></span></div>
+    </div></details>
+
+    <details><summary>表示・設定の保存</summary><div class="sec">
+      <p class="hint">レイヤー確認は調整用（書き出しにも反映）。設定はJSONやURLで保存・共有できる。</p>
+      <div class="row"><label>レイヤー表示</label>
+        <select id="pView">
+          <option value="all">すべて</option>
+          <option value="face">面のみ</option>
+          <option value="extrude">立体のみ</option>
+          <option value="outline">縁のみ</option>
+          <option value="nofx">光り物オフ</option>
+        </select>
+      </div>
+      <div class="row" style="gap:6px">
+        <button class="ghost" id="btnSaveJson">設定を書き出し</button>
+        <button class="ghost" id="btnLoadJson">読み込み</button>
+        <button class="ghost" id="btnShareUrl">URLをコピー</button>
+      </div>
+      <input type="file" id="fileJson" accept=".json" style="display:none">
+    </div></details>
+    <details><summary>背景（プレビュー・書き出しオプション）</summary><div class="sec">
+      <div class="row"><label>タイプ</label>
+        <select id="pBg">
+          <option value="none">なし（透過）</option>
+          <option value="burst">爆発（放射グラデ）</option>
+          <option value="rays">集中線</option>
+        </select>
+      </div>
+      <div class="row"><label>色</label><input type="color" id="pBgC1" value="#ffdd55"><input type="color" id="pBgC2" value="#b31200"></div>
+    </div></details>
+  </div>
+</div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   激アツ文字工房 — pipeline:
+   glow → extrude → outlines → face(fill→bevel→texture→bolt→gloss)
+   全描画は draw(ctx, scale) に集約 → 書き出しも同関数で高解像度に。
+   アニメ拡張: draw に time 引数を足せばフレーム描画に転用可能。
+============================================================ */
+
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+
+/* ---------- パラメータ収集 ---------- */
+const P = {};
+const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pTexInt","pTexScale","pSeed","pMetal","pVary","pLiquid","pLiquidR","pLiquidBands",
+  "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
+  "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
+  "pArch","pTilt","pJitR","pJitY","pJitSeed"];
+const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
+  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgC1","pBgC2"];
+
+/* 縁取りスロット（外→内）4本 */
+const OUTLINE_DEFAULTS = [
+  {on:true,  color:"#ffffff", w:26},
+  {on:true,  color:"#1a0e00", w:18},
+  {on:true,  color:"#ffd76a", w:10},
+  {on:true,  color:"#5a2d00", w:4},
+];
+function buildOutlineUI(){
+  const sec = $("outlineSec");
+  sec.innerHTML = "";
+  OUTLINE_DEFAULTS.forEach((o,i)=>{
+    const div = document.createElement("div");
+    div.className = "oslot";
+    div.innerHTML = `<input type="checkbox" id="olOn${i}" ${o.on?"checked":""}>
+      <input type="color" id="olC${i}" value="${o.color}">
+      <input type="range" id="olW${i}" min="0" max="60" value="${o.w}">
+      <span class="val" id="olV${i}">${o.w}</span>`;
+    sec.appendChild(div);
+    ["olOn"+i,"olC"+i,"olW"+i].forEach(id=>$(id).addEventListener("input",onInput));
+  });
+}
+
+function readParams(){
+  rangeIds.forEach(id=>P[id]=+$(id).value);
+  otherIds.forEach(id=>{
+    const el=$(id);
+    P[id]= el.type==="checkbox" ? el.checked : el.value;
+  });
+  P.outlines=[];
+  for(let i=0;i<4;i++){
+    P.outlines.push({on:$("olOn"+i).checked, color:$("olC"+i).value, w:+$("olW"+i).value});
+    $("olV"+i).textContent = $("olW"+i).value;
+  }
+  // range値表示
+  document.querySelectorAll(".val[data-for]").forEach(s=>{
+    s.textContent = $(s.dataset.for).value;
+  });
+  $("customFillRow").style.display = P.pFill==="custom" ? "flex":"none";
+}
+
+/* ---------- 乱数（シード付き） ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+
+/* ---------- value noise テクスチャ ---------- */
+const texCache = {key:"", canvas:null};
+const sideCache = {key:"", canvas:null};
+function makeTexture(type, scale, seed){
+  const key = type+"_"+scale+"_"+seed;
+  if(texCache.key===key) return texCache.canvas;
+  const S=256, c=document.createElement("canvas"); c.width=c.height=S;
+  const x=c.getContext("2d"), img=x.createImageData(S,S), d=img.data;
+  const rnd=mulberry32(seed*1013);
+  const G=48, grid=[];
+  for(let i=0;i<(G+1)*(G+1);i++) grid.push(rnd());
+  const gv=(ix,iy)=>grid[((iy%G+G)%G)*(G+1)+((ix%G+G)%G)];
+  const smooth=t=>t*t*(3-2*t);
+  function noise(nx,ny){
+    const x0=Math.floor(nx), y0=Math.floor(ny), fx=smooth(nx-x0), fy=smooth(ny-y0);
+    const a=gv(x0,y0), b=gv(x0+1,y0), cc=gv(x0,y0+1), dd=gv(x0+1,y0+1);
+    return a+(b-a)*fx+(cc-a)*fy+(a-b-cc+dd)*fx*fy;
+  }
+  function fbm(nx,ny){
+    let v=0, amp=.55, f=1;
+    for(let o=0;o<4;o++){v+=noise(nx*f,ny*f)*amp; f*=2.1; amp*=.5;}
+    return v;
+  }
+  const sc=scale*1.2;
+  for(let py=0;py<S;py++)for(let px=0;px<S;px++){
+    let v;
+    if(type==="fire"){
+      // 縦に引き伸ばした乱流＝炎のゆらぎ
+      v=fbm(px/S*sc*2, py/S*sc*5);
+    }else if(type==="lava"){
+      // リッジノイズ＝ひび割れ
+      const n=fbm(px/S*sc*2, py/S*sc*2);
+      v=1-Math.abs(n-.5)*2; v=Math.pow(v,3);
+    }else{ // plasma
+      v=fbm(px/S*sc*1.5, py/S*sc*1.5);
+    }
+    v=Math.max(0,Math.min(1,v));
+    let r,g,b,a=255;
+    if(type==="fire"){
+      // 黒→深紅→橙→黄→白
+      if(v<.3){r=90*(v/.3); g=0; b=0;}
+      else if(v<.55){const t=(v-.3)/.25; r=90+165*t; g=40*t; b=0;}
+      else if(v<.8){const t=(v-.55)/.25; r=255; g=40+140*t; b=10*t;}
+      else{const t=(v-.8)/.2; r=255; g=180+75*t; b=10+200*t;}
+    }else if(type==="lava"){
+      if(v<.45){r=25+40*v; g=8; b=4;}           // 黒い岩
+      else if(v<.7){const t=(v-.45)/.25; r=120+120*t; g=20+50*t; b=8;}
+      else{const t=(v-.7)/.3; r=255; g=90+130*t; b=20+60*t;}  // 灼熱の割れ目
+    }else if(type==="glitter"){
+      // 低コントラストの下地（輝点は後描き）
+      v=fbm(px/S*sc*3, py/S*sc*3);
+      r=200+45*v; g=195+45*v; b=205+45*v;
+    }else if(type==="facet"){
+      // 下地は薄いノイズ（三角面は後描き）
+      v=fbm(px/S*sc, py/S*sc);
+      r=205+30*v; g=205+30*v; b=215+30*v;
+    }else{
+      r=255*v; g=200*v; b=120+135*v;
+    }
+    const i=(py*S+px)*4; d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=a;
+  }
+  x.putImageData(img,0,0);
+  if(type==="facet"){
+    // ダイヤカット: 明暗ランダムの三角面パッチ＋細い境界線
+    const fr=mulberry32(seed*577);
+    const pts=[];
+    const grid2=5+Math.round(scale*.8);
+    for(let iy=0;iy<=grid2;iy++)for(let ix=0;ix<=grid2;ix++){
+      pts.push({x:ix/grid2*S+(fr()-.5)*S/grid2*.9, y:iy/grid2*S+(fr()-.5)*S/grid2*.9});
+    }
+    const at=(ix,iy)=>pts[iy*(grid2+1)+ix];
+    for(let iy=0;iy<grid2;iy++)for(let ix=0;ix<grid2;ix++){
+      const a=at(ix,iy), b2=at(ix+1,iy), c2=at(ix,iy+1), d2=at(ix+1,iy+1);
+      const tris = fr()<.5 ? [[a,b2,d2],[a,d2,c2]] : [[a,b2,c2],[b2,d2,c2]];
+      for(const tri of tris){
+        const lum=fr();
+        x.beginPath(); x.moveTo(tri[0].x,tri[0].y);
+        x.lineTo(tri[1].x,tri[1].y); x.lineTo(tri[2].x,tri[2].y); x.closePath();
+        x.fillStyle = lum>.5
+          ? `rgba(255,255,255,${(lum-.5)*.9})`
+          : `rgba(40,45,70,${(.5-lum)*.75})`;
+        x.fill();
+        x.strokeStyle="rgba(255,255,255,.35)"; x.lineWidth=.7; x.stroke();
+      }
+    }
+  }
+  if(type==="glitter"){
+    // ラメ輝点: 小粒多数 + 中粒少数（shadowで滲ませる）
+    const gr=mulberry32(seed*401);
+    for(let i=0;i<380;i++){
+      const gx=gr()*S, gy=gr()*S, r0=.4+gr()*1.4;
+      x.fillStyle=`rgba(255,255,255,${.35+gr()*.65})`;
+      x.beginPath(); x.arc(gx,gy,r0,0,7); x.fill();
+    }
+    x.shadowColor="#ffffff"; x.shadowBlur=3;
+    for(let i=0;i<50;i++){
+      const gx=gr()*S, gy=gr()*S;
+      x.fillStyle="rgba(255,255,255,.95)";
+      x.beginPath(); x.arc(gx,gy,1.2+gr()*1.6,0,7); x.fill();
+    }
+    x.shadowBlur=0;
+  }
+  texCache.key=key; texCache.canvas=c;
+  return c;
+}
+
+/* ---------- グラデ ---------- */
+const GRADS = {
+  gold:   [[0,"#fffbe0"],[.22,"#ffd76a"],[.45,"#a06a00"],[.52,"#fff3b8"],[.72,"#e8a817"],[1,"#6b3d00"]],
+  silver: [[0,"#ffffff"],[.25,"#cfd6e0"],[.48,"#6c7686"],[.55,"#f4f7fb"],[.78,"#9aa5b5"],[1,"#454e5c"]],
+  fire:   [[0,"#fff9b0"],[.35,"#ffb32e"],[.65,"#ff4d00"],[1,"#7a0f00"]],
+  lava:   [[0,"#ffd23e"],[.4,"#ff6a00"],[.75,"#b31200"],[1,"#3d0500"]],
+  crimson:[[0,"#ff8a6a"],[.45,"#e01515"],[1,"#5e0000"]],
+  rainbow:[[0,"#ff3b3b"],[.17,"#ff9d2e"],[.34,"#ffe23e"],[.5,"#3ddc55"],[.67,"#3aa9ff"],[.84,"#7a5cff"],[1,"#ff4ddb"]],
+  chromePink:[[0,"#ffe9f6"],[.18,"#ff8fd0"],[.38,"#c4177e"],[.5,"#fff0fa"],[.62,"#a80f68"],[.85,"#ff7cc8"],[1,"#7c0a4d"]],
+  chromeBlue:[[0,"#eef6ff"],[.2,"#9cc8f0"],[.4,"#1e3a5f"],[.5,"#ffffff"],[.65,"#16304f"],[.85,"#7fb2e8"],[1,"#0a1c33"]],
+  diamond:[[0,"#ffffff"],[.15,"#dfe9f5"],[.3,"#ffffff"],[.45,"#b9c9dd"],[.55,"#ffffff"],[.7,"#cdd9e8"],[.85,"#ffffff"],[1,"#aebfd6"]],
+};
+function makeGradient(g, x0,y0,x1,y1, repeat, stops){
+  const grad=g.createLinearGradient(x0,y0,x1,y1);
+  for(let r=0;r<repeat;r++){
+    stops.forEach(([p,c])=>grad.addColorStop(Math.min(1,(r+p)/repeat),c));
+  }
+  return grad;
+}
+
+/* ---------- プロシージャルメタルグラデ ----------
+   本物のメタルグラデ素材の文法: 不規則な幅の明暗バンド＋シャープな白飛び
+   鏡面ライン＋細い暗線をランダム配置。seedで柄ガチャ。 */
+function makeMetalStops(seed,dark,light,horizon,coarse,raw){
+  const r=mulberry32((seed|0)*2654435761);
+  const K=coarse?2.6:1; // coarse: 側面用に帯を太く・本数を半減
+  const tone=t=>{t=Math.max(0,Math.min(1,t));
+    const c=[lerp(dark[0],light[0],t)|0,lerp(dark[1],light[1],t)|0,lerp(dark[2],light[2],t)|0];
+    return raw?c:`rgb(${c[0]},${c[1]},${c[2]})`;};
+  const st=[];
+  const push=(p,t)=>{
+    p=Math.max(0,Math.min(1,p));
+    if(st.length&&p<=st[st.length-1][0]) p=Math.min(1,st[st.length-1][0]+.0006);
+    st.push([p,tone(t)]);
+  };
+  push(0,.5+r()*.4);
+  let p=0, hDone=!horizon;
+  while(p<.96){
+    p+=(.05+r()*.14)*K;
+    if(!hDone&&p>.44){
+      // 地平線: 暗いフラット帯＋直下の白飛びライン（側面の締め）
+      push(.44,.35); push(.455,.06); push(.53,.06); push(.545,.82); push(.565,.5);
+      p=.58; hDone=true; continue;
+    }
+    const k=r();
+    if(k<.33){       // 白飛びの鏡面ライン（直後を暗く沈める非対称反転＝バキバキ感）
+      const w=(.004+r()*.012)*K;
+      push(p-w,.3+r()*.3); push(p,.96+r()*.04); push(p+w,.08+r()*.18);
+    }else if(k<.5){  // 細い暗線
+      const w=(.003+r()*.01)*K;
+      push(p-w,.45+r()*.25); push(p,r()*.12); push(p+w,.45+r()*.3);
+    }else{           // なだらかな明暗バンド
+      push(p,.12+r()*.82);
+    }
+  }
+  push(1,.45+r()*.35);
+  return st;
+}
+function sampleStops(st,t){
+  if(t<=st[0][0]) return st[0][1];
+  for(let i=1;i<st.length;i++){
+    if(t<=st[i][0]){
+      const p0=st[i-1][0], c0=st[i-1][1], p1=st[i][0], c1=st[i][1];
+      const k=(t-p0)/Math.max(1e-6,p1-p0);
+      return [lerp(c0[0],c1[0],k),lerp(c0[1],c1[1],k),lerp(c0[2],c1[2],k)];
+    }
+  }
+  return st[st.length-1][1];
+}
+const METAL_PAL={
+  metalGold:  [[58,32,0],  [255,248,216]],
+  metalSilver:[[38,42,52], [255,255,255]],
+  metalCopper:[[72,30,10], [255,224,200]],
+};
+function getFillStops(){
+  if(P.pFill==="custom") return [[0,P.pFillC1],[1,P.pFillC2]];
+  if(METAL_PAL[P.pFill]){
+    const [d,l]=METAL_PAL[P.pFill];
+    return makeMetalStops(P.pSeed*7+3,d,l,false);
+  }
+  return GRADS[P.pFill];
+}
+
+/* ---------- レイアウト（文字ごと配置） ---------- */
+function fontStr(size){
+  const f=P.pFont;
+  if(f==="system-heavy") return `900 ${size}px "Hiragino Sans","Yu Gothic",sans-serif`;
+  const w=(f==="Shippori Mincho B1"||f==="Kaisei Tokumin")?"800 ":"400 ";
+  return `${w}${size}px "${f}"`;
+}
+function layoutText(g){
+  const size=P.pSize, lines=P.pText.split("\n");
+  g.font=fontStr(size);
+  const lineH=size*P.pLineH/100, spacing=P.pSpacing;
+  const jr=mulberry32(P.pJitSeed*77);
+  const chars=[]; let maxW=0;
+  lines.forEach((line,li)=>{
+    // 行幅計測
+    let w=0; const ws=[];
+    for(const ch of line){const cw=g.measureText(ch).width; ws.push(cw); w+=cw+spacing;}
+    if(line.length) w-=spacing;
+    maxW=Math.max(maxW,w);
+    let x=-w/2;
+    let ci=0;
+    for(const ch of line){
+      const cw=ws[ci++];
+      const cx=x+cw/2;
+      const jitR=(jr()*2-1)*P.pJitR*Math.PI/180;
+      const jitY=(jr()*2-1)*P.pJitY;
+      chars.push({ch, cx, cy:li*lineH, cw, jitR, jitY, lineW:w});
+      x+=cw+spacing;
+    }
+  });
+  const totalH=(lines.length-1)*lineH+size;
+  return {chars, maxW, totalH, size, lines:lines.length, lineH};
+}
+
+/* 全文字を指定スタイルで描画（mode: "fill"|"stroke"、styleFnで文字ごとにfillStyle変更可） */
+function drawChars(g, L, mode, dx=0, dy=0, styleFn=null){
+  const archAmp=P.pArch/100;
+  const tilt=P.pTilt*Math.PI/180;
+  let i=0;
+  for(const c of L.chars){
+    if(styleFn) g.fillStyle=styleFn(c,i);
+    i++;
+    g.save();
+    // アーチ: 行中央基準の放物線
+    const t = c.lineW>0 ? c.cx/(c.lineW/2) : 0;
+    const archY = -archAmp*L.size*(1-t*t);
+    const archRot = archAmp*t*0.5;
+    g.translate(c.cx+dx, c.cy+c.jitY+archY+dy);
+    g.rotate(c.jitR+archRot);
+    g.transform(1,0,Math.tan(-tilt),1,0,0);
+    if(mode==="fill") g.fillText(c.ch,0,0);
+    else g.strokeText(c.ch,0,0);
+    g.restore();
+  }
+}
+
+/* ---------- 面レイヤー生成（fill→bevel→texture→bolt→gloss） ---------- */
+function buildFaceLayer(W,H,offX,offY,L,scale){
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d");
+  g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
+  g.translate(offX,offY); g.scale(scale,scale);
+
+  // 1) グラデ塗り（pVary>0なら文字ごとに位相・角度を乱す＝面内の情報量）
+  const ang=P.pFillAngle*Math.PI/180;
+  const R=Math.max(L.maxW,L.totalH)/2;
+  const gx=Math.cos(ang)*R, gy=Math.sin(ang)*R;
+  const stops = getFillStops();
+  const cyMid=(L.lines-1)*L.lineH/2;
+  const baseGrad=makeGradient(g,-gx,cyMid-gy,gx,cyMid+gy,P.pFillRepeat,stops);
+  let styleFn=null;
+  if(P.pVary>0){
+    const vary=P.pVary/100;
+    const vr=mulberry32(P.pSeed*991+P.pJitSeed);
+    const phases=L.chars.map(()=>({
+      dy:(vr()*2-1)*L.size*.6*vary,
+      da:(vr()*2-1)*.7*vary
+    }));
+    const gradCache=phases.map(ph=>{
+      const a2=ang+ph.da;
+      const gx2=Math.cos(a2)*R, gy2=Math.sin(a2)*R;
+      const yc=cyMid+ph.dy;
+      return makeGradient(g,-gx2,yc-gy2,gx2,yc+gy2,P.pFillRepeat,stops);
+    });
+    styleFn=(c,i)=>gradCache[i];
+  }
+  g.fillStyle=baseGrad;
+  drawChars(g,L,"fill",0,0,styleFn);
+
+  // 2) 擬似ベベル: 下ずらし影→上ずらしハイライト→中央を縮小本体で塗り戻し
+  const bv=P.pBevel;
+  if(bv>0){
+    const bla=P.pExLight*Math.PI/180;
+    const blx=Math.cos(bla), bly=Math.sin(bla);
+    g.globalCompositeOperation="source-atop";
+    // 影＝光源の反対側エッジ、ハイライト＝光源側エッジ（光源角度に連動）
+    g.fillStyle="rgba(50,15,0,.75)"; drawChars(g,L,"fill",-blx*bv,-bly*bv);
+    g.fillStyle="rgba(255,255,235,.9)"; drawChars(g,L,"fill",blx*bv,bly*bv);
+    // Gemini④ 底面リムライト: 床からの照り返しを下エッジに（ベベルと同じずらしテク）
+    if(P.pRim>0){
+      g.globalAlpha=P.pRim/100*.9;
+      g.fillStyle=P.pRimC;
+      drawChars(g,L,"fill",0,bv+1.5);
+      g.globalAlpha=1;
+    }
+    g.save();
+    g.fillStyle=baseGrad;
+    drawCharsInset(g,L,bv,styleFn);
+    g.restore();
+    g.globalCompositeOperation="source-over";
+  }
+
+  // 2.5) 水銀: ぼかしハイトマップ→ジグザグのクロームカーブでシャープな反射縞に戻す
+  if(P.pLiquid>0){
+    const hm=document.createElement("canvas"); hm.width=W; hm.height=H;
+    const hg=hm.getContext("2d");
+    hg.translate(offX,offY); hg.scale(scale,scale);
+    hg.font=fontStr(L.size); hg.textBaseline="middle"; hg.textAlign="center";
+    // 高さ場: シャープな白シルエットから「ぼかした輪郭stroke」を削る＝輪郭0→内側1の内側減衰
+    hg.lineJoin="round"; hg.miterLimit=2;
+    hg.fillStyle="#ffffff"; drawChars(hg,L,"fill");
+    hg.globalCompositeOperation="destination-out";
+    softStroke(hg,L,"#000000",P.pLiquidR*.8,P.pLiquidR*3,scale);
+    hg.globalCompositeOperation="source-over";
+    // クロームカーブ: 高さ→cos折り返しで「暗→明→暗→明」の縞（境界はシャープなS字）
+    // 出力は暗部色→明部色の補間（水銀の色を直接指定できる）
+    const id=hg.getImageData(0,0,W,H), dd=id.data;
+    const nb=P.pLiquidBands*2-1;
+    const lc1=hex(P.pLiquidC1), lc2=hex(P.pLiquidC2);
+    for(let i=0;i<dd.length;i+=4){
+      const a=dd[i+3]/255;
+      if(a<.02){dd[i+3]=0;continue;}
+      const t=Math.pow(Math.min(1,a),.6); // ガンマで縞を内側まで引き伸ばす
+      const v=.5-.5*Math.cos(t*Math.PI*nb);
+      dd[i]=lerp(lc2[0],lc1[0],v)|0;
+      dd[i+1]=lerp(lc2[1],lc1[1],v)|0;
+      dd[i+2]=lerp(lc2[2],lc1[2],v)|0;
+      dd[i+3]=255;
+    }
+    hg.putImageData(id,0,0);
+    // 面内にsource-atopで合成（強度＝置き換え率）
+    g.save();
+    g.setTransform(1,0,0,1,0,0);
+    g.globalCompositeOperation="source-atop";
+    g.globalAlpha=P.pLiquid/100;
+    g.drawImage(hm,0,0);
+    g.restore();
+  }
+
+  // 3) テクスチャ（面内のみ）
+  if(P.pTex!=="none" && P.pTexInt>0){
+    const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed);
+    g.globalCompositeOperation="source-atop";
+    g.globalAlpha=P.pTexInt/100;
+    const pw=Math.max(L.maxW,256), ph=Math.max(L.totalH+L.size,256);
+    g.drawImage(tex,-L.maxW/2-20,-L.size/2-20,pw+40,ph+40);
+    g.globalAlpha=1;
+    g.globalCompositeOperation="source-over";
+  }
+
+  // 3.5) メタルツヤ: 行ごとに「上ハイライト→中央暗線→下は環境の映り込み色」の水平スプリット
+  if(P.pMetal>0){
+    g.globalCompositeOperation="source-atop";
+    const m=P.pMetal/100;
+    const [mr,mgc,mb]=hex(P.pMetalC);
+    const from=-L.size/2, to=(L.lines-1)*L.lineH+L.size/2, total=to-from;
+    const mgrad=g.createLinearGradient(0,from,0,to);
+    const bandStops=[[0,`rgba(255,255,255,${.7*m})`],[.36,`rgba(255,255,255,${.05*m})`],
+      [.48,`rgba(30,8,25,${.4*m})`],[.56,`rgba(${mr},${mgc},${mb},${.4*m})`],
+      [.8,`rgba(${mr*.35|0},${mgc*.35|0},${mb*.35|0},${.3*m})`],[1,`rgba(${mr},${mgc},${mb},${.55*m})`]];
+    let prev=-1;
+    for(let li=0;li<L.lines;li++){
+      for(const [p,c] of bandStops){
+        let pos=(li*L.lineH+p*L.size)/total;
+        pos=Math.max(0,Math.min(1,Math.max(prev+.0001,pos)));
+        mgrad.addColorStop(pos,c); prev=pos;
+      }
+    }
+    g.fillStyle=mgrad;
+    g.fillRect(-9999,from-9999,19998,total+19998);
+    g.globalCompositeOperation="source-over";
+  }
+
+  // 4) 稲妻（面内クリップ。「はみ出す」オン時はdraw側で最前面に描く）
+  if(P.pBolt>0 && !P.pBoltOver && P.pView!=="nofx"){
+    g.globalCompositeOperation="source-atop";
+    drawBolts(g,L,false);
+    g.globalCompositeOperation="source-over";
+  }
+
+  // 5) 光沢スイープ（斜め帯）
+  if(P.pGlossOn && P.pGlossA>0 && P.pView!=="nofx"){
+    g.globalCompositeOperation="source-atop";
+    const gw=L.maxW*P.pGlossW/100;
+    const px=-L.maxW/2 + L.maxW*P.pGlossPos/100;
+    g.save();
+    g.translate(px, cyMid); g.rotate(-0.5);
+    const gg=g.createLinearGradient(-gw,0,gw,0);
+    gg.addColorStop(0,"rgba(255,255,255,0)");
+    gg.addColorStop(.5,`rgba(255,255,255,${P.pGlossA/100})`);
+    gg.addColorStop(1,"rgba(255,255,255,0)");
+    g.fillStyle=gg;
+    g.fillRect(-gw,-(L.totalH+L.size),gw*2,(L.totalH+L.size)*2);
+    g.restore();
+    g.globalCompositeOperation="source-over";
+  }
+  return c;
+}
+/* 画面外shadowテク: 実体を遠くに描き、ぼけた影だけを正位置に落とす（iOS対応の古典ぼかし） */
+function softChars(g,L,color,blur,dx,dy,scale){
+  const OFF=20000;
+  g.save();
+  g.shadowColor=color; g.shadowBlur=blur*scale;
+  g.shadowOffsetX=OFF; g.shadowOffsetY=0;
+  g.fillStyle="#000";
+  g.translate(-OFF/scale,0);
+  drawChars(g,L,"fill",dx,dy);
+  g.restore();
+}
+/* 同・stroke版（ぼけた輪郭線） */
+function softStroke(g,L,color,blur,lw,scale){
+  const OFF=20000;
+  g.save();
+  g.shadowColor=color; g.shadowBlur=blur*scale;
+  g.shadowOffsetX=OFF; g.shadowOffsetY=0;
+  g.strokeStyle="#000"; g.lineWidth=lw; g.lineJoin="round"; g.miterLimit=2;
+  g.translate(-OFF/scale,0);
+  drawChars(g,L,"stroke");
+  g.restore();
+}
+
+/* ベベル用: わずかに縮小した本体（中央塗り戻し） */
+function drawCharsInset(g,L,bv,styleFn=null){
+  let i=0;
+  for(const c of L.chars){
+    if(styleFn) g.fillStyle=styleFn(c,i);
+    i++;
+    g.save();
+    const t=c.lineW>0?c.cx/(c.lineW/2):0;
+    const archAmp=P.pArch/100;
+    const archY=-archAmp*L.size*(1-t*t);
+    g.translate(c.cx, c.cy+c.jitY+archY);
+    g.rotate(c.jitR+archAmp*t*0.5);
+    g.transform(1,0,Math.tan(-P.pTilt*Math.PI/180),1,0,0);
+    const k=1-(bv*2)/L.size;
+    g.scale(k,k);
+    g.fillText(c.ch,0,0);
+    g.restore();
+  }
+}
+
+/* ---------- メイン描画 ---------- */
+function computeCanvasSize(L){
+  const maxStroke=Math.max(...P.outlines.filter(o=>o.on).map(o=>o.w),0);
+  const glowPad=P.pGlowOn?P.pGlowBlur*2:0;
+  const exPad=P.pExDepth+4;
+  const pad=maxStroke+glowPad+exPad+Math.abs(P.pArch)+P.pJitY+30;
+  const tiltPad=Math.abs(Math.tan(P.pTilt*Math.PI/180))*L.size;
+  return {
+    W:Math.ceil(L.maxW+pad*2+tiltPad*2),
+    H:Math.ceil(L.totalH+pad*2),
+    pad
+  };
+}
+
+function draw(targetCtx, scale, withBg){
+  readParams();
+  const mg=targetCtx;
+  // 計測用
+  const meas=document.createElement("canvas").getContext("2d");
+  meas.font=fontStr(P.pSize);
+  const L=layoutText(meas);
+  const {W,H,pad}=computeCanvasSize(L);
+  const cw=Math.round(W*scale), ch=Math.round(H*scale);
+  mg.canvas.width=cw; mg.canvas.height=ch;
+  mg.clearRect(0,0,cw,ch);
+
+  const offX=cw/2, offY=(pad+L.size/2)*scale;
+
+  // 背景（放射の中心は文字の縦中心に合わせる）
+  const bgCy = offY + ((L.lines-1)*L.lineH/2)*scale;
+  if(withBg && P.pBg!=="none"){
+    if(P.pBg==="burst"){
+      const rg=mg.createRadialGradient(cw/2,bgCy,0,cw/2,bgCy,Math.max(cw,ch)*.7);
+      rg.addColorStop(0,P.pBgC1); rg.addColorStop(1,P.pBgC2);
+      mg.fillStyle=rg; mg.fillRect(0,0,cw,ch);
+    }else{ // rays 集中線
+      mg.fillStyle=P.pBgC2; mg.fillRect(0,0,cw,ch);
+      const rr=mulberry32(P.pSeed*5);
+      mg.save(); mg.translate(cw/2,bgCy);
+      const R=Math.max(cw,ch);
+      for(let i=0;i<48;i++){
+        const a=(i/48)*Math.PI*2+rr()*.1;
+        const w=(0.006+rr()*.02)*Math.PI;
+        mg.beginPath(); mg.moveTo(0,0);
+        mg.arc(0,0,R,a-w,a+w); mg.closePath();
+        mg.fillStyle=i%2?P.pBgC1:"rgba(255,255,255,.12)";
+        mg.globalAlpha=.5+rr()*.5; mg.fill();
+      }
+      mg.restore(); mg.globalAlpha=1;
+      const rg=mg.createRadialGradient(cw/2,bgCy,0,cw/2,bgCy,R*.5);
+      rg.addColorStop(0,"rgba(255,255,255,.55)"); rg.addColorStop(1,"rgba(255,255,255,0)");
+      mg.fillStyle=rg; mg.fillRect(0,0,cw,ch);
+    }
+  }
+
+  mg.save();
+  mg.translate(offX,offY); mg.scale(scale,scale);
+  mg.font=fontStr(L.size); mg.textBaseline="middle"; mg.textAlign="center";
+  mg.lineJoin="round"; mg.miterLimit=2;
+
+  // 縁込みの外形幅（押し出し・グローはこのシルエットで描く）
+  const act=P.outlines.filter(o=>o.on&&o.w>0);
+  const maxOW=act.length?Math.max(...act.map(o=>o.w)):0;
+  // レイヤー表示モード
+  const V=P.pView||"all";
+  const showGlow=(V==="all"), showEx=(V==="all"||V==="extrude"||V==="nofx");
+  const showOL=(V==="all"||V==="outline"||V==="nofx"), showFace=(V==="all"||V==="face"||V==="nofx");
+  const showFx=(V==="all");
+  // 縁込みシルエットを1色で描くヘルパー
+  const silhouette=(color,dx,dy)=>{
+    mg.fillStyle=color;
+    if(maxOW>0){mg.strokeStyle=color; mg.lineWidth=maxOW; drawChars(mg,L,"stroke",dx,dy);}
+    drawChars(mg,L,"fill",dx,dy);
+  };
+
+  // ① グロー（縁込みシルエットを発光色で）
+  if(P.pGlowOn&&showGlow){
+    mg.save();
+    mg.shadowColor=P.pGlowC; mg.shadowBlur=P.pGlowBlur*scale;
+    silhouette(P.pGlowC,0,0); silhouette(P.pGlowC,0,0); // 2度描きで濃く
+    mg.restore();
+  }
+
+  // ② 押し出し（縁込み外形を奥→手前、色補間）
+  const d=P.pExDepth;
+  if(d>0&&showEx){
+    const ea=P.pExAngle*Math.PI/180;
+    const ux=Math.cos(ea), uy=Math.sin(ea);
+    const c1=hex(P.pExC1), c2=hex(P.pExC2);
+    // 底面リムライト: 先端(最奥)のさらに外側にrim色を敷く→ループが上書きし先端縁だけ残る
+    if(P.pRim>0){
+      mg.globalAlpha=Math.min(1,P.pRim/100);
+      silhouette(P.pRimC, ux*(d+2.5), uy*(d+2.5));
+      mg.globalAlpha=1;
+    }
+    // 深さ方向は滑らかな2色lerpのまま（離散d ステップに荒い金属ストップを
+    // 直接サンプリングすると、隣接レイヤー間で色がジャンプして「層」状に
+    // 見えてしまうため）。金属反射の質感は側面ツヤ(buildSideSheen)側で
+    // ピクセル単位の連続グラデーションとして描く。
+    for(let i=d;i>=1;i--){
+      const t=i/d;
+      let r=lerp(c1[0],c2[0],t), gc=lerp(c1[1],c2[1],t), b=lerp(c1[2],c2[2],t);
+      if(P.pExBand>0){
+        // 側面のクローム反射: フラットな帯＋シャープな遷移（水銀的な折り返し）
+        const s=Math.sin(t*Math.PI*2*P.pExBand+1.1);
+        const k=1+Math.sign(s)*Math.pow(Math.abs(s),.35)*.55;
+        r=Math.min(255,r*k); gc=Math.min(255,gc*k); b=Math.min(255,b*k);
+      }
+      silhouette(`rgb(${r|0},${gc|0},${b|0})`,ux*i,uy*i);
+    }
+    // 側面ツヤ（結果はキャッシュ: 側面に関係するパラメータが不変なら再利用）
+    if(P.pExSpec>0){
+      const sideKey=JSON.stringify([P.pText,P.pFont,P.pSize,P.pSpacing,P.pLineH,
+        P.pExDepth,P.pExAngle,P.pExSpec,P.pExLight,P.pExSpecW,P.pExFlash,P.pExC1,P.pExC2,
+        P.pSeed,P.pLiquidBands,P.pArch,P.pTilt,P.pJitR,P.pJitY,P.pJitSeed,maxOW,scale,cw,ch,
+        P.outlines,P.pGlowOn,P.pGlowBlur,offX,offY]);
+      let refl;
+      if(sideCache.key===sideKey){ refl=sideCache.canvas; }
+      else{
+        refl=buildSideSheen(cw,ch,offX,offY,L,scale,maxOW,ux,uy,d);
+        sideCache.key=sideKey; sideCache.canvas=refl;
+      }
+      mg.save();
+      mg.setTransform(1,0,0,1,0,0);
+      mg.globalAlpha=Math.min(1,Math.pow(P.pExSpec/100,.65));
+      mg.drawImage(refl,0,0);
+      mg.restore();
+    }
+  }
+
+  // ③ 縁取り（外側から太い順に上書き）
+  if(showOL) for(const o of act){
+    mg.strokeStyle=o.color; mg.lineWidth=o.w;
+    drawChars(mg,L,"stroke");
+  }
+  mg.restore();
+
+  // 手描きブラシ用「側面のみ」マスクの元: グローを含めず、押し出し(立体)+縁取りだけを
+  // 別キャンバスに単色で再描画する（mgのスナップショットだとグローの後光まで
+  // 拾ってしまい、ブラシがグローの滲みにまではみ出す不具合があったため）
+  const extrudeOnlyMask=document.createElement("canvas");
+  extrudeOnlyMask.width=cw; extrudeOnlyMask.height=ch;
+  {
+    const emg=extrudeOnlyMask.getContext("2d");
+    emg.translate(offX,offY); emg.scale(scale,scale);
+    emg.font=fontStr(L.size); emg.textBaseline="middle"; emg.textAlign="center";
+    emg.lineJoin="round"; emg.miterLimit=2;
+    if(d>0&&showEx){
+      const ea=P.pExAngle*Math.PI/180, ux2=Math.cos(ea), uy2=Math.sin(ea);
+      for(let i=d;i>=1;i--){
+        emg.fillStyle="#fff"; emg.strokeStyle="#fff";
+        if(maxOW>0){emg.lineWidth=maxOW; drawChars(emg,L,"stroke",ux2*i,uy2*i);}
+        drawChars(emg,L,"fill",ux2*i,uy2*i);
+      }
+    }
+    if(showOL) for(const o of act){ emg.strokeStyle="#fff"; emg.lineWidth=o.w; drawChars(emg,L,"stroke"); }
+  }
+
+  // ④ 面レイヤー合成
+  const face=buildFaceLayer(cw,ch,offX,offY,L,scale);
+  if(showFace) mg.drawImage(face,0,0);
+
+  // 手描きブラシ用マスク: charMask=全体（グロー+立体+縁+面）、
+  // sideMask=側面のみ（面「と」前面位置の縁取りの両方を引く＝フチにもはみ出させない）
+  const charMask=snapshotCanvas(mg.canvas);
+  const frontMask=document.createElement("canvas"); frontMask.width=cw; frontMask.height=ch;
+  {
+    const fmg=frontMask.getContext("2d");
+    fmg.translate(offX,offY); fmg.scale(scale,scale);
+    fmg.font=fontStr(L.size); fmg.textBaseline="middle"; fmg.textAlign="center";
+    fmg.lineJoin="round"; fmg.miterLimit=2;
+    if(showOL) for(const o of act){ fmg.strokeStyle=o.color; fmg.lineWidth=o.w; drawChars(fmg,L,"stroke"); }
+    fmg.setTransform(1,0,0,1,0,0);
+    fmg.drawImage(face,0,0);
+  }
+  const sideMask=snapshotCanvas(extrudeOnlyMask);
+  {
+    const sg=sideMask.getContext("2d");
+    sg.globalCompositeOperation="destination-out";
+    sg.drawImage(frontMask,0,0);
+  }
+
+  // ④.5 はみ出し稲妻（文字の上を横切って全体に走る）
+  if(P.pBolt>0 && P.pBoltOver && showFx){
+    mg.save();
+    mg.translate(offX,offY); mg.scale(scale,scale);
+    drawBolts(mg,L,true);
+    mg.restore();
+  }
+
+  // ⑤ 十字スパークル（最前面、面のエッジ優先で配置）
+  if(showFx) scatterSparkles(mg,face,cw,ch,scale);
+
+  // ⑥ 手描きブラシ（レイヤーごとに合成。金属反射は側面マスクでクリップ＝面まで明るくしない）
+  const liveLayers = currentStroke
+    ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
+    : brushLayers;
+  renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, charMask, $("brushMaskOff").checked);
+
+  // ライブプレビュー描画時のみ、ブラシのポインタ座標変換用にレイアウトを記録
+  if(mg.canvas===cv) lastLayout={offX,offY,scale,cw,ch};
+
+  return {W:cw,H:ch};
+}
+function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+/* ---------- 側面レイヤー（マスク切り出し＋環境映り込み） ----------
+   側面領域＝押し出しスタンプの和集合−本体シルエット。その中に
+   「空→地平線（シャープな暗線）→照り返し」の水平環境グラデを押し出し色から
+   自動生成して描き込み、法線ハイライト帯（ずらし差分）を重ねる。 */
+function buildSideSheen(cw,ch,offX,offY,L,scale,maxOW,ux,uy,d){
+  const la=P.pExLight*Math.PI/180;
+  const w=P.pExSpecW;
+  const mkC=()=>{const c=document.createElement("canvas");c.width=cw;c.height=ch;return c;};
+  const setupText=g=>{
+    g.setTransform(1,0,0,1,0,0);
+    g.clearRect(0,0,cw,ch);
+    g.translate(offX,offY); g.scale(scale,scale);
+    g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
+    g.lineJoin="round"; g.miterLimit=2;
+  };
+  /* 使い回しバッファ3枚（12方向ぶん毎回作るとメモリを食うため） */
+  const eC=mkC(), eg=eC.getContext("2d");
+  const sC=mkC(), sg=sC.getContext("2d");
+  const bC=mkC(), bg2=bC.getContext("2d");
+  const OFF=20000;
+  const drawSil=(g,color,dx=0,dy=0)=>{
+    g.fillStyle=color; g.strokeStyle=color;
+    if(maxOW>0){g.lineWidth=maxOW; drawChars(g,L,"stroke",dx,dy);}
+    drawChars(g,L,"fill",dx,dy);
+  };
+  const makeEdge=(dirx,diry,color,s)=>{
+    setupText(eg);
+    drawSil(eg,color);
+    eg.globalCompositeOperation="destination-out";
+    drawSil(eg,color,-dirx*s,-diry*s);
+    eg.globalCompositeOperation="source-over";
+    return eC;
+  };
+  const sweepInto=src=>{
+    sg.setTransform(1,0,0,1,0,0); sg.clearRect(0,0,cw,ch);
+    for(let i=1;i<=d;i++) sg.drawImage(src,ux*i*scale,uy*i*scale);
+    return sC;
+  };
+  const blurInto=(src,color,blur)=>{
+    bg2.setTransform(1,0,0,1,0,0); bg2.clearRect(0,0,cw,ch);
+    bg2.shadowColor=color; bg2.shadowBlur=blur*scale;
+    bg2.shadowOffsetX=OFF; bg2.shadowOffsetY=0;
+    bg2.drawImage(src,-OFF,0);
+    bg2.shadowColor="transparent";
+    return bC;
+  };
+
+  // A) 側面マスク＝スタンプ和集合−本体
+  setupText(eg); drawSil(eg,"#ffffff");
+  const mask=mkC();
+  {const g=mask.getContext("2d");
+   for(let i=1;i<=d;i++) g.drawImage(eC,ux*i*scale,uy*i*scale);
+   g.globalCompositeOperation="destination-out"; g.drawImage(eC,0,0);}
+
+  const refl=mkC(); const rg=refl.getContext("2d");
+  const c1=hex(P.pExC1), c2=hex(P.pExC2);
+  const mix=(a,b,t)=>[lerp(a[0],b[0],t)|0,lerp(a[1],b[1],t)|0,lerp(a[2],b[2],t)|0];
+  const Wt=[255,255,255], Bk=[0,0,0];
+
+  // B) 法線マップ: 12方向のエッジ帯を「光源との角度差」でクローム着色し、
+  //    遠い方向から積む。輪郭のカーブに沿って 純白→明→急落→暗黒→リム光 が回り込む。
+  const NDIR=12;
+  const dirs=[];
+  for(let k=0;k<NDIR;k++){
+    const a=k/NDIR*Math.PI*2;
+    let dd=((a-la)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    if(dd>Math.PI) dd=Math.PI*2-dd;
+    dirs.push({a,dd});
+  }
+  dirs.sort((p2,q)=>q.dd-p2.dd);
+  for(const {a,dd} of dirs){
+    const t=(Math.cos(dd)+1)/2;   // 1=光源正面, 0=真裏
+    let col;
+    if(t>.93)      col=Wt;                          // スペキュラ＝純白
+    else if(t>.7)  col=mix(c1,Wt,.35+(t-.7)*2.4);   // 明るい地色
+    else if(t>.42) col=mix(c1,Bk,(.7-t)*1.5);       // 急落
+    else if(t>.15) col=mix(c2,Bk,.5);               // 暗部＝ほぼ黒
+    else           col=mix(c1,Wt,.3);               // 真裏のリム＝環境の拾い光
+    const cs=`rgb(${col[0]},${col[1]},${col[2]})`;
+    rg.drawImage(blurInto(sweepInto(makeEdge(Math.cos(a),Math.sin(a),cs,w)),cs,Math.max(1,w*.3)),0,0);
+  }
+
+  // 側面の実在Y範囲（上向き押し出しにも対応）
+  const fromY=offY-(L.size/2)*scale-Math.max(0,-uy)*d*scale;
+  const spanY=((L.lines-1)*L.lineH+L.size)*scale+Math.abs(uy)*d*scale+2;
+
+  // D) ランダム閃き（法線追従・局所化）: ランダム方向のエッジ帯を
+  //    楕円フェードマスクで局所的に抜く＝カーブに沿った柔らかい端の白閃き
+  if(P.pExFlash>0){
+    const gr=mulberry32(P.pSeed*29+7);
+    for(let i=0;i<P.pExFlash;i++){
+      const a=la+(gr()*2-1)*1.0;             // 光源寄り±57°
+      const ew=w*(.6+gr()*.7);
+      const band=sweepInto(makeEdge(Math.cos(a),Math.sin(a),"rgba(255,255,255,.85)",ew));
+      // 楕円フェードでband断片を抜く（bCバッファ流用）
+      bg2.setTransform(1,0,0,1,0,0);
+      bg2.shadowColor="transparent"; bg2.shadowOffsetX=0; bg2.shadowBlur=0;
+      bg2.clearRect(0,0,cw,ch);
+      bg2.drawImage(band,0,0);
+      bg2.globalCompositeOperation="destination-in";
+      const x0=gr()*cw, y0=fromY+gr()*spanY;
+      const rx=cw*(.07+gr()*.14), ry=(8+gr()*18)*scale;
+      bg2.save(); bg2.translate(x0,y0); bg2.scale(rx,ry);
+      const fal=bg2.createRadialGradient(0,0,0,0,0,1);
+      fal.addColorStop(0,"rgba(255,255,255,1)");
+      fal.addColorStop(.55,"rgba(255,255,255,.85)");
+      fal.addColorStop(1,"rgba(255,255,255,0)");
+      bg2.fillStyle=fal; bg2.fillRect(-1,-1,2,2);
+      bg2.restore();
+      bg2.globalCompositeOperation="source-over";
+      rg.drawImage(bC,0,0);
+    }
+  }
+
+  // E) 側面マスクで切り出し
+  rg.globalCompositeOperation="destination-in";
+  rg.drawImage(mask,0,0);
+  return refl;
+}
+
+/* ---------- 稲妻（枝分かれ・太さ・乱れ対応） ---------- */
+function strokeBolt(g,pts,w,color,glowR){
+  g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]);
+  g.lineJoin="round"; g.lineCap="round";
+  g.strokeStyle=color; g.lineWidth=w*2.2;
+  g.shadowColor=color; g.shadowBlur=glowR;
+  g.stroke(); g.stroke(); // 2度でグロー濃く
+  g.shadowBlur=0;
+  g.strokeStyle="rgba(255,255,255,.95)"; g.lineWidth=Math.max(.8,w*.8); g.stroke();
+}
+function drawBolts(g,L,over){
+  const br=mulberry32(P.pSeed*31+P.pBolt*7);
+  const ext=over?L.size*.45:0;
+  const top=-L.size/2-ext, bot=(L.lines-1)*L.lineH+L.size/2+ext;
+  const wBase=L.size*.011*P.pBoltW;
+  const rough=P.pBoltRough/100;
+  const glowR=L.size*.12;
+  for(let b=0;b<P.pBolt;b++){
+    let bx=(br()*2-1)*L.maxW/2, by=top;
+    const pts=[[bx,by]];
+    while(by<bot){
+      bx+=(br()*2-1)*L.size*.5*rough;
+      by+=L.size*(.05+br()*.13);
+      pts.push([bx,by]);
+    }
+    strokeBolt(g,pts,wBase,P.pBoltC,glowR);
+    // 枝分かれ: 幹の途中から細い枝を斜めに
+    for(let k=0;k<P.pBoltBranch;k++){
+      const pi=1+Math.floor(br()*Math.max(1,pts.length-2));
+      let [x,y]=pts[Math.min(pi,pts.length-1)];
+      const dir=br()<.5?-1:1;
+      const bp=[[x,y]];
+      const n=2+Math.floor(br()*3);
+      for(let s=0;s<n;s++){
+        x+=dir*L.size*(.08+br()*.22)*(.5+rough);
+        y+=L.size*(.02+br()*.1);
+        bp.push([x,y]);
+      }
+      strokeBolt(g,bp,wBase*.45,P.pBoltC,glowR*.7);
+    }
+  }
+}
+
+/* ---------- 十字スパークル ---------- */
+function drawSparkle(g,x,y,r,color,rot,shape){
+  g.save(); g.translate(x,y); g.rotate(rot);
+  const [cr,cg,cb]=hex(color);
+  const lenK=P.pSparkLen/100;
+  // 暗いハロー（明色背景でも埋もれないための下敷き。白ハローの手前に薄く）
+  const dhalo=g.createRadialGradient(0,0,0,0,0,r*.75);
+  dhalo.addColorStop(0,"rgba(20,15,10,.35)");
+  dhalo.addColorStop(.5,"rgba(20,15,10,.15)");
+  dhalo.addColorStop(1,"rgba(20,15,10,0)");
+  g.fillStyle=dhalo;
+  g.beginPath(); g.arc(0,0,r*.75,0,7); g.fill();
+  // 色つきハロー
+  const halo=g.createRadialGradient(0,0,0,0,0,r*.6);
+  halo.addColorStop(0,"rgba(255,255,255,.95)");
+  halo.addColorStop(.4,`rgba(${cr},${cg},${cb},.5)`);
+  halo.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
+  g.fillStyle=halo;
+  g.beginPath(); g.arc(0,0,r*.6,0,7); g.fill();
+  const spike=(len,w,fill)=>{
+    g.beginPath();
+    g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
+    g.quadraticCurveTo(-w,0,0,-len); g.closePath();
+    g.fillStyle=fill; g.fill();
+  };
+  // 光条は「暗い縁取り版を少し太く」→「白本体」の2度描き。
+  // 明るい背景でも輪郭が立って埋もれない（Photoshopの境界線と同じ理屈）。
+  const spikePair=(len,w)=>{ spike(len,w*1.7,"rgba(15,10,5,.55)"); spike(len,w,"rgba(255,255,255,.96)"); };
+  if(shape==="dot"){
+    // ハローとコアのみ（玉ボケ）
+  }else if(shape==="star6"){
+    for(let k=0;k<3;k++){ spikePair(r*lenK,r*.075); g.rotate(Math.PI/3); }
+  }else if(shape==="star8"){
+    for(let k=0;k<4;k++){ spikePair((k%2?r*.6:r)*lenK,r*.07); g.rotate(Math.PI/4); }
+  }else if(shape==="diamond"){
+    spikePair(r*1.35*lenK,r*.05);
+    g.rotate(Math.PI/2); spikePair(r*1.35*lenK,r*.05);
+  }else{ // cross: 縦横長＋斜め45°短
+    spikePair(r*lenK,r*.085);
+    g.rotate(Math.PI/2); spikePair(r*lenK,r*.085);
+    g.rotate(Math.PI/4); spikePair(r*.45*lenK,r*.05);
+    g.rotate(Math.PI/2); spikePair(r*.45*lenK,r*.05);
+  }
+  // 中心コア
+  g.fillStyle="#ffffff";
+  g.beginPath(); g.arc(0,0,r*.07,0,7); g.fill();
+  g.restore();
+}
+function scatterSparkles(mg, face, cw, ch, scale){
+  if(P.pSparkN<=0) return;
+  const fctx=face.getContext("2d");
+  const data=fctx.getImageData(0,0,cw,ch).data;
+  const A=(x,y)=> (x<0||y<0||x>=cw||y>=ch)?0:data[((y|0)*cw+(x|0))*4+3];
+  const rnd=mulberry32(P.pSparkSeed*13+P.pSparkN);
+  const step=7*scale;
+  const edgeRate=P.pSparkEdge/100;
+  const varK=P.pSparkVar/100;
+  let placed=0, tries=0;
+  while(placed<P.pSparkN && tries<P.pSparkN*80){
+    tries++;
+    const x=rnd()*cw, y=rnd()*ch;
+    const c=A(x,y);
+    const nb=[A(x+step,y),A(x-step,y),A(x,y+step),A(x,y-step)];
+    const hasIn = c>40||nb.some(v=>v>40);
+    const hasOut = c<40||nb.some(v=>v<40);
+    if(!hasIn) continue;
+    const isEdge = hasIn&&hasOut;
+    // 配置スライダー: 100=エッジのみ、0=面全体に均等
+    if(isEdge){ if(rnd()>.15+.85*edgeRate) continue; }
+    else      { if(rnd()>(1-edgeRate)*.75+.05) continue; }
+    const r=P.pSparkSize*(1-varK*.6+rnd()*varK*1.2)*scale;
+    const shape = P.pSparkShape==="mixed"
+      ? ["cross","dot","star6"][(rnd()*3)|0] : P.pSparkShape;
+    drawSparkle(mg,x,y,r,P.pSparkC,(rnd()-.5)*.5,shape);
+    placed++;
+  }
+}
+
+/* ---------- 手描きブラシ（金属反射・スパークルを狙った場所に置く） ----------
+   金属反射（metal-hi/lo）は「基準点＋押し出し角度方向への伸び量(reach)」で保存する。
+   描画位置は毎回その時点のP.pExAngleから再計算するので、後で角度スライダーを
+   動かすとブラシ跡が自動で追従する。ドラッグ自体も角度方向へ投影してスナップ
+   させるので、フリーハンドの揺れが3D面の奥行きと整合しない問題を防ぐ。
+   スパークルは経路追従（points配列）のまま、流量=配置確率でランダム配置。
+   レイヤー: brushLayers配列（下から順、各々{id,name,visible,strokes}）。 */
+let brushLayers = [{id:1, name:"レイヤー1", visible:true, strokes:[]}];
+let activeLayerId = 1;
+let nextLayerId = 2;
+let currentStroke = null;
+let lastLayout = {offX:0, offY:0, scale:1, cw:0, ch:0};
+
+function snapshotCanvas(src){
+  const c=document.createElement("canvas"); c.width=src.width; c.height=src.height;
+  c.getContext("2d").drawImage(src,0,0);
+  return c;
+}
+
+function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
+  const g2=tg.createRadialGradient(x,y,0,x,y,r);
+  // 75%まで平坦（バキバキの硬いエッジ）→ 外側25%だけ急速フェード
+  g2.addColorStop(0, `rgba(${cr},${cg},${cb},${a})`);
+  g2.addColorStop(.75, `rgba(${cr},${cg},${cb},${a})`);
+  g2.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+  tg.fillStyle=g2;
+  tg.beginPath(); tg.arc(x,y,r,0,7); tg.fill();
+}
+
+function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, charMask, maskOff){
+  const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
+  for(const layer of layers){
+    if(!layer.visible || !layer.strokes.length) continue;
+    const metal = layer.strokes.filter(s=>s.type==="metal-hi"||s.type==="metal-mid"||s.type==="metal-lo");
+    const spark = layer.strokes.filter(s=>s.type==="spark");
+
+    if(metal.length){
+      const tmp=document.createElement("canvas"); tmp.width=mg.canvas.width; tmp.height=mg.canvas.height;
+      const tg=tmp.getContext("2d");
+      for(const st of metal){
+        const [cr,cg,cb]=hex(st.color);
+        const a=Math.max(.03, Math.pow(st.flow/100,.6)*.85);
+        const r=Math.max(1.5, st.size*scale*.5);
+        if(st.anchor){
+          // 角度追従型: 基準点から現在の押し出し角度方向へreach分だけ伸ばして描く
+          const steps=Math.max(1, Math.ceil(Math.abs(st.reach)/(st.size*.18)));
+          for(let i=0;i<=steps;i++){
+            const t=(i/steps)*st.reach;
+            const lx=st.anchor.x+t*ux, ly=st.anchor.y+t*uy;
+            drawMetalDab(tg, offX+lx*scale, offY+ly*scale, r, cr,cg,cb, a);
+          }
+        }else{
+          // 旧形式（自由曲線）互換
+          for(const p of st.points){
+            drawMetalDab(tg, offX+p.x*scale, offY+p.y*scale, r, cr,cg,cb, a);
+          }
+        }
+      }
+      if(!maskOff){
+        tg.globalCompositeOperation="destination-in";
+        tg.drawImage(sideMask,0,0);
+      }
+      mg.save(); mg.setTransform(1,0,0,1,0,0);
+      mg.drawImage(tmp,0,0);
+      mg.restore();
+    }
+
+    if(spark.length){
+      mg.save(); mg.setTransform(1,0,0,1,0,0);
+      const shapes=["cross","star6","dot"];
+      for(const st of spark){
+        const rnd=mulberry32(Math.max(1,(st.points.length*97+st.size*13+1)|0));
+        for(const p of st.points){
+          if(rnd() > st.flow/100) continue; // 流量=経路上での配置密度
+          const x=offX+p.x*scale, y=offY+p.y*scale;
+          drawSparkle(mg, x, y, st.size*scale*.8, st.color, (rnd()-.5)*.6, shapes[(rnd()*shapes.length)|0]);
+        }
+      }
+      mg.restore();
+    }
+  }
+}
+
+function screenToLocal(clientX, clientY){
+  const rect=cv.getBoundingClientRect();
+  const px=(clientX-rect.left)*(cv.width/Math.max(1,rect.width));
+  const py=(clientY-rect.top)*(cv.height/Math.max(1,rect.height));
+  return { x:(px-lastLayout.offX)/lastLayout.scale, y:(py-lastLayout.offY)/lastLayout.scale };
+}
+function activeLayer(){ return brushLayers.find(l=>l.id===activeLayerId) || brushLayers[0]; }
+
+/* ---------- レイヤーUI ---------- */
+function buildLayerUI(){
+  const box=$("layerList");
+  box.innerHTML="";
+  for(let i=brushLayers.length-1;i>=0;i--){
+    const L=brushLayers[i];
+    const row=document.createElement("div");
+    row.className="layerRow"+(L.id===activeLayerId?" active":"");
+    const vis=document.createElement("input"); vis.type="checkbox"; vis.checked=L.visible;
+    vis.addEventListener("change",()=>{ L.visible=vis.checked; commitState(); requestDraw(); });
+    const name=document.createElement("span"); name.className="layerName"; name.textContent=L.name+` (${L.strokes.length})`;
+    row.appendChild(vis); row.appendChild(name);
+    row.addEventListener("click",(e)=>{ if(e.target===vis) return; activeLayerId=L.id; buildLayerUI(); });
+    box.appendChild(row);
+  }
+}
+$("btnLayerAdd").addEventListener("click",()=>{
+  const id=nextLayerId++;
+  brushLayers.push({id,name:"レイヤー"+id,visible:true,strokes:[]});
+  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
+});
+$("btnLayerDup").addEventListener("click",()=>{
+  const src=activeLayer(); const id=nextLayerId++;
+  brushLayers.push({id,name:src.name+"のコピー",visible:true,strokes:JSON.parse(JSON.stringify(src.strokes))});
+  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
+});
+$("btnLayerDel").addEventListener("click",()=>{
+  if(brushLayers.length<=1) return;
+  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
+  brushLayers.splice(idx,1);
+  activeLayerId=brushLayers[Math.max(0,idx-1)].id;
+  buildLayerUI(); commitState(); requestDraw();
+});
+$("btnLayerUp").addEventListener("click",()=>{
+  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
+  if(idx<brushLayers.length-1){ [brushLayers[idx],brushLayers[idx+1]]=[brushLayers[idx+1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
+});
+$("btnLayerDown").addEventListener("click",()=>{
+  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
+  if(idx>0){ [brushLayers[idx],brushLayers[idx-1]]=[brushLayers[idx-1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
+});
+
+/* ---------- 描画インタラクション ---------- */
+let brushDrawing=false;
+$("brushType").addEventListener("change",()=>{
+  const t=$("brushType").value;
+  if(t==="metal-hi") $("brushColor").value="#ffffff";
+  else if(t==="metal-mid") $("brushColor").value="#d9a441";
+  else if(t==="metal-lo") $("brushColor").value="#140a04";
+  else if(t==="spark") $("brushColor").value="#ffe9c0";
+});
+$("brushMode").addEventListener("change",()=>{
+  cv.classList.toggle("brush-active", $("brushMode").checked);
+});
+function updateBrushLabel(id){
+  document.querySelector(`.val[data-for="${id}"]`).textContent = $(id).value;
+}
+$("btnSizeDown").addEventListener("click",()=>{ $("brushSize").value=Math.max(4,+$("brushSize").value-4); updateBrushLabel("brushSize"); onInput(); });
+$("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(80,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
+// brushSize/brushFlowはP側のパラメータではない(=draw()を経由しない)ため、
+// 動かした瞬間にラベルが更新されない不具合があった。専用に直接更新する。
+["brushSize","brushFlow"].forEach(id=>{
+  $(id).addEventListener("input",()=>updateBrushLabel(id));
+});
+
+cv.addEventListener("pointerdown", e=>{
+  if(!$("brushMode").checked) return;
+  e.preventDefault();
+  try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+  brushDrawing=true;
+  const p=screenToLocal(e.clientX,e.clientY);
+  const type=$("brushType").value;
+  const base={ type, color:$("brushColor").value, size:+$("brushSize").value, flow:+$("brushFlow").value };
+  if(type==="metal-hi"||type==="metal-mid"||type==="metal-lo"){
+    currentStroke={...base, anchor:p, reach:0}; // 角度追従型: 基準点のみ記録、伸びはdragで決める
+  }else{
+    currentStroke={...base, points:[p]};
+  }
+  requestDraw();
+}, {passive:false});
+cv.addEventListener("pointermove", e=>{
+  if(!brushDrawing||!currentStroke) return;
+  e.preventDefault();
+  const p=screenToLocal(e.clientX,e.clientY);
+  if(currentStroke.anchor){
+    // 現在の押し出し角度方向へドラッグを投影＝フリーハンドの揺れを角度に沿わせる
+    const ang=+$("pExAngle").value*Math.PI/180;
+    const ux=Math.cos(ang), uy=Math.sin(ang);
+    const dx=p.x-currentStroke.anchor.x, dy=p.y-currentStroke.anchor.y;
+    currentStroke.reach=dx*ux+dy*uy;
+  }else{
+    const last=currentStroke.points[currentStroke.points.length-1];
+    const minDist=Math.max(1,currentStroke.size*.12);
+    if(Math.hypot(p.x-last.x,p.y-last.y)<minDist) return;
+    currentStroke.points.push(p);
+  }
+  requestDraw();
+}, {passive:false});
+// iOS Safariはpointer/touchのpreventDefaultがpassiveリスナーだと無効になるため、
+// ブラシモード中はtouchstart/touchmoveも明示的にブロックしてページのゴム跳ね・揺れを止める
+["touchstart","touchmove"].forEach(evt=>{
+  cv.addEventListener(evt, e=>{
+    if($("brushMode").checked) e.preventDefault();
+  }, {passive:false});
+});
+function endBrushStroke(){
+  if(!brushDrawing) return;
+  brushDrawing=false;
+  const layer=activeLayer();
+  const hasContent = currentStroke && (currentStroke.anchor ? Math.abs(currentStroke.reach)>1 : currentStroke.points.length>1);
+  if(hasContent && layer){
+    if(currentStroke.type==="eraser"){
+      const er=currentStroke, rad=er.size;
+      layer.strokes = layer.strokes.map(st=>({...st,
+        points: st.points ? st.points.filter(pt=>!er.points.some(ep=>Math.hypot(pt.x-ep.x,pt.y-ep.y)<rad)) : st.points
+      })).filter(st=>!st.points || st.points.length>1);
+    }else{
+      layer.strokes.push(currentStroke);
+    }
+    commitState();
+    buildLayerUI();
+  }
+  currentStroke=null;
+  requestDraw();
+}
+cv.addEventListener("pointerup", endBrushStroke);
+cv.addEventListener("pointerleave", endBrushStroke);
+cv.addEventListener("pointercancel", endBrushStroke);
+$("btnClearBrush").addEventListener("click",()=>{
+  const layer=activeLayer();
+  if(!layer.strokes.length) return;
+  layer.strokes=[]; buildLayerUI(); commitState(); requestDraw();
+});
+
+/* ---------- ワークスペース拡大縮小 ---------- */
+function applyZoom(){
+  const z=+$("viewZoom").value/100;
+  cv.style.transform=`scale(${z})`;
+  cv.style.transformOrigin="center center";
+  $("zoomLabel").textContent=Math.round(z*100)+"%";
+}
+$("viewZoom").addEventListener("input", applyZoom);
+$("zoomOut").addEventListener("click",()=>{ $("viewZoom").value=Math.max(25,+$("viewZoom").value-25); applyZoom(); });
+$("zoomIn").addEventListener("click",()=>{ $("viewZoom").value=Math.min(400,+$("viewZoom").value+25); applyZoom(); });
+$("zoomReset").addEventListener("click",()=>{ $("viewZoom").value=100; applyZoom(); });
+
+/* ---------- プレビュー更新 ---------- */
+let rafPending=false;
+function requestDraw(){
+  if(rafPending) return;
+  rafPending=true;
+  requestAnimationFrame(()=>{
+    rafPending=false;
+    const s=draw(ctx,1,true);
+    $("sizeNote").textContent=`${s.W}×${s.H}px（×${$("expScale").value}で保存）`;
+  });
+}
+function onInput(){requestDraw();}
+
+/* ---------- 書き出し ---------- */
+$("btnExport").addEventListener("click",()=>{
+  const scale=+$("expScale").value;
+  const off=document.createElement("canvas").getContext("2d");
+  draw(off,scale,$("expBg").checked);
+  off.canvas.toBlob(b=>{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(b);
+    a.download="pachimoji.png";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  },"image/png");
+});
+
+/* ---------- プリセット ---------- */
+/* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
+const DEFAULTS={pFillRepeat:1,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
+  pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
+  pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
+  pArch:0,pTilt:0,pJitR:0,pJitY:0,pBg:"none"};
+const PRESETS = {
+  "夜職ゴールド":{pFill:"metalGold",pFillAngle:80,pFillRepeat:1,pVary:65,pMetal:55,pMetalC:"#ff9040",pLiquid:35,pLiquidR:14,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",
+    ol:[[true,"#fff6d8",8],[true,"#3a1c00",14],[true,"#ffd76a",6],[false,"#ffffff",0]],
+    pExDepth:18,pExAngle:118,pExC1:"#c08a1e",pExC2:"#241000",pBevel:4,pExBand:1,pExSpec:85,pExLight:305,pExSpecW:12,pExFlash:8,pRim:60,pRimC:"#ffcc66",
+    pGlowOn:true,pGlowC:"#ffb020",pGlowBlur:20,pGlossOn:true,pGlossPos:55,pGlossW:22,pGlossA:45,
+    pSparkN:24,pSparkSize:15,pSparkC:"#fff3c8",pSparkShape:"mixed",pArch:6,pJitR:5,pJitY:9},
+  "水銀":{pFill:"metalSilver",pFillAngle:90,pFillRepeat:1,pLiquid:90,pLiquidR:20,pLiquidBands:2,pLiquidC1:"#f4f8ff",pLiquidC2:"#20262f",pMetal:55,pMetalC:"#bcd8ff",
+    ol:[[true,"#eef2f8",9],[true,"#14171e",15],[false,"#ffffff",0],[false,"#ffffff",0]],
+    pExDepth:14,pExAngle:110,pExC1:"#c8d2e0",pExC2:"#2a303c",pBevel:2,pExSpec:95,pExLight:315,pExSpecW:13,pExFlash:10,pRim:55,pRimC:"#cfe4ff",
+    pGlowOn:false,pGlossOn:false,pSparkN:14,pSparkSize:14,pSparkC:"#ffffff",pJitR:3,pJitY:5},
+  "金BONUS":{pFill:"metalGold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",
+    ol:[[true,"#ffffff",26],[true,"#1a0e00",18],[true,"#ffd76a",10],[true,"#5a2d00",4]],
+    pExDepth:16,pExAngle:115,pExC1:"#b8811a",pExC2:"#3a2000",pBevel:3,pExBand:2,pExSpec:75,pExLight:315,pExSpecW:9,
+    pGlowOn:true,pGlowC:"#ff8c00",pGlowBlur:24,pGlossOn:true,pGlossPos:35,pGlossW:18,pGlossA:55,
+    pArch:12,pSparkN:10,pSparkSize:12,pSparkC:"#fff3b8"},
+  "激アツ炎":{pFill:"crimson",pFillAngle:90,pTex:"fire",pTexInt:70,pTexScale:4,
+    ol:[[true,"#000000",24],[true,"#ffd76a",14],[true,"#7a1500",6],[false,"#ffffff",0]],
+    pExDepth:12,pExAngle:100,pExC1:"#5e0d00",pExC2:"#1c0300",pBevel:2,
+    pGlowOn:true,pGlowC:"#ff3300",pGlowBlur:34,
+    pJitR:8,pJitY:10,pBg:"burst",pBgC1:"#ffdd55",pBgC2:"#b31200"},
+  "溶岩":{pFill:"lava",pFillAngle:90,pTex:"lava",pTexInt:85,pTexScale:5,
+    ol:[[true,"#000000",22],[true,"#ff9d2e",10],[true,"#3d0500",5],[false,"#ffffff",0]],
+    pExDepth:14,pExAngle:110,pExC1:"#3d0500",pExC2:"#120100",pBevel:2,
+    pGlowOn:true,pGlowC:"#ff6a00",pGlowBlur:28,pJitR:5,pJitY:6},
+  "雷撃":{pFill:"silver",pFillAngle:90,pFillRepeat:3,
+    ol:[[true,"#0a1830",24],[true,"#9adfff",12],[true,"#112233",5],[false,"#ffffff",0]],
+    pExDepth:12,pExAngle:120,pExC1:"#2a3b55",pExC2:"#0a1220",pBevel:3,pExBand:2,
+    pGlowOn:true,pGlowC:"#4db8ff",pGlowBlur:30,pGlossOn:true,pGlossPos:60,pGlossW:14,pGlossA:65,
+    pBolt:5,pBoltC:"#9adfff",pBoltW:5,pBoltBranch:3,pBoltRough:65,pBoltOver:true,pJitR:6,pJitY:8,pSparkN:14,pSparkC:"#c8ecff",pSparkSize:13},
+  "銀メタル":{pFill:"metalSilver",pFillAngle:90,pFillRepeat:2,
+    ol:[[true,"#ffffff",22],[true,"#0d0d12",14],[true,"#c8d2de",7],[false,"#ffffff",0]],
+    pExDepth:14,pExAngle:115,pExC1:"#5a6472",pExC2:"#1a1e26",pBevel:4,pExBand:3,pMetal:45,
+    pGlossOn:true,pGlossPos:30,pGlossW:20,pGlossA:70},
+  "虹プレミア":{pFill:"rainbow",pFillAngle:25,pTex:"plasma",pTexInt:30,pTexScale:3,
+    ol:[[true,"#ffffff",24],[true,"#12001c",16],[true,"#ffd76a",8],[false,"#ffffff",0]],
+    pExDepth:14,pExAngle:115,pExC1:"#3d2a55",pExC2:"#140a20",pBevel:3,
+    pGlowOn:true,pGlowC:"#ff4ddb",pGlowBlur:30,pGlossOn:true,pGlossPos:45,pGlossW:16,pGlossA:60,
+    pArch:10,pJitR:4,pJitY:5,pSparkN:16,pSparkC:"#ffffff"},
+  "ピンクグロス":{pFill:"chromePink",pFillAngle:90,pTex:"glitter",pTexInt:45,pTexScale:6,pMetal:60,pMetalC:"#ff9ad2",pVary:45,pLiquid:50,pLiquidR:16,pLiquidBands:1,pLiquidC1:"#ffe8f5",pLiquidC2:"#8f0f5e",
+    ol:[[true,"#5c0338",20],[true,"#ff9ad2",12],[true,"#ffffff",5],[false,"#ffffff",0]],
+    pExDepth:16,pExAngle:105,pExC1:"#c4177e",pExC2:"#4a0129",pBevel:3,pExBand:2,pExSpec:80,pExLight:300,pExSpecW:10,
+    pGlowOn:true,pGlowC:"#ff66c4",pGlowBlur:26,pGlossOn:true,pGlossPos:30,pGlossW:16,pGlossA:50,
+    pSparkN:30,pSparkSize:15,pSparkC:"#ffd7f0",pSparkShape:"star6",pArch:8,pJitR:6,pJitY:8},
+  "ダイヤ":{pFill:"diamond",pFillAngle:90,pTex:"facet",pTexInt:60,pTexScale:6,pMetal:45,pMetalC:"#bcd8ff",pVary:40,pLiquid:25,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#43506b",
+    ol:[[true,"#0a1c33",22],[true,"#9cc8f0",10],[true,"#ffffff",4],[false,"#ffffff",0]],
+    pExDepth:18,pExAngle:110,pExC1:"#34517a",pExC2:"#0a1626",pBevel:3,pExBand:3,pExSpec:75,pExLight:315,pExSpecW:10,
+    pGlowOn:true,pGlowC:"#bfe0ff",pGlowBlur:22,pGlossOn:true,pGlossPos:40,pGlossW:14,pGlossA:60,
+    pSparkN:38,pSparkSize:16,pSparkC:"#dff0ff",pSparkShape:"star8",pSparkLen:130,pJitR:5,pJitY:7},
+};
+function applyPreset(name){
+  const p={...DEFAULTS, ...PRESETS[name]};
+  for(const [k,v] of Object.entries(p)){
+    if(k==="ol"){
+      v.forEach((o,i)=>{$("olOn"+i).checked=o[0]; $("olC"+i).value=o[1]; $("olW"+i).value=o[2];});
+    }else{
+      const el=$(k); if(!el) continue;
+      if(el.type==="checkbox") el.checked=v; else el.value=v;
+    }
+  }
+  commitState();
+  requestDraw();
+}
+Object.keys(PRESETS).forEach(name=>{
+  const b=document.createElement("button");
+  b.textContent=name; b.addEventListener("click",()=>applyPreset(name));
+  $("presets").appendChild(b);
+});
+
+/* ---------- アンドゥ・リドゥ ---------- */
+const undoStack=[], redoStack=[]; let lastState=null;
+function snapshot(){
+  const s={};
+  document.querySelectorAll("#panel input[id], #panel select[id], #panel textarea[id]").forEach(el=>{
+    s[el.id]= el.type==="checkbox" ? el.checked : el.value;
+  });
+  s.__brushLayers = brushLayers;
+  s.__activeLayerId = activeLayerId;
+  s.__nextLayerId = nextLayerId;
+  return JSON.stringify(s);
+}
+function applyState(json){
+  const s=JSON.parse(json);
+  for(const [id,v] of Object.entries(s)){
+    if(id==="__brushLayers"){
+      brushLayers = (Array.isArray(v)&&v.length) ? v : [{id:1,name:"レイヤー1",visible:true,strokes:[]}];
+      continue;
+    }
+    if(id==="__activeLayerId"){ activeLayerId=v; continue; }
+    if(id==="__nextLayerId"){ nextLayerId=v; continue; }
+    if(id==="__brush"){ // 旧フォーマット互換: フラットなストローク配列を単一レイヤーへ変換
+      if(Array.isArray(v)&&v.length) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:v}];
+      continue;
+    }
+    const el=$(id); if(!el) continue;
+    if(el.type==="checkbox") el.checked=v; else el.value=v;
+  }
+  if(!brushLayers.some(l=>l.id===activeLayerId)) activeLayerId=brushLayers[0].id;
+  buildLayerUI();
+  requestDraw();
+}
+function updateUndoBtns(){
+  $("btnUndo").disabled=!undoStack.length;
+  $("btnRedo").disabled=!redoStack.length;
+}
+function commitState(){
+  const now=snapshot();
+  if(now===lastState) return;
+  if(lastState){ undoStack.push(lastState); if(undoStack.length>60) undoStack.shift(); }
+  lastState=now; redoStack.length=0; updateUndoBtns();
+}
+$("btnUndo").addEventListener("click",()=>{
+  if(!undoStack.length) return;
+  redoStack.push(lastState); lastState=undoStack.pop();
+  applyState(lastState); updateUndoBtns();
+});
+$("btnRedo").addEventListener("click",()=>{
+  if(!redoStack.length) return;
+  undoStack.push(lastState); lastState=redoStack.pop();
+  applyState(lastState); updateUndoBtns();
+});
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){
+    e.preventDefault();
+    (e.shiftKey?$("btnRedo"):$("btnUndo")).click();
+  }
+});
+// 全コントロールの確定時（change）にスナップショット
+document.querySelectorAll("#panel input[id], #panel select[id], #panel textarea[id]")
+  .forEach(el=>el.addEventListener("change",commitState));
+
+/* ---------- 設定の保存・読込・URL共有 ---------- */
+$("btnSaveJson").addEventListener("click",()=>{
+  const blob=new Blob([snapshot()],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="pachimoji-settings.json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+});
+$("btnLoadJson").addEventListener("click",()=>$("fileJson").click());
+$("fileJson").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{ applyState(rd.result); commitState(); }
+    catch(err){ alert("設定ファイルを読み込めませんでした"); }
+  };
+  rd.readAsText(f);
+  e.target.value="";
+});
+$("btnShareUrl").addEventListener("click",async()=>{
+  const enc=btoa(unescape(encodeURIComponent(snapshot())));
+  const url=location.origin+location.pathname+"#p="+enc;
+  try{ await navigator.clipboard.writeText(url); $("btnShareUrl").textContent="コピーした！";
+    setTimeout(()=>$("btnShareUrl").textContent="URLをコピー",1500); }
+  catch(err){ prompt("このURLをコピーしてください", url); }
+});
+// URLハッシュから設定を復元
+(function(){
+  const m=location.hash.match(/#p=(.+)/);
+  if(!m) return;
+  try{ applyState(decodeURIComponent(escape(atob(m[1])))); }catch(e){}
+})();
+
+/* ---------- 初期化 ---------- */
+buildOutlineUI();
+buildLayerUI();
+applyZoom();
+lastState=snapshot(); updateUndoBtns();
+[...rangeIds,...otherIds].forEach(id=>$(id).addEventListener("input",onInput));
+$("expScale").addEventListener("input",requestDraw);
+
+/* フォント読込 → 再描画 */
+const FONT_LIST=['400 40px "Reggae One"','400 40px "RocknRoll One"','400 40px "Rampart One"',
+  '800 40px "Shippori Mincho B1"','800 40px "Kaisei Tokumin"','400 40px "DotGothic16"'];
+Promise.all(FONT_LIST.map(f=>document.fonts.load(f).catch(()=>[])))
+  .then(rs=>{
+    const ok=rs.filter(r=>r.length).length;
+    $("fontStatus").textContent = ok>0 ? `Webフォント ${ok}/${FONT_LIST.length} 読込済` : "Webフォント読込失敗（システムフォントで動作）";
+    requestDraw();
+  });
+document.fonts.ready.then(requestDraw);
+requestDraw();
+</script>
+</body>
+</html>
