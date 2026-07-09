@@ -43,6 +43,7 @@ header .tag{color:var(--sub); font-size:11px;}
   flex:1; display:flex; flex-direction:column; min-width:0;
 }
 #stage{
+  position:relative;
   flex:1; display:flex; align-items:center; justify-content:center;
   overflow:auto; padding:18px; overscroll-behavior:contain;
   background:
@@ -52,6 +53,15 @@ header .tag{color:var(--sub); font-size:11px;}
   background-size:22px 22px; background-position:0 0,11px 11px;
 }
 #cv{max-width:100%; max-height:100%; image-rendering:auto;}
+/* ブラシガイド円: フォトショ風に、今のブラシサイズをカーソル位置に丸で表示する。
+   pointer-events:noneで下のcanvasへのタッチ操作を邪魔しない。二重の縁取りで
+   明るい背景・暗い背景どちらの上でも視認できるようにしてある。 */
+#brushCursor{
+  position:absolute; left:0; top:0; pointer-events:none;
+  border:1.5px solid rgba(255,255,255,.9); border-radius:50%;
+  box-shadow:0 0 0 1px rgba(0,0,0,.6), inset 0 0 0 1px rgba(0,0,0,.6);
+  transform:translate(-50%,-50%); display:none; z-index:5;
+}
 #exportBar{
   display:flex; gap:8px; align-items:center; flex-wrap:wrap;
   padding:10px 14px; border-top:1px solid var(--line); background:var(--panel);
@@ -181,7 +191,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <span id="zoomLabel">100%</span>
       <button class="ghost" id="zoomReset">リセット</button>
     </div>
-    <div id="stage"><canvas id="cv"></canvas></div>
+    <div id="stage"><canvas id="cv"></canvas><div id="brushCursor"></div></div>
     <div id="exportBar">
       <button class="primary" id="btnExport">透過PNGを保存</button>
       <label class="chk" style="margin-top:0"><input type="checkbox" id="expBg"><span>背景を含める</span></label>
@@ -449,7 +459,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="gradient">グラデ（放射）</option>
         </select>
       </div>
-      <div class="row"><label id="pBgC1Label">色</label><input type="color" id="pBgC1" value="#ffdd55">
+      <div class="row"><label>色</label><input type="color" id="pBgC1" value="#ffdd55">
         <input type="color" id="pBgC2" value="#b31200"></div>
     </div></details>
   </div>
@@ -1225,7 +1235,10 @@ function applyTrapezoid(mg, cw, ch, quality, contentHalfW, offX){
   snapshot.getContext("2d").drawImage(mg.canvas,0,0);
   mg.setTransform(1,0,0,1,0,0);
   mg.clearRect(0,0,cw,ch);
-  const STRIP=2;
+  // 帯の太さはキャンバス高さに応じて自動調整（呼び出し回数をおよそ一定に保つ）。
+  // 固定2pxのままだと書き出し倍率3倍・大きめフォント時に数千回のdrawImage呼び出しになり、
+  // 書き出しボタンを押した瞬間に一瞬フリーズしたようになってしまうため。
+  const STRIP=Math.max(2, Math.round(ch/300));
   const srcL=Math.max(0,offX-contentHalfW), srcR=Math.min(cw,offX+contentHalfW);
   const leftPadW=srcL, rightPadW=cw-srcR;
   for(let y=0;y<ch;y+=STRIP){
@@ -1435,9 +1448,19 @@ function draw(targetCtx, scale, withBg, quality){
 
   // ⑥ 手描きブラシ（レイヤーごとに合成。金属反射は側面マスクでクリップ＝面まで明るくしない）
   if(hasBrushWork){
-    const liveLayers = currentStroke
-      ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
-      : brushLayers;
+    let liveLayers;
+    if(currentStroke && currentStroke.type==="eraser"){
+      // 消しゴムはドラッグ中に「消える結果」をその場でプレビューする。
+      // 描画対象になるストローク種別(metal/spark/bolt)には該当しないため、
+      // 何もしないと指を離すまで消えたかどうか分からず不安になる。
+      liveLayers = brushLayers.map(l => l.id===activeLayerId
+        ? {...l, strokes: eraseFromStrokes(l.strokes, currentStroke)}
+        : l);
+    }else{
+      liveLayers = currentStroke
+        ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
+        : brushLayers;
+    }
     renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value);
   }
 
@@ -1975,6 +1998,7 @@ $("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDr
 $("brushMask").addEventListener("change",()=>requestDraw());
 $("brushMode").addEventListener("change",()=>{
   cv.classList.toggle("brush-active", $("brushMode").checked);
+  if(!$("brushMode").checked) $("brushCursor").style.display="none";
 });
 function updateBrushLabel(id){
   const el=document.querySelector(`.val[data-for="${id}"]`);
@@ -1987,6 +2011,32 @@ $("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(80,+
 ["brushSize","brushFlow","brushSpacing","brushScatter"].forEach(id=>{
   $(id).addEventListener("input",()=>updateBrushLabel(id));
 });
+
+/* ---------- ブラシガイド円（サイズを触ってる間だけキャンバス中央に表示） ----------
+   スマホではホバーの概念がなく「カーソル追従」は分かりにくかったため、
+   もっと単純に「サイズスライダー（+/-ボタン含む）を操作してる間だけ、
+   キャンバス中央にその大きさの丸を出す」方式にした。指を離すと少し待って消える。
+   実際のdrawMetalDab等がr=size*scale*.5を半径として使っているため、
+   直径=brushSizeの値としてガイド円のサイズを合わせてある。 */
+let brushGuideHideTimer=null;
+function showBrushSizeGuide(){
+  const cursor=$("brushCursor");
+  const rect=cv.getBoundingClientRect();
+  const stageEl=$("stage"), stageRect=stageEl.getBoundingClientRect();
+  const scalePxPerLocal=(rect.width/Math.max(1,cv.width))*(lastLayout.scale||1);
+  const diameter=Math.max(6, (+$("brushSize").value)*scalePxPerLocal);
+  cursor.style.width=diameter+"px";
+  cursor.style.height=diameter+"px";
+  // キャンバスの中央（stage基準の座標）に固定表示
+  cursor.style.left=(rect.left-stageRect.left+stageEl.scrollLeft+rect.width/2)+"px";
+  cursor.style.top=(rect.top-stageRect.top+stageEl.scrollTop+rect.height/2)+"px";
+  cursor.style.display="block";
+  clearTimeout(brushGuideHideTimer);
+  brushGuideHideTimer=setTimeout(()=>{ cursor.style.display="none"; },700);
+}
+$("brushSize").addEventListener("input",showBrushSizeGuide);
+$("btnSizeDown").addEventListener("click",showBrushSizeGuide);
+$("btnSizeUp").addEventListener("click",showBrushSizeGuide);
 
 cv.addEventListener("pointerdown", e=>{
   if(!$("brushMode").checked) return;
@@ -2032,6 +2082,29 @@ cv.addEventListener("pointermove", e=>{
     if($("brushMode").checked) e.preventDefault();
   }, {passive:false});
 });
+// 消しゴムの判定ロジック本体。endBrushStroke(確定時)とdraw()内のライブプレビューの
+// 両方から同じ関数を呼ぶことで、ドラッグ中に見えているプレビューと指を離した後の
+// 結果が食い違わないようにする。
+function eraseFromStrokes(strokes, er){
+  const rad=er.size;
+  const ang=+$("pExAngle").value*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
+  return strokes.filter(st=>{
+    if(st.anchor){
+      // 金属反射(anchor+reach)は現在の押し出し角度でのなぞり線をサンプリングして判定
+      const steps=Math.max(1, Math.ceil(Math.abs(st.reach)/(st.size*.18)));
+      for(let i=0;i<=steps;i++){
+        const t=(i/steps)*st.reach;
+        const lx=st.anchor.x+t*ux, ly=st.anchor.y+t*uy;
+        if(er.points.some(ep=>Math.hypot(lx-ep.x,ly-ep.y)<rad)) return false; // 触れたら丸ごと削除
+      }
+      return true;
+    }
+    return true; // points配列型は次のmapで個別に間引く
+  }).map(st=>{
+    if(!st.points) return st;
+    return {...st, points: st.points.filter(pt=>!er.points.some(ep=>Math.hypot(pt.x-ep.x,pt.y-ep.y)<rad))};
+  }).filter(st=>!st.points || st.points.length>0); // 完全に消えた分だけ除外（未接触の単発は残す）
+}
 function endBrushStroke(){
   if(!brushDrawing) return;
   brushDrawing=false;
@@ -2044,24 +2117,7 @@ function endBrushStroke(){
   );
   if(hasContent && layer){
     if(currentStroke.type==="eraser"){
-      const er=currentStroke, rad=er.size;
-      // 金属反射(anchor+reach)は現在の押し出し角度でのなぞり線をサンプリングして判定
-      const ang=+$("pExAngle").value*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
-      layer.strokes = layer.strokes.filter(st=>{
-        if(st.anchor){
-          const steps=Math.max(1, Math.ceil(Math.abs(st.reach)/(st.size*.18)));
-          for(let i=0;i<=steps;i++){
-            const t=(i/steps)*st.reach;
-            const lx=st.anchor.x+t*ux, ly=st.anchor.y+t*uy;
-            if(er.points.some(ep=>Math.hypot(lx-ep.x,ly-ep.y)<rad)) return false; // 触れたら丸ごと削除
-          }
-          return true;
-        }
-        return true; // points配列型は次のmapで個別に間引く
-      }).map(st=>{
-        if(!st.points) return st;
-        return {...st, points: st.points.filter(pt=>!er.points.some(ep=>Math.hypot(pt.x-ep.x,pt.y-ep.y)<rad))};
-      }).filter(st=>!st.points || st.points.length>0); // 完全に消えた分だけ除外（未接触の単発は残す）
+      layer.strokes = eraseFromStrokes(layer.strokes, currentStroke);
     }else{
       layer.strokes.push(currentStroke);
     }
@@ -2086,6 +2142,9 @@ function applyZoom(){
   cv.style.transform=`scale(${z})`;
   cv.style.transformOrigin="center center";
   $("zoomLabel").textContent=Math.round(z*100)+"%";
+  // ズーム倍率が変わると必要な解像度も変わるため、再描画をリクエストする
+  // （rAFベースの間引きが効くので、スライダーを素早く動かしても呼び過ぎにはならない）
+  requestDraw("low");
 }
 $("viewZoom").addEventListener("input", applyZoom);
 $("zoomOut").addEventListener("click",()=>{ $("viewZoom").value=Math.max(25,+$("viewZoom").value-25); applyZoom(); });
@@ -2114,6 +2173,14 @@ $("btnFillReset").addEventListener("click",()=>{
    フル解像度の完成品に差し替える。「触ってる最中に完成品は要らない」設計。 */
 let rafPending=false, nextQuality="high", idleTimer=null;
 const PREVIEW_LOW_SCALE=0.6;
+// ズーム倍率を反映した解像度。今までは#cvをCSS transform:scaleで見た目だけ拡大していたため、
+// 100%を超えるズームで元の解像度のままボケていた。高品質描画(quality="high")の時だけ、
+// ズームした分だけ実際のキャンバス解像度も上げる（100%表示時は今までと同じ負荷のまま＝
+// devicePixelRatioまでは掛けない。常時retina解像度で描くと平常時の負荷が増えてしまうため）。
+function currentPreviewScale(){
+  const zoomFrac=Math.max(1,(+$("viewZoom").value/100));
+  return Math.min(4, zoomFrac);
+}
 function requestDraw(quality){
   if(quality==="low"||quality==="high") nextQuality=quality;
   if(!rafPending){
@@ -2122,10 +2189,12 @@ function requestDraw(quality){
       rafPending=false;
       const q=nextQuality; nextQuality="high";
       // ブラシ操作中は跡がボケないよう等倍。スライダー操作中のみ0.6に落とす。
-      const pScale=(q==="low" && !brushDrawing) ? PREVIEW_LOW_SCALE : 1;
+      const pScale=(q==="low" && !brushDrawing) ? PREVIEW_LOW_SCALE : currentPreviewScale();
       const s=draw(ctx,pScale,true,q);
       if(q==="high"){
-        $("sizeNote").textContent=`${s.W}×${s.H}px（×${$("expScale").value}で保存）`;
+        // sizeNoteは「書き出しサイズの目安(等倍)」を示す欄なので、ズームで内部解像度を
+        // 上げていてもズームに影響されないよう pScale で割り戻した値を表示する。
+        $("sizeNote").textContent=`${Math.round(s.W/pScale)}×${Math.round(s.H/pScale)}px（×${$("expScale").value}で保存）`;
       }
     });
   }
