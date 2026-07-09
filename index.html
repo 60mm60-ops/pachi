@@ -1461,7 +1461,7 @@ function draw(targetCtx, scale, withBg, quality){
         ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
         : brushLayers;
     }
-    renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value);
+    renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value, quality);
   }
 
   // ライブプレビュー描画時のみ、ブラシのポインタ座標変換用にレイアウトを記録
@@ -1751,7 +1751,7 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
   tg.beginPath(); tg.arc(x,y,r,0,7); tg.fill();
 }
 
-function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, maskMode){
+function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, maskMode, quality){
   // maskMode: "face"=面のみ / "full"=面＋縁 / "off"=クリップなし
   const clipCanvas = maskMode==="face" ? faceMask : frontMask; // 中心判定・ピクセルクリップの基準
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
@@ -1797,10 +1797,14 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
       const tmp=document.createElement("canvas"); tmp.width=cwv; tmp.height=chv;
       const tg=tmp.getContext("2d");
       tg.globalCompositeOperation="lighter"; // 粒同士は加算
-      // 中心判定用マスク（面のみ or 面＋縁、グロー抜き）。OFF時は判定せず全部描く
+      // 中心判定用マスク（面のみ or 面＋縁、グロー抜き）。OFF時は判定せず全部描く。
+      // getImageDataはキャンバス全体を読み出す重い処理で、これを毎フレーム(ドラッグ中)
+      // 呼んでいたのが「スパークルブラシがもっさりする」の主因だった。ドラッグ中(low)は
+      // マスク判定を省略して全部描き、指を離した本描画(high)でだけ正確に絞り込む。
       let fmData=null;
       const onFace=(sx,sy)=>{
         if(maskMode==="off") return true;
+        if(quality!=="high") return true;
         if(!fmData) fmData=clipCanvas.getContext("2d").getImageData(0,0,cwv,chv).data;
         const ix=sx|0, iy=sy|0;
         if(ix<0||iy<0||ix>=cwv||iy>=chv) return false;
@@ -1833,14 +1837,19 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
           }
         }
         for(const s of stamps){
-          if(st.flow<100 && rnd() > st.flow/100) continue; // 流量=密度の微調整（間引き）
-          const off=(rnd()*2-1)*scatter*st.size; // 散布: 経路の法線方向へばらす
+          // 散布: 経路の法線方向へばらす（0ならぴったり線、大きいほどランダムに散る）
+          const off=(rnd()*2-1)*scatter*st.size;
           const lx=s.x+s.nx*off, ly=s.y+s.ny*off;
           const sx=offX+lx*scale, sy=offY+ly*scale;
           if(!onFace(sx,sy)) continue; // 中心が面上のスタンプだけ（光条のはみ出しは許容）
           const shp = shapeSel==="mixed" ? shapes[(rnd()*shapes.length)|0] : shapeSel;
+          // 流量=各スタンプの不透明度（フォトショ同様）。以前は確率で間引いていたため、
+          // なぞった場所にスタンプが「来ない」ことがあり、狙った通りに置けない不満の原因だった。
+          // 今はなぞった場所には必ずスタンプが置かれ、流量が低いほど薄く重なる。
+          tg.globalAlpha=Math.max(0.05, st.flow/100);
           drawSparkle(tg, sx, sy, st.size*scale*.8, st.color, (rnd()-.5)*.6, shp);
         }
+        tg.globalAlpha=1;
       }
       mg.save(); mg.setTransform(1,0,0,1,0,0); mg.globalCompositeOperation="lighter";
       mg.drawImage(tmp,0,0); mg.restore();
@@ -1992,7 +2001,9 @@ function updateBrushRows(){
 }
 // 系統を変えたら推奨色から始める / 種類変更は同系統内なので色維持
 $("brushCategory").addEventListener("change",()=>{ brushColorTouched=false; fillBrushTypes(); onInput(); });
-$("brushType").addEventListener("change",()=>{ applyBrushTypeColor(); updateBrushRows(); });
+// 種類(明/中間/暗など)を選び直すのは「この色にしたい」という明確な操作なので、
+// 以前どこかで色を触っていたとしても、ここでは必ずその種類の色を適用する。
+$("brushType").addEventListener("change",()=>{ brushColorTouched=false; applyBrushTypeColor(); updateBrushRows(); });
 // 色ピッカーを触ったら以後尊重。プレビューも即更新
 $("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDraw("low"); });
 $("brushMask").addEventListener("change",()=>requestDraw());
@@ -2088,22 +2099,48 @@ cv.addEventListener("pointermove", e=>{
 function eraseFromStrokes(strokes, er){
   const rad=er.size;
   const ang=+$("pExAngle").value*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
-  return strokes.filter(st=>{
+  const touched=(x,y)=>er.points.some(ep=>Math.hypot(x-ep.x,y-ep.y)<rad);
+  const result=[];
+  for(const st of strokes){
     if(st.anchor){
-      // 金属反射(anchor+reach)は現在の押し出し角度でのなぞり線をサンプリングして判定
+      // 金属反射(anchor+reach)は「触れたらストローク全部削除」だと、長い線の
+      // 端をちょっと消しただけで全体が消えてしまい狙った通りにならない。
+      // レンダリング時と同じ間隔でダブ位置をサンプリングし、消しゴムに触れなかった
+      // 点だけをpoints形式(旧形式互換、金属反射も点ごと独立描画に対応済み)として
+      // 残すことで、触れた部分だけを部分的に消せるようにする。
       const steps=Math.max(1, Math.ceil(Math.abs(st.reach)/(st.size*.18)));
+      const remain=[];
       for(let i=0;i<=steps;i++){
         const t=(i/steps)*st.reach;
         const lx=st.anchor.x+t*ux, ly=st.anchor.y+t*uy;
-        if(er.points.some(ep=>Math.hypot(lx-ep.x,ly-ep.y)<rad)) return false; // 触れたら丸ごと削除
+        if(!touched(lx,ly)) remain.push({x:lx,y:ly});
       }
-      return true;
+      if(remain.length>0){
+        const {anchor,reach,...rest}=st;
+        result.push({...rest, points:remain});
+      }
+      // 全点が触れた場合はremain.length===0となり、何も残らず削除される
+    }else if(st.points){
+      // スパーク・稲妻は隣接する点同士を結んでスタンプ位置や稲妻の折れ線を作るため、
+      // 途中の点だけを単純に間引くと、消した場所をまたいで前後の点が直接つながり
+      // 「幽霊の橋」のように消したはずの場所に線が復活してしまう。
+      // 消えた場所でストロークそのものを分割し、別々のストロークにすることで防ぐ。
+      const segments=[[]];
+      for(const pt of st.points){
+        if(touched(pt.x,pt.y)){
+          if(segments[segments.length-1].length>0) segments.push([]);
+        }else{
+          segments[segments.length-1].push(pt);
+        }
+      }
+      for(const seg of segments){
+        if(seg.length>0) result.push({...st, points:seg});
+      }
+    }else{
+      result.push(st);
     }
-    return true; // points配列型は次のmapで個別に間引く
-  }).map(st=>{
-    if(!st.points) return st;
-    return {...st, points: st.points.filter(pt=>!er.points.some(ep=>Math.hypot(pt.x-ep.x,pt.y-ep.y)<rad))};
-  }).filter(st=>!st.points || st.points.length>0); // 完全に消えた分だけ除外（未接触の単発は残す）
+  }
+  return result;
 }
 function endBrushStroke(){
   if(!brushDrawing) return;
