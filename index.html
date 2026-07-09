@@ -1668,13 +1668,32 @@ function endBrushStroke(){
   if(!brushDrawing) return;
   brushDrawing=false;
   const layer=activeLayer();
-  const hasContent = currentStroke && (currentStroke.anchor ? Math.abs(currentStroke.reach)>1 : currentStroke.points.length>1);
+  const cs=currentStroke;
+  const hasContent = cs && (
+    cs.anchor         ? Math.abs(cs.reach)>1 :   // 金属反射: 押し出し方向へ伸ばす
+    cs.type==="spark" ? cs.points.length>=1 :    // スパークル: タップ1発でポンと置ける
+    cs.points.length>1                            // 稲妻・消しゴム: ドラッグが要る
+  );
   if(hasContent && layer){
     if(currentStroke.type==="eraser"){
       const er=currentStroke, rad=er.size;
-      layer.strokes = layer.strokes.map(st=>({...st,
-        points: st.points ? st.points.filter(pt=>!er.points.some(ep=>Math.hypot(pt.x-ep.x,pt.y-ep.y)<rad)) : st.points
-      })).filter(st=>!st.points || st.points.length>1);
+      // 金属反射(anchor+reach)は現在の押し出し角度でのなぞり線をサンプリングして判定
+      const ang=+$("pExAngle").value*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
+      layer.strokes = layer.strokes.filter(st=>{
+        if(st.anchor){
+          const steps=Math.max(1, Math.ceil(Math.abs(st.reach)/(st.size*.18)));
+          for(let i=0;i<=steps;i++){
+            const t=(i/steps)*st.reach;
+            const lx=st.anchor.x+t*ux, ly=st.anchor.y+t*uy;
+            if(er.points.some(ep=>Math.hypot(lx-ep.x,ly-ep.y)<rad)) return false; // 触れたら丸ごと削除
+          }
+          return true;
+        }
+        return true; // points配列型は次のmapで個別に間引く
+      }).map(st=>{
+        if(!st.points) return st;
+        return {...st, points: st.points.filter(pt=>!er.points.some(ep=>Math.hypot(pt.x-ep.x,pt.y-ep.y)<rad))};
+      }).filter(st=>!st.points || st.points.length>0); // 完全に消えた分だけ除外（未接触の単発は残す）
     }else{
       layer.strokes.push(currentStroke);
     }
@@ -1755,64 +1774,65 @@ const DEFAULTS={pFillRepeat:1,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
   pArch:0,pTilt:0,pJitR:0,pJitY:0,pBg:"none"};
 const PRESETS = {
-  "夜職ゴールド":{pFill:"metalGold",pFillAngle:80,pFillRepeat:1,pVary:65,pMetal:55,pMetalC:"#ff9040",pLiquid:35,pLiquidR:14,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",
-    ol:[[true,"#fff6d8",8],[true,"#3a1c00",14],[true,"#ffd76a",6],[false,"#ffffff",0]],
-    pExDepth:18,pExAngle:118,pExC1:"#c08a1e",pExC2:"#241000",pBevel:4,pExBand:1,pExSpec:85,pExLight:305,pExSpecW:12,pExFlash:8,pRim:60,pRimC:"#ffcc66",
-    pGlowOn:true,pGlowC:"#ffb020",pGlowBlur:20,pGlossOn:true,pGlossPos:55,pGlossW:22,pGlossA:45,
-    pSparkN:24,pSparkSize:15,pSparkC:"#fff3c8",pSparkShape:"mixed",pArch:6,pJitR:5,pJitY:9},
-  "水銀":{pFill:"metalSilver",pFillAngle:90,pFillRepeat:1,pLiquid:90,pLiquidR:20,pLiquidBands:2,pLiquidC1:"#f4f8ff",pLiquidC2:"#20262f",pMetal:55,pMetalC:"#bcd8ff",
-    ol:[[true,"#eef2f8",9],[true,"#14171e",15],[false,"#ffffff",0],[false,"#ffffff",0]],
-    pExDepth:14,pExAngle:110,pExC1:"#c8d2e0",pExC2:"#2a303c",pBevel:2,pExSpec:95,pExLight:315,pExSpecW:13,pExFlash:10,pRim:55,pRimC:"#cfe4ff",
-    pGlowOn:false,pGlossOn:false,pSparkN:14,pSparkSize:14,pSparkC:"#ffffff",pJitR:3,pJitY:5},
-  "金BONUS":{pFill:"metalGold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",
-    ol:[[true,"#ffffff",26],[true,"#1a0e00",18],[true,"#ffd76a",10],[true,"#5a2d00",4]],
-    pExDepth:16,pExAngle:115,pExC1:"#b8811a",pExC2:"#3a2000",pBevel:3,pExBand:2,pExSpec:75,pExLight:315,pExSpecW:9,
-    pGlowOn:true,pGlowC:"#ff8c00",pGlowBlur:24,pGlossOn:true,pGlossPos:35,pGlossW:18,pGlossA:55,
-    pArch:12,pSparkN:10,pSparkSize:12,pSparkC:"#fff3b8"},
-  "激アツ炎":{pFill:"crimson",pFillAngle:90,pTex:"fire",pTexInt:70,pTexScale:4,
-    ol:[[true,"#000000",24],[true,"#ffd76a",14],[true,"#7a1500",6],[false,"#ffffff",0]],
-    pExDepth:12,pExAngle:100,pExC1:"#5e0d00",pExC2:"#1c0300",pBevel:2,
-    pGlowOn:true,pGlowC:"#ff3300",pGlowBlur:34,
-    pJitR:8,pJitY:10,pBg:"burst",pBgC1:"#ffdd55",pBgC2:"#b31200"},
-  "溶岩":{pFill:"lava",pFillAngle:90,pTex:"lava",pTexInt:85,pTexScale:5,
-    ol:[[true,"#000000",22],[true,"#ff9d2e",10],[true,"#3d0500",5],[false,"#ffffff",0]],
-    pExDepth:14,pExAngle:110,pExC1:"#3d0500",pExC2:"#120100",pBevel:2,
-    pGlowOn:true,pGlowC:"#ff6a00",pGlowBlur:28,pJitR:5,pJitY:6},
-  "雷撃":{pFill:"silver",pFillAngle:90,pFillRepeat:3,
-    ol:[[true,"#0a1830",24],[true,"#9adfff",12],[true,"#112233",5],[false,"#ffffff",0]],
-    pExDepth:12,pExAngle:120,pExC1:"#2a3b55",pExC2:"#0a1220",pBevel:3,pExBand:2,
-    pGlowOn:true,pGlowC:"#4db8ff",pGlowBlur:30,pGlossOn:true,pGlossPos:60,pGlossW:14,pGlossA:65,
-    pBolt:5,pBoltC:"#9adfff",pBoltW:5,pBoltBranch:3,pBoltRough:65,pBoltOver:true,pJitR:6,pJitY:8,pSparkN:14,pSparkC:"#c8ecff",pSparkSize:13},
-  "銀メタル":{pFill:"metalSilver",pFillAngle:90,pFillRepeat:2,
-    ol:[[true,"#ffffff",22],[true,"#0d0d12",14],[true,"#c8d2de",7],[false,"#ffffff",0]],
-    pExDepth:14,pExAngle:115,pExC1:"#5a6472",pExC2:"#1a1e26",pBevel:4,pExBand:3,pMetal:45,
-    pGlossOn:true,pGlossPos:30,pGlossW:20,pGlossA:70},
-  "虹プレミア":{pFill:"rainbow",pFillAngle:25,pTex:"plasma",pTexInt:30,pTexScale:3,
-    ol:[[true,"#ffffff",24],[true,"#12001c",16],[true,"#ffd76a",8],[false,"#ffffff",0]],
-    pExDepth:14,pExAngle:115,pExC1:"#3d2a55",pExC2:"#140a20",pBevel:3,
-    pGlowOn:true,pGlowC:"#ff4ddb",pGlowBlur:30,pGlossOn:true,pGlossPos:45,pGlossW:16,pGlossA:60,
-    pArch:10,pJitR:4,pJitY:5,pSparkN:16,pSparkC:"#ffffff"},
-  "ピンクグロス":{pFill:"chromePink",pFillAngle:90,pTex:"glitter",pTexInt:45,pTexScale:6,pMetal:60,pMetalC:"#ff9ad2",pVary:45,pLiquid:50,pLiquidR:16,pLiquidBands:1,pLiquidC1:"#ffe8f5",pLiquidC2:"#8f0f5e",
-    ol:[[true,"#5c0338",20],[true,"#ff9ad2",12],[true,"#ffffff",5],[false,"#ffffff",0]],
-    pExDepth:16,pExAngle:105,pExC1:"#c4177e",pExC2:"#4a0129",pBevel:3,pExBand:2,pExSpec:80,pExLight:300,pExSpecW:10,
-    pGlowOn:true,pGlowC:"#ff66c4",pGlowBlur:26,pGlossOn:true,pGlossPos:30,pGlossW:16,pGlossA:50,
-    pSparkN:30,pSparkSize:15,pSparkC:"#ffd7f0",pSparkShape:"star6",pArch:8,pJitR:6,pJitY:8},
-  "ダイヤ":{pFill:"diamond",pFillAngle:90,pTex:"facet",pTexInt:60,pTexScale:6,pMetal:45,pMetalC:"#bcd8ff",pVary:40,pLiquid:25,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#43506b",
-    ol:[[true,"#0a1c33",22],[true,"#9cc8f0",10],[true,"#ffffff",4],[false,"#ffffff",0]],
-    pExDepth:18,pExAngle:110,pExC1:"#34517a",pExC2:"#0a1626",pBevel:3,pExBand:3,pExSpec:75,pExLight:315,pExSpecW:10,
-    pGlowOn:true,pGlowC:"#bfe0ff",pGlowBlur:22,pGlossOn:true,pGlossPos:40,pGlossW:14,pGlossA:60,
-    pSparkN:38,pSparkSize:16,pSparkC:"#dff0ff",pSparkShape:"star8",pSparkLen:130,pJitR:5,pJitY:7},
+  "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
+    pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",pMetal:0,
+    ol:[[true,"#ffffff",22],[true,"#1a0e00",18],[true,"#ffd76a",10],[true,"#5a2d00",4]],
+    pExDepth:16,pExAngle:115,pExC1:"#b8811a",pExC2:"#3a2000",pBevel:3,pExBand:2,pExSpec:75,pExLight:315,pExSpecW:9,pExFlash:6,pRim:0,
+    pGlowOn:false,pGlossOn:true,pGlossPos:35,pGlossW:18,pGlossA:55,
+    pArch:12,pSparkN:10,pSparkShape:"cross",pSparkSize:12,pSparkC:"#fff3b8",
+    brush:[
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:-4.18,y:-35.01},reach:139.60},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:35.16,y:-38.68},reach:155.89},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:70.82,y:-27.14},reach:149.61},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:118.03,y:4.34},reach:184.98},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:126.42,y:-19.79},reach:196.33},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:154.22,y:-40.25},reach:197.40},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:202.48,y:6.96},reach:172.30},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:215.59,y:41.58},reach:134.15},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:-100.70,y:23.74},reach:161.62},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:-174.66,y:65.19},reach:141.38},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:-225.54,y:-36.06},reach:166.35},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:-78.67,y:15.88},reach:154.15},
+      {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:18.90,y:-73.30},reach:174.84}
+    ]},
+  "夜職ゴールド":{pText:"夜職ゴールド",pFont:"Shippori Mincho B1",pSpacing:-26,
+    pFill:"metalGold",pFillAngle:80,pFillRepeat:1,pVary:65,pMetal:55,pMetalC:"#ff9040",pLiquid:35,pLiquidR:14,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",
+    ol:[[true,"#7a4a00",10],[true,"#3a1c00",7],[true,"#fdc700",6],[false,"#ffffff",0]],
+    pExDepth:18,pExAngle:118,pExC1:"#c08a1e",pExC2:"#241000",pBevel:4,pExBand:1,pExSpec:85,pExLight:318,pExSpecW:5,pExFlash:17,pRim:80,pRimC:"#ffcc66",
+    pGlowOn:false,pGlossOn:true,pGlossPos:49,pGlossW:22,pGlossA:45,
+    pBolt:2,pBoltC:"#d19d01",pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,
+    pSparkN:8,pSparkSize:15,pSparkC:"#fff3c8",pSparkShape:"mixed",pArch:6,pJitR:5,pJitY:9},
+  "激アツ炎":{pText:"激アツ炎",pFont:"system-heavy",pSpacing:3,pLineH:80,
+    pFill:"crimson",pFillAngle:90,pFillRepeat:1,pTex:"fire",pTexInt:70,pTexScale:4,
+    ol:[[true,"#000000",18],[true,"#ffd76a",7],[true,"#7a1500",6],[false,"#ffffff",0]],
+    pExDepth:12,pExAngle:100,pExC1:"#5e0d00",pExC2:"#1c0300",pBevel:2,pExFlash:6,
+    pGlowOn:true,pGlowC:"#ff3300",pGlowBlur:18,
+    pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:1,pBg:"none"},
+  "溶岩":{pText:"溶岩",pFont:"Rampart One",pSize:185,pSpacing:-23,pLineH:80,
+    pFill:"lava",pFillAngle:26,pFillRepeat:4,pTex:"lava",pTexInt:100,pTexScale:5,pVary:16,
+    ol:[[true,"#e22400",7],[true,"#fff2d5",4],[true,"#000000",2],[true,"#5c0701",0]],
+    pExDepth:12,pExAngle:93,pExC1:"#e22400",pExC2:"#120100",pBevel:4,pExFlash:6,
+    pGlowOn:false,
+    pArch:0,pTilt:0,pJitR:5,pJitY:6,pJitSeed:1},
 };
 function applyPreset(name){
   const p={...DEFAULTS, ...PRESETS[name]};
   for(const [k,v] of Object.entries(p)){
     if(k==="ol"){
       v.forEach((o,i)=>{$("olOn"+i).checked=o[0]; $("olC"+i).value=o[1]; $("olW"+i).value=o[2];});
+    }else if(k==="brush"){
+      // プリセット付属の手描きブラシストローク（金属反射の手仕上げなど）を1レイヤーとして反映
+      brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:JSON.parse(JSON.stringify(v))}];
+      activeLayerId=1; nextLayerId=2;
     }else{
       const el=$(k); if(!el) continue;
       if(el.type==="checkbox") el.checked=v; else el.value=v;
     }
   }
+  if(!("brush" in p)) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:[]}]; // ブラシ無指定なら初期化
+  brushColorTouched=true; // プリセットの色を推奨色で上書きさせない
+  fillBrushTypes();
+  buildLayerUI();
   commitState();
   requestDraw();
 }
