@@ -75,7 +75,14 @@ details[open] summary::before{transform:rotate(90deg);}
 .row{display:flex; align-items:center; gap:8px; margin-top:9px;}
 .row label{width:86px; flex-shrink:0; color:var(--sub); font-size:12px;}
 .row input[type=range]{flex:1; accent-color:var(--gold); min-width:0;}
-.row .val{width:42px; text-align:right; font-variant-numeric:tabular-nums; color:var(--txt); font-size:12px;}
+.val{
+  width:42px; text-align:right; font-variant-numeric:tabular-nums; color:var(--txt); font-size:12px;
+  background:var(--panel2); border:1px solid transparent; border-radius:5px; padding:3px 4px;
+  font-family:inherit; -moz-appearance:textfield;
+}
+.val::-webkit-outer-spin-button, .val::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+.val:focus{outline:none; border-color:var(--gold);}
+.oslot .val{width:30px;}
 .row input[type=color]{
   width:32px; height:26px; border:1px solid var(--line); border-radius:6px;
   background:none; padding:1px; cursor:pointer;
@@ -119,7 +126,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 /* outline slot */
 .oslot{display:flex; align-items:center; gap:7px; margin-top:8px;}
 .oslot input[type=range]{flex:1; accent-color:var(--gold); min-width:0;}
-.oslot .val{width:30px; text-align:right; font-size:12px; color:var(--txt);}
 
 @media (max-width:760px){
   #main{flex-direction:column;}
@@ -191,9 +197,9 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="DotGothic16">ドットゴシック16</option>
         </select>
       </div>
-      <div class="row"><label>サイズ</label><input type="range" id="pSize" min="40" max="300" value="150"><span class="val" data-for="pSize"></span></div>
-      <div class="row"><label>字間</label><input type="range" id="pSpacing" min="-30" max="60" value="0"><span class="val" data-for="pSpacing"></span></div>
-      <div class="row"><label>行間</label><input type="range" id="pLineH" min="80" max="160" value="105"><span class="val" data-for="pLineH"></span></div>
+      <div class="row"><label>サイズ</label><input type="range" id="pSize" min="40" max="300" value="150"><input type="number" class="val" data-for="pSize"></div>
+      <div class="row"><label>字間</label><input type="range" id="pSpacing" min="-30" max="60" value="0"><input type="number" class="val" data-for="pSpacing"></div>
+      <div class="row"><label>行間</label><input type="range" id="pLineH" min="80" max="160" value="105"><input type="number" class="val" data-for="pLineH"></div>
     </div></details>
 
     <details open><summary>プリセット</summary><div class="sec">
@@ -202,7 +208,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
     </div></details>
 
     <details open><summary>塗り（面）</summary><div class="sec">
-      <p class="hint">文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「水銀」は液体クローム（ぼかし→急峻カーブ）、「輝きの暴れ」は文字ごとにグラデ位相を乱す。</p>
+      <p class="hint">文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「水銀」は液体クローム（ぼかし→急峻カーブ）、「輝きの暴れ」は文字ごとにグラデ位相を乱す。「色相/彩度/明るさ」はどのグラデにも後から掛けられる調整＝プリセットの色が強すぎる時などに。</p>
       <div class="row"><label>グラデ</label>
         <select id="pFill">
           <option value="metalGold">リアルメタル金</option>
@@ -214,6 +220,8 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="lava">溶岩レッド</option>
           <option value="crimson">激アツ赤</option>
           <option value="rainbow">虹</option>
+          <option value="rainbowVivid">激烈虹（原色バキバキ）</option>
+          <option value="rainbowStripe">虹ストライプ（縞）</option>
           <option value="chromePink">クロームピンク</option>
           <option value="chromeBlue">クロームブルー</option>
           <option value="diamond">ダイヤ（白銀）</option>
@@ -223,8 +231,21 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row" id="customFillRow" style="display:none"><label>カスタム色</label>
         <input type="color" id="pFillC1" value="#ffe37a"><input type="color" id="pFillC2" value="#b34700">
       </div>
-      <div class="row"><label>角度</label><input type="range" id="pFillAngle" min="0" max="360" value="90"><span class="val" data-for="pFillAngle"></span></div>
-      <div class="row"><label>繰り返し</label><input type="range" id="pFillRepeat" min="1" max="6" value="1"><span class="val" data-for="pFillRepeat"></span></div>
+      <div class="row"><label>角度</label><input type="range" id="pFillAngle" min="0" max="360" value="90"><input type="number" class="val" data-for="pFillAngle"></div>
+      <div class="row" style="gap:6px">
+        <label style="width:86px;flex-shrink:0"></label>
+        <button class="ghost" id="btnAngleH" style="padding:5px 10px">→ 横</button>
+        <button class="ghost" id="btnAngleV" style="padding:5px 10px">↓ 縦</button>
+        <button class="ghost" id="btnAngleD" style="padding:5px 10px">↘ 斜め</button>
+      </div>
+      <div class="row"><label>繰り返し</label><input type="range" id="pFillRepeat" min="1" max="6" value="1"><input type="number" class="val" data-for="pFillRepeat"></div>
+      <div class="row"><label>色相</label><input type="range" id="pFillHue" min="-180" max="180" value="0"><input type="number" class="val" data-for="pFillHue"></div>
+      <div class="row"><label>彩度</label><input type="range" id="pFillSat" min="0" max="200" value="100"><input type="number" class="val" data-for="pFillSat"></div>
+      <div class="row"><label>明るさ</label><input type="range" id="pFillLight" min="-50" max="50" value="0"><input type="number" class="val" data-for="pFillLight"></div>
+      <div class="row">
+        <label style="width:86px;flex-shrink:0"></label>
+        <button class="ghost" id="btnFillReset" style="padding:5px 10px">色味リセット</button>
+      </div>
       <div class="row"><label>テクスチャ</label>
         <select id="pTex">
           <option value="none">なし</option>
@@ -233,18 +254,23 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="plasma">プラズマ雲</option>
           <option value="glitter">ラメ（グリッター）</option>
           <option value="facet">ダイヤカット（多面体）</option>
+          <option value="gem">カラーストーン（散りばめ）</option>
         </select>
       </div>
-      <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><span class="val" data-for="pTexInt"></span></div>
-      <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="10" value="4"><span class="val" data-for="pTexScale"></span></div>
-      <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><span class="val" data-for="pVary"></span></div>
-      <div class="row"><label>水銀</label><input type="range" id="pLiquid" min="0" max="100" value="0"><span class="val" data-for="pLiquid"></span></div>
+      <div class="row" id="gemColorRow" style="display:none"><label>石の色</label>
+        <input type="color" id="pGemColor" value="#ffffff">
+        <label class="chk" style="margin:0 0 0 4px"><input type="checkbox" id="pGemRandom"><span>石ごとにランダム色</span></label>
+      </div>
+      <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
+      <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="10" value="4"><input type="number" class="val" data-for="pTexScale"></div>
+      <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><input type="number" class="val" data-for="pVary"></div>
+      <div class="row"><label>水銀</label><input type="range" id="pLiquid" min="0" max="100" value="0"><input type="number" class="val" data-for="pLiquid"></div>
       <div class="row"><label>水銀色 明/暗</label><input type="color" id="pLiquidC1" value="#ffffff"><input type="color" id="pLiquidC2" value="#2a3140"></div>
-      <div class="row"><label>丸み</label><input type="range" id="pLiquidR" min="4" max="60" value="14"><span class="val" data-for="pLiquidR"></span></div>
-      <div class="row"><label>反射縞</label><input type="range" id="pLiquidBands" min="1" max="4" value="2"><span class="val" data-for="pLiquidBands"></span></div>
-      <div class="row"><label>メタルツヤ</label><input type="range" id="pMetal" min="0" max="100" value="0"><span class="val" data-for="pMetal"></span></div>
+      <div class="row"><label>丸み</label><input type="range" id="pLiquidR" min="4" max="60" value="14"><input type="number" class="val" data-for="pLiquidR"></div>
+      <div class="row"><label>反射縞</label><input type="range" id="pLiquidBands" min="1" max="4" value="2"><input type="number" class="val" data-for="pLiquidBands"></div>
+      <div class="row"><label>メタルツヤ</label><input type="range" id="pMetal" min="0" max="100" value="0"><input type="number" class="val" data-for="pMetal"></div>
       <div class="row"><label>映り込み色</label><input type="color" id="pMetalC" value="#ffb060"></div>
-      <div class="row"><label>シード</label><input type="range" id="pSeed" min="1" max="99" value="7"><span class="val" data-for="pSeed"></span></div>
+      <div class="row"><label>シード</label><input type="range" id="pSeed" min="1" max="99" value="7"><input type="number" class="val" data-for="pSeed"></div>
     </div></details>
 
     <details open><summary>縁取り（外側から）</summary><div class="sec" id="outlineSec">
@@ -254,18 +280,18 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 
     <details open><summary>立体押し出し</summary><div class="sec">
       <p class="hint">文字の厚み（側面）。ずらしコピーの積層＝パチ文字職人の力技をコード化。「側面ツヤ」が金属光沢の本体。</p>
-      <div class="row"><label>深さ</label><input type="range" id="pExDepth" min="0" max="40" value="14"><span class="val" data-for="pExDepth"></span></div>
-      <div class="row"><label>方向</label><input type="range" id="pExAngle" min="0" max="360" value="115"><span class="val" data-for="pExAngle"></span></div>
+      <div class="row"><label>深さ</label><input type="range" id="pExDepth" min="0" max="40" value="14"><input type="number" class="val" data-for="pExDepth"></div>
+      <div class="row"><label>方向</label><input type="range" id="pExAngle" min="0" max="360" value="115"><input type="number" class="val" data-for="pExAngle"></div>
       <div class="row"><label>色（手前）</label><input type="color" id="pExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="pExC2" value="#2b1600"></div>
-      <div class="row"><label>ベベル</label><input type="range" id="pBevel" min="0" max="10" value="3"><span class="val" data-for="pBevel"></span></div>
-      <div class="row"><label>側面バンド</label><input type="range" id="pExBand" min="0" max="4" value="0"><span class="val" data-for="pExBand"></span></div>
-      <div class="row"><label>側面ツヤ</label><input type="range" id="pExSpec" min="0" max="100" value="0"><span class="val" data-for="pExSpec"></span></div>
+      <div class="row"><label>ベベル</label><input type="range" id="pBevel" min="0" max="10" value="3"><input type="number" class="val" data-for="pBevel"></div>
+      <div class="row"><label>側面バンド</label><input type="range" id="pExBand" min="0" max="4" value="0"><input type="number" class="val" data-for="pExBand"></div>
+      <div class="row"><label>側面ツヤ</label><input type="range" id="pExSpec" min="0" max="100" value="0"><input type="number" class="val" data-for="pExSpec"></div>
       <label class="chk"><input type="checkbox" id="pExRefl" checked><span>側面メタル縞（映り込み風バンディング）</span></label>
-      <div class="row"><label>ランダム閃き</label><input type="range" id="pExFlash" min="0" max="20" value="6"><span class="val" data-for="pExFlash"></span></div>
-      <div class="row"><label>照り返し</label><input type="range" id="pRim" min="0" max="100" value="0"><span class="val" data-for="pRim"></span></div>
+      <div class="row"><label>ランダム閃き</label><input type="range" id="pExFlash" min="0" max="20" value="6"><input type="number" class="val" data-for="pExFlash"></div>
+      <div class="row"><label>照り返し</label><input type="range" id="pRim" min="0" max="100" value="0"><input type="number" class="val" data-for="pRim"></div>
       <div class="row"><label>照り返し色</label><input type="color" id="pRimC" value="#ffcc66"></div>
-      <div class="row"><label>光源角度</label><input type="range" id="pExLight" min="0" max="360" value="315"><span class="val" data-for="pExLight"></span></div>
-      <div class="row"><label>ツヤ幅</label><input type="range" id="pExSpecW" min="2" max="30" value="14"><span class="val" data-for="pExSpecW"></span></div>
+      <div class="row"><label>光源角度</label><input type="range" id="pExLight" min="0" max="360" value="315"><input type="number" class="val" data-for="pExLight"></div>
+      <div class="row"><label>ツヤ幅</label><input type="range" id="pExSpecW" min="2" max="30" value="14"><input type="number" class="val" data-for="pExSpecW"></div>
     </div></details>
 
     <details open><summary>✏️ ブラシで直描き</summary><div class="sec">
@@ -291,14 +317,14 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="mixed">ミックス</option>
         </select>
       </div>
-      <div class="row" id="brushSpacingRow"><label>間隔</label><input type="range" id="brushSpacing" min="10" max="200" value="60"><span class="val" data-for="brushSpacing"></span></div>
-      <div class="row" id="brushScatterRow"><label>散布</label><input type="range" id="brushScatter" min="0" max="120" value="0"><span class="val" data-for="brushScatter"></span></div>
+      <div class="row" id="brushSpacingRow"><label>間隔</label><input type="range" id="brushSpacing" min="10" max="200" value="60"><input type="number" class="val" data-for="brushSpacing"></div>
+      <div class="row" id="brushScatterRow"><label>散布</label><input type="range" id="brushScatter" min="0" max="120" value="0"><input type="number" class="val" data-for="brushScatter"></div>
       <div class="row"><label>サイズ</label>
         <button class="ghost" id="btnSizeDown" style="padding:4px 10px">−</button>
         <input type="range" id="brushSize" min="4" max="80" value="20" style="flex:1">
         <button class="ghost" id="btnSizeUp" style="padding:4px 10px">＋</button>
-        <span class="val" data-for="brushSize"></span></div>
-      <div class="row"><label>流量</label><input type="range" id="brushFlow" min="1" max="100" value="40"><span class="val" data-for="brushFlow"></span></div>
+        <input type="number" class="val" data-for="brushSize"></div>
+      <div class="row"><label>流量</label><input type="range" id="brushFlow" min="1" max="100" value="40"><input type="number" class="val" data-for="brushFlow"></div>
       <div class="row"><label>色</label><input type="color" id="brushColor" value="#ffffff"></div>
       <div class="row"><label>描画範囲</label>
         <select id="brushMask">
@@ -326,18 +352,18 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <p class="hint">グロー・光沢・稲妻・スパークル。PSの光彩（外側）＋自作ブラシに相当。</p>
       <label class="chk"><input type="checkbox" id="pGlowOn" checked><span>外側グロー</span></label>
       <div class="row"><label>グロー色</label><input type="color" id="pGlowC" value="#ff8c00">
-        <input type="range" id="pGlowBlur" min="2" max="60" value="24" style="flex:1"><span class="val" data-for="pGlowBlur"></span></div>
+        <input type="range" id="pGlowBlur" min="2" max="60" value="24" style="flex:1"><input type="number" class="val" data-for="pGlowBlur"></div>
       <label class="chk"><input type="checkbox" id="pGlossOn" checked><span>光沢スイープ（斜め帯）</span></label>
-      <div class="row"><label>位置</label><input type="range" id="pGlossPos" min="0" max="100" value="35"><span class="val" data-for="pGlossPos"></span></div>
-      <div class="row"><label>幅</label><input type="range" id="pGlossW" min="4" max="60" value="18"><span class="val" data-for="pGlossW"></span></div>
-      <div class="row"><label>不透明度</label><input type="range" id="pGlossA" min="0" max="100" value="55"><span class="val" data-for="pGlossA"></span></div>
-      <div class="row"><label>稲妻</label><input type="range" id="pBolt" min="0" max="10" value="0"><span class="val" data-for="pBolt"></span></div>
+      <div class="row"><label>位置</label><input type="range" id="pGlossPos" min="0" max="100" value="35"><input type="number" class="val" data-for="pGlossPos"></div>
+      <div class="row"><label>幅</label><input type="range" id="pGlossW" min="4" max="60" value="18"><input type="number" class="val" data-for="pGlossW"></div>
+      <div class="row"><label>不透明度</label><input type="range" id="pGlossA" min="0" max="100" value="55"><input type="number" class="val" data-for="pGlossA"></div>
+      <div class="row"><label>稲妻</label><input type="range" id="pBolt" min="0" max="10" value="0"><input type="number" class="val" data-for="pBolt"></div>
       <div class="row"><label>稲妻色</label><input type="color" id="pBoltC" value="#9adfff">
-        <label style="width:auto">太さ</label><input type="range" id="pBoltW" min="1" max="10" value="4" style="flex:1"><span class="val" data-for="pBoltW"></span></div>
-      <div class="row"><label>枝分かれ</label><input type="range" id="pBoltBranch" min="0" max="5" value="2"><span class="val" data-for="pBoltBranch"></span></div>
-      <div class="row"><label>乱れ</label><input type="range" id="pBoltRough" min="10" max="100" value="50"><span class="val" data-for="pBoltRough"></span></div>
+        <label style="width:auto">太さ</label><input type="range" id="pBoltW" min="1" max="10" value="4" style="flex:1"><input type="number" class="val" data-for="pBoltW"></div>
+      <div class="row"><label>枝分かれ</label><input type="range" id="pBoltBranch" min="0" max="5" value="2"><input type="number" class="val" data-for="pBoltBranch"></div>
+      <div class="row"><label>乱れ</label><input type="range" id="pBoltRough" min="10" max="100" value="50"><input type="number" class="val" data-for="pBoltRough"></div>
       <label class="chk"><input type="checkbox" id="pBoltOver"><span>文字からはみ出す（最前面に走らせる）</span></label>
-      <div class="row"><label>スパークル</label><input type="range" id="pSparkN" min="0" max="60" value="0"><span class="val" data-for="pSparkN"></span></div>
+      <div class="row"><label>スパークル</label><input type="range" id="pSparkN" min="0" max="60" value="0"><input type="number" class="val" data-for="pSparkN"></div>
       <div class="row"><label>形状</label>
         <select id="pSparkShape">
           <option value="cross">十字（4条＋斜め）</option>
@@ -348,21 +374,41 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="mixed">ミックス</option>
         </select>
       </div>
-      <div class="row"><label>大きさ</label><input type="range" id="pSparkSize" min="4" max="40" value="14"><span class="val" data-for="pSparkSize"></span></div>
-      <div class="row"><label>光条の長さ</label><input type="range" id="pSparkLen" min="50" max="220" value="100"><span class="val" data-for="pSparkLen"></span></div>
-      <div class="row"><label>ばらつき</label><input type="range" id="pSparkVar" min="0" max="100" value="60"><span class="val" data-for="pSparkVar"></span></div>
-      <div class="row"><label>エッジ配置</label><input type="range" id="pSparkEdge" min="0" max="100" value="70"><span class="val" data-for="pSparkEdge"></span></div>
+      <div class="row"><label>大きさ</label><input type="range" id="pSparkSize" min="4" max="40" value="14"><input type="number" class="val" data-for="pSparkSize"></div>
+      <div class="row"><label>光条の長さ</label><input type="range" id="pSparkLen" min="50" max="220" value="100"><input type="number" class="val" data-for="pSparkLen"></div>
+      <div class="row"><label>ばらつき</label><input type="range" id="pSparkVar" min="0" max="100" value="60"><input type="number" class="val" data-for="pSparkVar"></div>
+      <div class="row"><label>エッジ配置</label><input type="range" id="pSparkEdge" min="0" max="100" value="70"><input type="number" class="val" data-for="pSparkEdge"></div>
       <div class="row"><label>スパーク色</label><input type="color" id="pSparkC" value="#ffd7f0">
-        <label style="width:auto">配置</label><input type="range" id="pSparkSeed" min="1" max="99" value="5" style="flex:1"><span class="val" data-for="pSparkSeed"></span></div>
+        <label style="width:auto">配置</label><input type="range" id="pSparkSeed" min="1" max="99" value="5" style="flex:1"><input type="number" class="val" data-for="pSparkSeed"></div>
     </div></details>
 
     <details><summary>変形</summary><div class="sec">
-      <p class="hint">アーチ・傾き・文字ごとの暴れ。パチ文字らしい躍動はここ。</p>
-      <div class="row"><label>アーチ</label><input type="range" id="pArch" min="-60" max="60" value="0"><span class="val" data-for="pArch"></span></div>
-      <div class="row"><label>傾き</label><input type="range" id="pTilt" min="-30" max="30" value="0"><span class="val" data-for="pTilt"></span></div>
-      <div class="row"><label>暴れ・回転</label><input type="range" id="pJitR" min="0" max="20" value="0"><span class="val" data-for="pJitR"></span></div>
-      <div class="row"><label>暴れ・上下</label><input type="range" id="pJitY" min="0" max="30" value="0"><span class="val" data-for="pJitY"></span></div>
-      <div class="row"><label>暴れシード</label><input type="range" id="pJitSeed" min="1" max="99" value="3"><span class="val" data-for="pJitSeed"></span></div>
+      <p class="hint">文字ごとの配置を連続的に変化させる。パチ文字らしい躍動はここ。「アーチ」は今までどおりの放物線、「扇形」は真円弧、「パース」は片側から迫り出してくる遠近感。</p>
+      <div class="row"><label>モード</label>
+        <select id="pTransformMode">
+          <option value="arch">アーチ（放物線）</option>
+          <option value="fan">扇形（真円弧）</option>
+          <option value="perspective">パース（迫り出し）</option>
+          <option value="none">なし</option>
+        </select>
+      </div>
+      <div class="row" id="archRow"><label>アーチ</label><input type="range" id="pArch" min="-60" max="60" value="0"><input type="number" class="val" data-for="pArch"></div>
+      <div class="row" id="fanRow"><label>半径</label><input type="range" id="pFanRadius" min="-800" max="800" value="300"><input type="number" class="val" data-for="pFanRadius"></div>
+      <p class="hint" id="fanHint" style="display:none">正＝ドーム状（中央が上がる）、負＝谷状（中央が下がる）。絶対値が小さいほどきつく曲がる。</p>
+      <div class="row" id="perspRow1"><label>方向角度</label><input type="range" id="pPerspAngle" min="0" max="360" value="45"><input type="number" class="val" data-for="pPerspAngle"></div>
+      <div class="row" id="perspRow2"><label>開始サイズ</label><input type="range" id="pPerspFrom" min="30" max="150" value="60"><input type="number" class="val" data-for="pPerspFrom"></div>
+      <div class="row" id="perspRow3"><label>終了サイズ</label><input type="range" id="pPerspTo" min="50" max="250" value="130"><input type="number" class="val" data-for="pPerspTo"></div>
+      <div class="row" id="perspRow4"><label>迫り出し量</label><input type="range" id="pPerspDrift" min="0" max="100" value="20"><input type="number" class="val" data-for="pPerspDrift"></div>
+      <p class="hint" id="perspHint" style="display:none">方向角度0＝右へ、90＝下へ。「45」で左上始点→右下へ迫り出す見た目になる。</p>
+      <div class="row"><label>傾き</label><input type="range" id="pTilt" min="-30" max="30" value="0"><input type="number" class="val" data-for="pTilt"></div>
+      <div class="row"><label>全体回転</label><input type="range" id="pRotate" min="-60" max="60" value="0"><input type="number" class="val" data-for="pRotate"></div>
+      <p class="hint">「傾き」は平行四辺形に歪む効果（イタリック体的）。「全体回転」は文字全部をそのまま剛体として回す（勢いのある斜め配置はこちら）。</p>
+      <div class="row"><label>台形・上幅</label><input type="range" id="pTrapTop" min="50" max="160" value="100"><input type="number" class="val" data-for="pTrapTop"></div>
+      <div class="row"><label>台形・下幅</label><input type="range" id="pTrapBottom" min="50" max="160" value="100"><input type="number" class="val" data-for="pTrapBottom"></div>
+      <p class="hint">上下の幅を別々に変えて台形（遠近感のある看板文字風）にする。上100/下60なら下すぼまり、上60/下100なら末広がり。</p>
+      <div class="row"><label>暴れ・回転</label><input type="range" id="pJitR" min="0" max="20" value="0"><input type="number" class="val" data-for="pJitR"></div>
+      <div class="row"><label>暴れ・上下</label><input type="range" id="pJitY" min="0" max="30" value="0"><input type="number" class="val" data-for="pJitY"></div>
+      <div class="row"><label>暴れシード</label><input type="range" id="pJitSeed" min="1" max="99" value="3"><input type="number" class="val" data-for="pJitSeed"></div>
     </div></details>
 
     <details><summary>表示・設定の保存</summary><div class="sec">
@@ -387,11 +433,12 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>タイプ</label>
         <select id="pBg">
           <option value="none">なし（透過）</option>
-          <option value="burst">爆発（放射グラデ）</option>
-          <option value="rays">集中線</option>
+          <option value="solid">単色ベタ塗り</option>
+          <option value="gradient">グラデ（放射）</option>
         </select>
       </div>
-      <div class="row"><label>色</label><input type="color" id="pBgC1" value="#ffdd55"><input type="color" id="pBgC2" value="#b31200"></div>
+      <div class="row"><label id="pBgC1Label">色</label><input type="color" id="pBgC1" value="#ffdd55">
+        <input type="color" id="pBgC2" value="#b31200"></div>
     </div></details>
   </div>
 </div>
@@ -411,12 +458,12 @@ const cv = $("cv"), ctx = cv.getContext("2d");
 
 /* ---------- パラメータ収集 ---------- */
 const P = {};
-const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pTexInt","pTexScale","pSeed","pMetal","pVary","pLiquid","pLiquidR","pLiquidBands",
+const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillHue","pFillSat","pFillLight","pTexInt","pTexScale","pSeed","pMetal","pVary","pLiquid","pLiquidR","pLiquidBands",
   "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
-  "pArch","pTilt","pJitR","pJitY","pJitSeed"];
-const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
-  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgC1","pBgC2"];
+  "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed"];
+const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pGemColor","pGemRandom","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
+  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgC1","pBgC2","pTransformMode"];
 
 /* 縁取りスロット（外→内）4本 */
 const OUTLINE_DEFAULTS = [
@@ -434,7 +481,7 @@ function buildOutlineUI(){
     div.innerHTML = `<input type="checkbox" id="olOn${i}" ${o.on?"checked":""}>
       <input type="color" id="olC${i}" value="${o.color}">
       <input type="range" id="olW${i}" min="0" max="60" value="${o.w}">
-      <span class="val" id="olV${i}">${o.w}</span>`;
+      <input type="number" class="val" id="olV${i}" value="${o.w}">`;
     sec.appendChild(div);
     ["olOn"+i,"olC"+i,"olW"+i].forEach(id=>$(id).addEventListener("input",onInput));
   });
@@ -449,13 +496,25 @@ function readParams(){
   P.outlines=[];
   for(let i=0;i<4;i++){
     P.outlines.push({on:$("olOn"+i).checked, color:$("olC"+i).value, w:+$("olW"+i).value});
-    $("olV"+i).textContent = $("olW"+i).value;
+    const olv=$("olV"+i);
+    if(document.activeElement!==olv) olv.value = $("olW"+i).value; // 入力中は上書きしない
   }
-  // range値表示
+  // range値表示（直接入力できるinput化したので、編集中(フォーカス中)は上書きしない）
   document.querySelectorAll(".val[data-for]").forEach(s=>{
-    s.textContent = $(s.dataset.for).value;
+    if(document.activeElement===s) return;
+    s.value = $(s.dataset.for).value;
   });
   $("customFillRow").style.display = P.pFill==="custom" ? "flex":"none";
+  $("gemColorRow").style.display = P.pTex==="gem" ? "flex":"none";
+  $("pBgC2").style.display = P.pBg==="gradient" ? "inline-block":"none";
+  // 変形モードに応じて関連スライダーだけ表示（他モードのスライダーは隠す）
+  const tm = P.pTransformMode||"arch";
+  $("archRow").style.display = tm==="arch" ? "flex":"none";
+  $("fanRow").style.display = tm==="fan" ? "flex":"none";
+  $("fanHint").style.display = tm==="fan" ? "block":"none";
+  const isPersp = tm==="perspective";
+  ["perspRow1","perspRow2","perspRow3","perspRow4"].forEach(id=>{ $(id).style.display = isPersp ? "flex":"none"; });
+  $("perspHint").style.display = isPersp ? "block":"none";
 }
 
 /* ---------- 乱数（シード付き） ---------- */
@@ -465,10 +524,53 @@ function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a
 const texCache = {key:"", canvas:null};
 const sideCache = {key:"", canvas:null};
 function makeTexture(type, scale, seed){
-  const key = type+"_"+scale+"_"+seed;
+  const gemExtra = type==="gem" ? "_"+(P.pGemColor||"#ffffff")+"_"+(P.pGemRandom?1:0) : "";
+  const key = type+"_"+scale+"_"+seed+gemExtra;
   if(texCache.key===key) return texCache.canvas;
   const S=256, c=document.createElement("canvas"); c.width=c.height=S;
-  const x=c.getContext("2d"), img=x.createImageData(S,S), d=img.data;
+  const x=c.getContext("2d");
+  if(type==="gem"){
+    // カラーストーン: ノイズ地は使わず、円形の"石"をランダム配置するベクター方式。
+    // 粒ごとに独立したハイライト(左上寄り)＋暗いエッジ(爪留め風)を持たせて「散りばめ」感を出す。
+    // scale(1~10)で石の密度、pGemColorで単色指定、pGemRandomONで宝石色パレットからランダム。
+    x.fillStyle="#141118"; x.fillRect(0,0,S,S); // 石の間から覗く金属地色
+    const gr=mulberry32(seed*733);
+    const n=Math.round(16+scale*7);
+    const baseR=S/Math.sqrt(n)*.62;
+    const palette=["#e63950","#3a7bff","#2ecc71","#a259ff","#ffd23e","#ff8fd0","#38d9d9"]; // ルビー/サファイア/エメラルド/アメジスト/トパーズ/ピンク/アクア
+    const gemHex=P.pGemColor||"#ffffff";
+    const useRandom=!!P.pGemRandom;
+    for(let i=0;i<n;i++){
+      const cx=gr()*S, cy=gr()*S;
+      const r=baseR*(.55+gr()*.85);
+      const [br,bgc,bb]=hex(useRandom ? palette[(gr()*palette.length)|0] : gemHex);
+      const hlx=cx-r*.32, hly=cy-r*.32;
+      const grad=x.createRadialGradient(hlx,hly,0,cx,cy,r*1.1);
+      grad.addColorStop(0,"rgba(255,255,255,.97)");
+      grad.addColorStop(.22,`rgb(${Math.min(255,br+70)},${Math.min(255,bgc+70)},${Math.min(255,bb+70)})`);
+      grad.addColorStop(.55,`rgb(${br},${bgc},${bb})`);
+      grad.addColorStop(.85,`rgb(${br*.45|0},${bgc*.45|0},${bb*.45|0})`);
+      grad.addColorStop(1,`rgb(${br*.2|0},${bgc*.2|0},${bb*.2|0})`);
+      x.beginPath(); x.arc(cx,cy,r,0,7); x.fillStyle=grad; x.fill();
+      // カット面風の細い明暗線を数本
+      const facetN=3+((gr()*3)|0);
+      for(let f=0;f<facetN;f++){
+        const a=gr()*Math.PI*2;
+        x.beginPath();
+        x.moveTo(cx+Math.cos(a)*r*.15, cy+Math.sin(a)*r*.15);
+        x.lineTo(cx+Math.cos(a)*r*.92, cy+Math.sin(a)*r*.92);
+        x.strokeStyle = gr()<.5 ? "rgba(255,255,255,.3)" : "rgba(0,0,0,.22)";
+        x.lineWidth=Math.max(.5,r*.05);
+        x.stroke();
+      }
+      // 爪留め風の暗いエッジ
+      x.beginPath(); x.arc(cx,cy,r,0,7);
+      x.strokeStyle="rgba(10,8,12,.8)"; x.lineWidth=Math.max(1,r*.08); x.stroke();
+    }
+    texCache.key=key; texCache.canvas=c;
+    return c;
+  }
+  const img=x.createImageData(S,S), d=img.data;
   const rnd=mulberry32(seed*1013);
   const G=48, grid=[];
   for(let i=0;i<(G+1)*(G+1);i++) grid.push(rnd());
@@ -568,6 +670,18 @@ function makeTexture(type, scale, seed){
 }
 
 /* ---------- グラデ ---------- */
+/* 縞レインボー用: 隣接ストップを詰めて境界をシャープにする（金属グラデと同じ技法）。
+   各色がベタ塗りの帯として並び、境界だけ細い遷移幅でブレンドされる＝パキッとした縞。 */
+function makeHardBands(colors){
+  const st=[], n=colors.length, w=1/n, eps=w*0.06;
+  for(let i=0;i<n;i++){
+    const p0=i*w, p1=(i+1)*w;
+    st.push([i===0?0:p0+eps, colors[i]]);
+    st.push([i===n-1?1:p1-eps, colors[i]]);
+  }
+  return st;
+}
+const RAINBOW_VIVID_COLORS=["#ff0000","#ff8800","#ffee00","#00e64d","#0091ff","#7000ff","#ff00c8"];
 const GRADS = {
   gold:   [[0,"#fffbe0"],[.22,"#ffd76a"],[.45,"#a06a00"],[.52,"#fff3b8"],[.72,"#e8a817"],[1,"#6b3d00"]],
   silver: [[0,"#ffffff"],[.25,"#cfd6e0"],[.48,"#6c7686"],[.55,"#f4f7fb"],[.78,"#9aa5b5"],[1,"#454e5c"]],
@@ -575,6 +689,8 @@ const GRADS = {
   lava:   [[0,"#ffd23e"],[.4,"#ff6a00"],[.75,"#b31200"],[1,"#3d0500"]],
   crimson:[[0,"#ff8a6a"],[.45,"#e01515"],[1,"#5e0000"]],
   rainbow:[[0,"#ff3b3b"],[.17,"#ff9d2e"],[.34,"#ffe23e"],[.5,"#3ddc55"],[.67,"#3aa9ff"],[.84,"#7a5cff"],[1,"#ff4ddb"]],
+  rainbowVivid:[[0,"#ff0000"],[.17,"#ff8800"],[.34,"#ffee00"],[.5,"#00e64d"],[.67,"#0091ff"],[.84,"#7000ff"],[1,"#ff00c8"]],
+  rainbowStripe: makeHardBands(RAINBOW_VIVID_COLORS),
   chromePink:[[0,"#ffe9f6"],[.18,"#ff8fd0"],[.38,"#c4177e"],[.5,"#fff0fa"],[.62,"#a80f68"],[.85,"#ff7cc8"],[1,"#7c0a4d"]],
   chromeBlue:[[0,"#eef6ff"],[.2,"#9cc8f0"],[.4,"#1e3a5f"],[.5,"#ffffff"],[.65,"#16304f"],[.85,"#7fb2e8"],[1,"#0a1c33"]],
   diamond:[[0,"#ffffff"],[.15,"#dfe9f5"],[.3,"#ffffff"],[.45,"#b9c9dd"],[.55,"#ffffff"],[.7,"#cdd9e8"],[.85,"#ffffff"],[1,"#aebfd6"]],
@@ -641,13 +757,60 @@ const METAL_PAL={
   metalSilver:[[38,42,52], [255,255,255]],
   metalCopper:[[72,30,10], [255,224,200]],
 };
-function getFillStops(){
-  if(P.pFill==="custom") return [[0,P.pFillC1],[1,P.pFillC2]];
-  if(METAL_PAL[P.pFill]){
-    const [d,l]=METAL_PAL[P.pFill];
-    return makeMetalStops(P.pSeed*7+3,d,l,false);
+/* ---------- 色味調整（色相・彩度・明るさ） ----------
+   どのグラデ（内蔵・プロシージャル金属・カスタム）にも後掛けできる汎用調整。
+   「プリセットの色が強すぎる／好みの色相に寄せたい」をUIから直接いじれるように。 */
+function parseColorToRgb(c){
+  if(c[0]==="#") return hex(c);
+  const m=c.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+  return m ? [+m[1],+m[2],+m[3]] : [0,0,0];
+}
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0,s=0; const l=(max+min)/2;
+  const d=max-min;
+  if(d>0){
+    s=l>.5 ? d/(2-max-min) : d/(max+min);
+    if(max===r) h=((g-b)/d+(g<b?6:0));
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h/=6;
   }
-  return GRADS[P.pFill];
+  return [h,s,l];
+}
+function hslToRgb(h,s,l){
+  if(s===0){const v=l*255; return [v,v,v];}
+  const q=l<.5 ? l*(1+s) : l+s-l*s, p=2*l-q;
+  const hue=t=>{
+    t=((t%1)+1)%1;
+    if(t<1/6) return p+(q-p)*6*t;
+    if(t<1/2) return q;
+    if(t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  };
+  return [hue(h+1/3)*255, hue(h)*255, hue(h-1/3)*255];
+}
+function adjustColor(c, hueDeg, satPct, lightPct){
+  if(hueDeg===0 && satPct===100 && lightPct===0) return c; // 無調整なら素通し
+  const [r,g,b]=parseColorToRgb(c);
+  let [h,s,l]=rgbToHsl(r,g,b);
+  h=((h+hueDeg/360)%1+1)%1;
+  s=Math.max(0,Math.min(1,s*(satPct/100)));
+  l=Math.max(0,Math.min(1,l+lightPct/100));
+  const [nr,ng,nb]=hslToRgb(h,s,l);
+  return `rgb(${nr|0},${ng|0},${nb|0})`;
+}
+function getFillStops(){
+  let stops;
+  if(P.pFill==="custom") stops=[[0,P.pFillC1],[1,P.pFillC2]];
+  else if(METAL_PAL[P.pFill]){
+    const [d,l]=METAL_PAL[P.pFill];
+    stops=makeMetalStops(P.pSeed*7+3,d,l,false);
+  }else stops=GRADS[P.pFill];
+  const hue=P.pFillHue||0, sat=P.pFillSat!==undefined?P.pFillSat:100, light=P.pFillLight||0;
+  if(hue===0 && sat===100 && light===0) return stops;
+  return stops.map(([p,c])=>[p, adjustColor(c,hue,sat,light)]);
 }
 
 /* ---------- レイアウト（文字ごと配置） ---------- */
@@ -656,6 +819,17 @@ function fontStr(size){
   if(f==="system-heavy") return `900 ${size}px "Hiragino Sans","Yu Gothic",sans-serif`;
   const w=(f==="Shippori Mincho B1"||f==="Kaisei Tokumin")?"800 ":"400 ";
   return `${w}${size}px "${f}"`;
+}
+/* Canvas+Webフォントの既知の癖対策: プリセット適用など「スクリプトから一気にフォントを
+   差し替えて即描画」すると、ブラウザのフォントシェイピングが追いつかず前のフォントの
+   まま描かれることがある（手動でもう一度選び直すと直るのはこの遅延が解消されるため）。
+   ダミー描画で強制的にウォームアップしてから本描画することで解消する。 */
+function warmupFont(fontName){
+  if(!fontName || fontName==="system-heavy") return;
+  const g=document.createElement("canvas").getContext("2d");
+  const w=(fontName==="Shippori Mincho B1"||fontName==="Kaisei Tokumin")?"800 ":"400 ";
+  g.font=`${w}150px "${fontName}"`;
+  g.fillText("激アツ",0,50);
 }
 function layoutText(g){
   const size=P.pSize, lines=P.pText.split("\n");
@@ -681,24 +855,67 @@ function layoutText(g){
     }
   });
   const totalH=(lines.length-1)*lineH+size;
+  applyTransformWarp(chars, size); // モード別(アーチ/扇形/パース)の位置・回転・拡縮を文字ごとに1回だけ計算
   return {chars, maxW, totalH, size, lines:lines.length, lineH};
+}
+
+/* ---------- 変形（アーチ/扇形/パース） ----------
+   文字ごとの追加変位(warpDx/warpDy)・追加回転(warpRot)・拡縮(warpScale)を、
+   モードに応じてここで一括計算し各char要素に埋め込む。drawChars/drawCharsInsetは
+   これを読むだけなので、呼び出し側(十数箇所ある)を一切変更せずにモード追加できる。
+   「アーチ」は旧実装(放物線)とビット単位で同じ式＝既存プリセットの見た目は不変。 */
+function applyTransformWarp(chars, size){
+  const mode=P.pTransformMode||"arch";
+  if(mode==="fan"){
+    const R=P.pFanRadius||0;
+    for(const c of chars){
+      if(Math.abs(R)<1){ c.warpDx=0; c.warpDy=0; c.warpRot=0; c.warpScale=1; continue; }
+      const theta=c.cx/R;
+      c.warpDx=R*Math.sin(theta)-c.cx;
+      c.warpDy=R*(1-Math.cos(theta));
+      c.warpRot=theta;
+      c.warpScale=1;
+    }
+  }else if(mode==="perspective"){
+    const ang=(P.pPerspAngle||0)*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
+    const px=-uy, py=ux; // 進行方向に垂直なベクトル(迫り出しのズレ方向)
+    const projs=chars.map(c=>c.cx*ux+c.cy*uy);
+    const pmin=Math.min(...projs), pmax=Math.max(...projs), span=Math.max(1e-6,pmax-pmin);
+    const from=(P.pPerspFrom!==undefined?P.pPerspFrom:60)/100;
+    const to=(P.pPerspTo!==undefined?P.pPerspTo:130)/100;
+    const drift=P.pPerspDrift||0;
+    chars.forEach((c,i)=>{
+      const t=(projs[i]-pmin)/span;
+      const d=drift*t*t; // 進行方向ほど加速的にズレる＝迫り出す勢い
+      c.warpDx=px*d; c.warpDy=py*d;
+      c.warpRot=(t-0.5)*(drift/100)*0.6;
+      c.warpScale=lerp(from,to,t);
+    });
+  }else if(mode==="none"){
+    for(const c of chars){ c.warpDx=0; c.warpDy=0; c.warpRot=0; c.warpScale=1; }
+  }else{ // "arch"（デフォルト・旧実装と同一の放物線）
+    const archAmp=P.pArch/100;
+    for(const c of chars){
+      const t=c.lineW>0 ? c.cx/(c.lineW/2) : 0;
+      c.warpDx=0;
+      c.warpDy=-archAmp*size*(1-t*t);
+      c.warpRot=archAmp*t*0.5;
+      c.warpScale=1;
+    }
+  }
 }
 
 /* 全文字を指定スタイルで描画（mode: "fill"|"stroke"、styleFnで文字ごとにfillStyle変更可） */
 function drawChars(g, L, mode, dx=0, dy=0, styleFn=null){
-  const archAmp=P.pArch/100;
   const tilt=P.pTilt*Math.PI/180;
   let i=0;
   for(const c of L.chars){
     if(styleFn) g.fillStyle=styleFn(c,i);
     i++;
     g.save();
-    // アーチ: 行中央基準の放物線
-    const t = c.lineW>0 ? c.cx/(c.lineW/2) : 0;
-    const archY = -archAmp*L.size*(1-t*t);
-    const archRot = archAmp*t*0.5;
-    g.translate(c.cx+dx, c.cy+c.jitY+archY+dy);
-    g.rotate(c.jitR+archRot);
+    g.translate(c.cx+c.warpDx+dx, c.cy+c.jitY+c.warpDy+dy);
+    g.rotate(c.jitR+c.warpRot);
+    if(c.warpScale!==1) g.scale(c.warpScale,c.warpScale);
     g.transform(1,0,Math.tan(-tilt),1,0,0);
     if(mode==="fill") g.fillText(c.ch,0,0);
     else g.strokeText(c.ch,0,0);
@@ -713,6 +930,7 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   const g=c.getContext("2d");
   g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
   g.translate(offX,offY); g.scale(scale,scale);
+  applyWholeRotation(g,L);
 
   // 1) グラデ塗り（pVary>0なら文字ごとに位相・角度を乱す＝面内の情報量）
   const ang=P.pFillAngle*Math.PI/180;
@@ -769,6 +987,7 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
     const hm=document.createElement("canvas"); hm.width=W; hm.height=H;
     const hg=hm.getContext("2d");
     hg.translate(offX,offY); hg.scale(scale,scale);
+    applyWholeRotation(hg,L);
     hg.font=fontStr(L.size); hg.textBaseline="middle"; hg.textAlign="center";
     // 高さ場: シャープな白シルエットから「ぼかした輪郭stroke」を削る＝輪郭0→内側1の内側減衰
     hg.lineJoin="round"; hg.miterLimit=2;
@@ -890,13 +1109,10 @@ function drawCharsInset(g,L,bv,styleFn=null){
     if(styleFn) g.fillStyle=styleFn(c,i);
     i++;
     g.save();
-    const t=c.lineW>0?c.cx/(c.lineW/2):0;
-    const archAmp=P.pArch/100;
-    const archY=-archAmp*L.size*(1-t*t);
-    g.translate(c.cx, c.cy+c.jitY+archY);
-    g.rotate(c.jitR+archAmp*t*0.5);
+    g.translate(c.cx+c.warpDx, c.cy+c.jitY+c.warpDy);
+    g.rotate(c.jitR+c.warpRot);
     g.transform(1,0,Math.tan(-P.pTilt*Math.PI/180),1,0,0);
-    const k=1-(bv*2)/L.size;
+    const k=(1-(bv*2)/L.size)*c.warpScale;
     g.scale(k,k);
     g.fillText(c.ch,0,0);
     g.restore();
@@ -908,13 +1124,72 @@ function computeCanvasSize(L){
   const maxStroke=Math.max(...P.outlines.filter(o=>o.on).map(o=>o.w),0);
   const glowPad=P.pGlowOn?P.pGlowBlur*2:0;
   const exPad=P.pExDepth+4;
-  const pad=maxStroke+glowPad+exPad+Math.abs(P.pArch)+P.pJitY+30;
+  // 変形(アーチ/扇形/パース)による実際のはみ出し量を文字ごとの計算結果から動的に算出。
+  // モードごとに個別の余白式を持たせず、実測ベースにすることで新モード追加時も自動対応する。
+  let warpPad=0;
+  for(const c of L.chars){
+    const disp=Math.hypot(c.warpDx,c.warpDy) + L.size*Math.max(0,c.warpScale-1)*0.6;
+    if(disp>warpPad) warpPad=disp;
+  }
+  const pad0=maxStroke+glowPad+exPad+warpPad+P.pJitY+30;
   const tiltPad=Math.abs(Math.tan(P.pTilt*Math.PI/180))*L.size;
+  // 全体回転ぶんの余白: 回転で四隅がキャンバス外にはみ出さないよう保守的に確保
+  const rotRad=Math.abs(P.pRotate||0)*Math.PI/180;
+  const rotPad = rotRad>0.001 ? Math.max(L.maxW,L.totalH)*0.5*Math.sin(rotRad) : 0;
+  const pad=pad0+rotPad;
+  // 台形(キーストーン)ぶんの横幅余白: パディング(グロー・押し出し用)は膨らませず、
+  // 文字の実寸ぶんだけ広げる。パディングごと拡大すると全体がドカンと肥大化してしまうため。
+  const trapScale=Math.max(1,(P.pTrapTop||100)/100,(P.pTrapBottom||100)/100);
+  const trapExtra=(trapScale-1)*L.maxW;
   return {
-    W:Math.ceil(L.maxW+pad*2+tiltPad*2),
+    W:Math.ceil(L.maxW+trapExtra+pad*2+tiltPad*2),
     H:Math.ceil(L.totalH+pad*2),
     pad
   };
+}
+/* 全体回転（剛体）: 文字ブロックの縦中心を軸に、translate(offX,offY)+scale直後に呼ぶ想定。
+   個々の文字を歪める「傾き」(シアー)とは別物＝ここでは文字配置ごとそのまま回す。
+   7箇所の「文字空間に入る」変換すべてで同じ軸を使うことで面・立体・マスクのズレを防ぐ。 */
+function applyWholeRotation(g, L){
+  const rot=(P.pRotate||0)*Math.PI/180;
+  if(Math.abs(rot)<0.0001) return;
+  const pivotY=(L.lines-1)*L.lineH/2;
+  g.translate(0,pivotY);
+  g.rotate(rot);
+  g.translate(0,-pivotY);
+}
+/* 台形（キーストーン）: 個々の文字ではなく完成済みの絵(グロー・立体・面・ブラシ全部込み)を
+   横方向の細い帯にスライスし、上端→下端で帯ごとに横幅を変えながら再配置する。
+   canvas 2Dは真の射影変換を持たないため、この「帯分割」が実用上いちばん確実に
+   台形の見た目を作れる方法（帯を細くするほど滑らかな斜辺になる）。
+   グロー・押し出しなど「固定ピクセル量であるべき効果」まで一緒に引き伸ばすと、
+   ボケ幅や厚みが間延びして「のっぺり」した見た目になる。それを避けるため、
+   文字の実寸＋ごく一部の縁だけを拡縮対象にし、外側の余白は拡縮せず平行移動のみに留める。 */
+function applyTrapezoid(mg, cw, ch, quality, contentHalfW, offX){
+  const top=(P.pTrapTop!==undefined?P.pTrapTop:100)/100;
+  const bottom=(P.pTrapBottom!==undefined?P.pTrapBottom:100)/100;
+  if(Math.abs(top-1)<0.005 && Math.abs(bottom-1)<0.005) return; // 無変形なら何もしない
+  const snapshot=document.createElement("canvas");
+  snapshot.width=cw; snapshot.height=ch;
+  snapshot.getContext("2d").drawImage(mg.canvas,0,0);
+  mg.setTransform(1,0,0,1,0,0);
+  mg.clearRect(0,0,cw,ch);
+  const STRIP = quality==="high" ? 2 : 6; // ドラッグ中(low)は帯を太くして軽量化
+  const srcL=Math.max(0,offX-contentHalfW), srcR=Math.min(cw,offX+contentHalfW);
+  const leftPadW=srcL, rightPadW=cw-srcR;
+  for(let y=0;y<ch;y+=STRIP){
+    const t=Math.min(1,y/Math.max(1,ch-1));
+    const s=top+(bottom-top)*t;
+    const stripH=Math.min(STRIP,ch-y);
+    const dstHalf=contentHalfW*s;
+    const dstL=offX-dstHalf, dstR=offX+dstHalf;
+    // 左パディング（グロー等の余白）: 拡縮せずそのまま、境界だけ追従させて平行移動
+    if(leftPadW>0.5) mg.drawImage(snapshot, 0,y,leftPadW,stripH, dstL-leftPadW,y,leftPadW,stripH);
+    // 中央: 文字の実寸部分だけを台形に拡縮
+    mg.drawImage(snapshot, srcL,y,srcR-srcL,stripH, dstL,y,dstHalf*2,stripH);
+    // 右パディング: 同様に平行移動のみ
+    if(rightPadW>0.5) mg.drawImage(snapshot, srcR,y,rightPadW,stripH, dstR,y,rightPadW,stripH);
+  }
 }
 
 function draw(targetCtx, scale, withBg, quality){
@@ -932,35 +1207,21 @@ function draw(targetCtx, scale, withBg, quality){
 
   const offX=cw/2, offY=(pad+L.size/2)*scale;
 
-  // 背景（放射の中心は文字の縦中心に合わせる）
+  // 背景（放射グラデの中心は文字の縦中心に合わせる）
   const bgCy = offY + ((L.lines-1)*L.lineH/2)*scale;
   if(withBg && P.pBg!=="none"){
-    if(P.pBg==="burst"){
+    if(P.pBg==="solid"){
+      mg.fillStyle=P.pBgC1; mg.fillRect(0,0,cw,ch);
+    }else if(P.pBg==="gradient"){
       const rg=mg.createRadialGradient(cw/2,bgCy,0,cw/2,bgCy,Math.max(cw,ch)*.7);
       rg.addColorStop(0,P.pBgC1); rg.addColorStop(1,P.pBgC2);
-      mg.fillStyle=rg; mg.fillRect(0,0,cw,ch);
-    }else{ // rays 集中線
-      mg.fillStyle=P.pBgC2; mg.fillRect(0,0,cw,ch);
-      const rr=mulberry32(P.pSeed*5);
-      mg.save(); mg.translate(cw/2,bgCy);
-      const R=Math.max(cw,ch);
-      for(let i=0;i<48;i++){
-        const a=(i/48)*Math.PI*2+rr()*.1;
-        const w=(0.006+rr()*.02)*Math.PI;
-        mg.beginPath(); mg.moveTo(0,0);
-        mg.arc(0,0,R,a-w,a+w); mg.closePath();
-        mg.fillStyle=i%2?P.pBgC1:"rgba(255,255,255,.12)";
-        mg.globalAlpha=.5+rr()*.5; mg.fill();
-      }
-      mg.restore(); mg.globalAlpha=1;
-      const rg=mg.createRadialGradient(cw/2,bgCy,0,cw/2,bgCy,R*.5);
-      rg.addColorStop(0,"rgba(255,255,255,.55)"); rg.addColorStop(1,"rgba(255,255,255,0)");
       mg.fillStyle=rg; mg.fillRect(0,0,cw,ch);
     }
   }
 
   mg.save();
   mg.translate(offX,offY); mg.scale(scale,scale);
+  applyWholeRotation(mg,L);
   mg.font=fontStr(L.size); mg.textBaseline="middle"; mg.textAlign="center";
   mg.lineJoin="round"; mg.miterLimit=2;
 
@@ -980,7 +1241,9 @@ function draw(targetCtx, scale, withBg, quality){
   };
 
   // ① グロー（縁込みシルエットを発光色で）
-  if(P.pGlowOn&&showGlow){
+  // shadowBlurは全文字ぶん2回描画するため特に重い。ドラッグ中(low)は省略し、
+  // 手を離した本描画(high)でのみ正確に描く＝スライダー操作時のカクつき対策
+  if(P.pGlowOn&&showGlow&&quality==="high"){
     mg.save();
     mg.shadowColor=P.pGlowC; mg.shadowBlur=P.pGlowBlur*scale;
     silhouette(P.pGlowC,0,0); silhouette(P.pGlowC,0,0); // 2度描きで濃く
@@ -1003,7 +1266,10 @@ function draw(targetCtx, scale, withBg, quality){
     // 直接サンプリングすると、隣接レイヤー間で色がジャンプして「層」状に
     // 見えてしまうため）。金属反射の質感は側面ツヤ(buildSideSheen)側で
     // ピクセル単位の連続グラデーションとして描く。
-    for(let i=d;i>=1;i--){
+    // ドラッグ中(low)は深さが大きいほど重くなる(1層=全文字1回描画)ため間引く。
+    // 手を離した本描画(high)では全層を正確に描く。
+    const exStep = (quality==="low" && d>10) ? Math.ceil(d/10) : 1;
+    for(let i=d;i>=1;i-=exStep){
       const t=i/d;
       let r=lerp(c1[0],c2[0],t), gc=lerp(c1[1],c2[1],t), b=lerp(c1[2],c2[2],t);
       if(P.pExBand>0){
@@ -1049,51 +1315,65 @@ function draw(targetCtx, scale, withBg, quality){
   // 手描きブラシ用「側面のみ」マスクの元: グローを含めず、押し出し(立体)+縁取りだけを
   // 別キャンバスに単色で再描画する（mgのスナップショットだとグローの後光まで
   // 拾ってしまい、ブラシがグローの滲みにまではみ出す不具合があったため）
-  const extrudeOnlyMask=document.createElement("canvas");
-  extrudeOnlyMask.width=cw; extrudeOnlyMask.height=ch;
-  {
-    const emg=extrudeOnlyMask.getContext("2d");
-    emg.translate(offX,offY); emg.scale(scale,scale);
-    emg.font=fontStr(L.size); emg.textBaseline="middle"; emg.textAlign="center";
-    emg.lineJoin="round"; emg.miterLimit=2;
-    if(d>0&&showEx){
-      const ea=P.pExAngle*Math.PI/180, ux2=Math.cos(ea), uy2=Math.sin(ea);
-      for(let i=d;i>=1;i--){
-        emg.fillStyle="#fff"; emg.strokeStyle="#fff";
-        if(maxOW>0){emg.lineWidth=maxOW; drawChars(emg,L,"stroke",ux2*i,uy2*i);}
-        drawChars(emg,L,"fill",ux2*i,uy2*i);
+  // ブラシストロークが1本も無ければこの一式は完全に無意味＆押し出しループの
+  // 二重描画で毎フレーム重くなるだけなので丸ごとスキップする＝スライダー操作の
+  // カクつき対策（ブラシを使ってなければ常にこの経路）
+  const hasBrushWork = !!currentStroke || brushLayers.some(l=>l.strokes.length>0);
+  let sideMask=null, frontMask=null, face;
+  if(hasBrushWork){
+    const extrudeOnlyMask=document.createElement("canvas");
+    extrudeOnlyMask.width=cw; extrudeOnlyMask.height=ch;
+    {
+      const emg=extrudeOnlyMask.getContext("2d");
+      emg.translate(offX,offY); emg.scale(scale,scale);
+      applyWholeRotation(emg,L);
+      emg.font=fontStr(L.size); emg.textBaseline="middle"; emg.textAlign="center";
+      emg.lineJoin="round"; emg.miterLimit=2;
+      if(d>0&&showEx){
+        const ea=P.pExAngle*Math.PI/180, ux2=Math.cos(ea), uy2=Math.sin(ea);
+        for(let i=d;i>=1;i--){
+          emg.fillStyle="#fff"; emg.strokeStyle="#fff";
+          if(maxOW>0){emg.lineWidth=maxOW; drawChars(emg,L,"stroke",ux2*i,uy2*i);}
+          drawChars(emg,L,"fill",ux2*i,uy2*i);
+        }
       }
+      if(showOL) for(const o of act){ emg.strokeStyle="#fff"; emg.lineWidth=o.w; drawChars(emg,L,"stroke"); }
     }
-    if(showOL) for(const o of act){ emg.strokeStyle="#fff"; emg.lineWidth=o.w; drawChars(emg,L,"stroke"); }
-  }
 
-  // ④ 面レイヤー合成
-  const face=buildFaceLayer(cw,ch,offX,offY,L,scale,quality);
-  if(showFace) mg.drawImage(face,0,0);
+    // 面レイヤー合成
+    face=buildFaceLayer(cw,ch,offX,offY,L,scale,quality);
+    if(showFace) mg.drawImage(face,0,0);
 
-  // 手描きブラシ用マスク:
-  // sideMask=側面のみ（金属反射用）、frontMask=面＋前面縁（グロー抜き、スパークル中心判定・稲妻クリップ用）
-  const frontMask=document.createElement("canvas"); frontMask.width=cw; frontMask.height=ch;
-  {
-    const fmg=frontMask.getContext("2d");
-    fmg.translate(offX,offY); fmg.scale(scale,scale);
-    fmg.font=fontStr(L.size); fmg.textBaseline="middle"; fmg.textAlign="center";
-    fmg.lineJoin="round"; fmg.miterLimit=2;
-    if(showOL) for(const o of act){ fmg.strokeStyle=o.color; fmg.lineWidth=o.w; drawChars(fmg,L,"stroke"); }
-    fmg.setTransform(1,0,0,1,0,0);
-    fmg.drawImage(face,0,0);
-  }
-  const sideMask=snapshotCanvas(extrudeOnlyMask);
-  {
-    const sg=sideMask.getContext("2d");
-    sg.globalCompositeOperation="destination-out";
-    sg.drawImage(frontMask,0,0);
+    // 手描きブラシ用マスク:
+    // sideMask=側面のみ（金属反射用）、frontMask=面＋前面縁（グロー抜き、スパークル中心判定・稲妻クリップ用）
+    frontMask=document.createElement("canvas"); frontMask.width=cw; frontMask.height=ch;
+    {
+      const fmg=frontMask.getContext("2d");
+      fmg.translate(offX,offY); fmg.scale(scale,scale);
+      applyWholeRotation(fmg,L);
+      fmg.font=fontStr(L.size); fmg.textBaseline="middle"; fmg.textAlign="center";
+      fmg.lineJoin="round"; fmg.miterLimit=2;
+      if(showOL) for(const o of act){ fmg.strokeStyle=o.color; fmg.lineWidth=o.w; drawChars(fmg,L,"stroke"); }
+      fmg.setTransform(1,0,0,1,0,0);
+      fmg.drawImage(face,0,0);
+    }
+    sideMask=snapshotCanvas(extrudeOnlyMask);
+    {
+      const sg=sideMask.getContext("2d");
+      sg.globalCompositeOperation="destination-out";
+      sg.drawImage(frontMask,0,0);
+    }
+  }else{
+    // ブラシ未使用時は面レイヤーだけ普通に合成すればよい
+    face=buildFaceLayer(cw,ch,offX,offY,L,scale,quality);
+    if(showFace) mg.drawImage(face,0,0);
   }
 
   // ④.5 はみ出し稲妻（文字の上を横切って全体に走る）
   if(P.pBolt>0 && P.pBoltOver && showFx && quality==="high"){
     mg.save();
     mg.translate(offX,offY); mg.scale(scale,scale);
+    applyWholeRotation(mg,L);
     drawBolts(mg,L,true);
     mg.restore();
   }
@@ -1103,18 +1383,29 @@ function draw(targetCtx, scale, withBg, quality){
   if(showFx && quality==="high") scatterSparkles(mg,face,cw,ch,scale);
 
   // ⑥ 手描きブラシ（レイヤーごとに合成。金属反射は側面マスクでクリップ＝面まで明るくしない）
-  const liveLayers = currentStroke
-    ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
-    : brushLayers;
-  renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value);
+  if(hasBrushWork){
+    const liveLayers = currentStroke
+      ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
+      : brushLayers;
+    renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value);
+  }
 
   // ライブプレビュー描画時のみ、ブラシのポインタ座標変換用にレイアウトを記録
-  if(mg.canvas===cv) lastLayout={offX,offY,scale,cw,ch};
+  // (rot/pivotYは全体回転の逆変換、trapTop/trapBottom/trapContentHalfWは台形の逆変換にscreenToLocalで使う)
+  if(mg.canvas===cv) lastLayout={offX,offY,scale,cw,ch,rot:(P.pRotate||0)*Math.PI/180,pivotY:(L.lines-1)*L.lineH/2,
+    trapTop:(P.pTrapTop!==undefined?P.pTrapTop:100)/100, trapBottom:(P.pTrapBottom!==undefined?P.pTrapBottom:100)/100,
+    trapContentHalfW:(L.maxW/2+40)*scale};
+
+  // 台形（キーストーン）: 完成した絵全体に対する最終ポスト処理。
+  // 拡縮対象は「文字の実寸＋グロー等の縁が収まる程度のバッファ」に限定し、
+  // それより外側の余白は拡縮せず平行移動のみに留める(のっぺり化・過剰な肥大化を防ぐ)
+  applyTrapezoid(mg, cw, ch, quality, (L.maxW/2+40)*scale, offX);
 
   return {W:cw,H:ch};
 }
 function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
 function lerp(a,b,t){return a+(b-a)*t;}
+
 
 /* ---------- 側面レイヤー（マスク切り出し＋環境映り込み） ----------
    側面領域＝押し出しスタンプの和集合−本体シルエット。その中に
@@ -1128,6 +1419,7 @@ function buildSideSheen(cw,ch,offX,offY,L,scale,maxOW,ux,uy,d){
     g.setTransform(1,0,0,1,0,0);
     g.clearRect(0,0,cw,ch);
     g.translate(offX,offY); g.scale(scale,scale);
+    applyWholeRotation(g,L);
     g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
     g.lineJoin="round"; g.miterLimit=2;
   };
@@ -1367,7 +1659,7 @@ let brushLayers = [{id:1, name:"レイヤー1", visible:true, strokes:[]}];
 let activeLayerId = 1;
 let nextLayerId = 2;
 let currentStroke = null;
-let lastLayout = {offX:0, offY:0, scale:1, cw:0, ch:0};
+let lastLayout = {offX:0, offY:0, scale:1, cw:0, ch:0, rot:0, pivotY:0, trapTop:1, trapBottom:1, trapContentHalfW:0};
 
 function snapshotCanvas(src){
   const c=document.createElement("canvas"); c.width=src.width; c.height=src.height;
@@ -1515,9 +1807,33 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
 
 function screenToLocal(clientX, clientY){
   const rect=cv.getBoundingClientRect();
-  const px=(clientX-rect.left)*(cv.width/Math.max(1,rect.width));
+  let px=(clientX-rect.left)*(cv.width/Math.max(1,rect.width));
   const py=(clientY-rect.top)*(cv.height/Math.max(1,rect.height));
-  return { x:(px-lastLayout.offX)/lastLayout.scale, y:(py-lastLayout.offY)/lastLayout.scale };
+  // 台形の逆変換（描画の最終ポスト処理なので、逆変換では最初に戻す）
+  // 中央のcontentHalfW幅だけ拡縮、外側は平行移動のみ＝applyTrapezoidの3領域式と対にする
+  const top=lastLayout.trapTop!==undefined?lastLayout.trapTop:1;
+  const bottom=lastLayout.trapBottom!==undefined?lastLayout.trapBottom:1;
+  if(Math.abs(top-1)>0.005 || Math.abs(bottom-1)>0.005){
+    const t=Math.min(1,py/Math.max(1,lastLayout.ch-1));
+    const s=top+(bottom-top)*t;
+    const chw=lastLayout.trapContentHalfW||0, ox=lastLayout.offX;
+    const srcL=ox-chw, srcR=ox+chw;
+    const dstHalf=chw*s, dstL=ox-dstHalf, dstR=ox+dstHalf;
+    if(px<dstL) px=px-dstL+srcL;
+    else if(px<=dstR) px = s>0.001 ? srcL+(px-dstL)/s : srcL;
+    else px=px-dstR+srcR;
+  }
+  let x=(px-lastLayout.offX)/lastLayout.scale, y=(py-lastLayout.offY)/lastLayout.scale;
+  const rot=lastLayout.rot||0;
+  if(Math.abs(rot)>0.0001){
+    // 全体回転の逆変換（描画時と逆順: pivotY基準で逆回転）
+    const pivotY=lastLayout.pivotY||0;
+    y-=pivotY;
+    const cos=Math.cos(-rot), sin=Math.sin(-rot);
+    const rx=x*cos-y*sin, ry=x*sin+y*cos;
+    x=rx; y=ry+pivotY;
+  }
+  return { x, y };
 }
 function activeLayer(){ return brushLayers.find(l=>l.id===activeLayerId) || brushLayers[0]; }
 
@@ -1610,7 +1926,8 @@ $("brushMode").addEventListener("change",()=>{
   cv.classList.toggle("brush-active", $("brushMode").checked);
 });
 function updateBrushLabel(id){
-  document.querySelector(`.val[data-for="${id}"]`).textContent = $(id).value;
+  const el=document.querySelector(`.val[data-for="${id}"]`);
+  if(document.activeElement!==el) el.value = $(id).value;
 }
 $("btnSizeDown").addEventListener("click",()=>{ $("brushSize").value=Math.max(4,+$("brushSize").value-4); updateBrushLabel("brushSize"); onInput(); });
 $("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(80,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
@@ -1724,6 +2041,22 @@ $("zoomOut").addEventListener("click",()=>{ $("viewZoom").value=Math.max(25,+$("
 $("zoomIn").addEventListener("click",()=>{ $("viewZoom").value=Math.min(400,+$("viewZoom").value+25); applyZoom(); });
 $("zoomReset").addEventListener("click",()=>{ $("viewZoom").value=100; applyZoom(); });
 
+/* ---------- 塗りの角度ショートカット・色味リセット ---------- */
+function setFillAngle(deg){
+  $("pFillAngle").value=deg;
+  document.querySelectorAll('.val[data-for="pFillAngle"]').forEach(s=>s.value=deg);
+  commitState(); requestDraw();
+}
+$("btnAngleH").addEventListener("click",()=>setFillAngle(0));   // 横=左→右
+$("btnAngleV").addEventListener("click",()=>setFillAngle(90));  // 縦=上→下
+$("btnAngleD").addEventListener("click",()=>setFillAngle(45));  // 斜め45°
+$("btnFillReset").addEventListener("click",()=>{
+  $("pFillHue").value=0; $("pFillSat").value=100; $("pFillLight").value=0;
+  document.querySelectorAll('.val[data-for="pFillHue"],.val[data-for="pFillSat"],.val[data-for="pFillLight"]')
+    .forEach(s=>{ s.value = $(s.dataset.for).value; });
+  commitState(); requestDraw();
+});
+
 /* ---------- プレビュー更新（プログレッシブ描画） ----------
    ドラッグ中は quality="low"（水銀・側面ツヤ・スパークル・稲妻を省いた骨組み）
    ＋解像度0.6で即描画。操作が止まった瞬間に一度だけ quality="high" で
@@ -1769,10 +2102,10 @@ $("btnExport").addEventListener("click",()=>{
 
 /* ---------- プリセット ---------- */
 /* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
-const DEFAULTS={pFillRepeat:1,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
+const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pGemColor:"#ffffff",pGemRandom:false,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
   pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
-  pArch:0,pTilt:0,pJitR:0,pJitY:0,pBg:"none"};
+  pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:60,pPerspTo:130,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,pBg:"none"};
 const PRESETS = {
   "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
     pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",pMetal:0,
@@ -1814,6 +2147,37 @@ const PRESETS = {
     pExDepth:12,pExAngle:93,pExC1:"#e22400",pExC2:"#120100",pBevel:4,pExFlash:6,
     pGlowOn:false,
     pArch:0,pTilt:0,pJitR:5,pJitY:6,pJitSeed:1},
+  "ピンクグロス":{pText:"ピンクグロス",pFont:"Shippori Mincho B1",pSpacing:-14,pLineH:80,
+    pFill:"chromePink",pFillAngle:242,pFillRepeat:5,pVary:35,pLiquid:30,pLiquidC1:"#e22400",pLiquidC2:"#e63b7a",pLiquidR:12,pLiquidBands:1,
+    ol:[[true,"#f4a4c0",22],[true,"#3c071b",0],[true,"#551029",9],[true,"#e63b7a",4]],
+    pExDepth:16,pExAngle:115,pExC1:"#e63b7a",pExC2:"#3c071b",pBevel:3,pExBand:2,pExSpec:75,pExFlash:6,
+    pGlowOn:false,pGlossOn:true,pGlossPos:75,pGlossW:19,pGlossA:55,
+    pSparkN:39,pSparkShape:"dot",pSparkSize:20,pSparkVar:83,pSparkEdge:98,pSparkC:"#791a3d",pSparkSeed:43,
+    pArch:12,pTilt:0,pJitR:0,pJitY:0,pJitSeed:1},
+  "氷結":{pText:"氷結",pFont:"system-heavy",pSpacing:0,pLineH:105,
+    pFill:"chromeBlue",pFillAngle:90,pFillRepeat:1,
+    ol:[[true,"#cbf0ff",14],[true,"#1a0e00",14],[true,"#74a7ff",9],[true,"#0042a9",4]],
+    pExDepth:21,pExAngle:109,pExC1:"#008cb4",pExC2:"#cbf0ff",pBevel:5,pExBand:0,pExSpec:85,pExFlash:6,pRim:57,pRimC:"#52d6fc",
+    pGlowOn:false,pGlossOn:true,pGlossPos:35,pGlossW:18,pGlossA:55,
+    pBolt:2,pBoltC:"#9adfff",pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,
+    pSparkN:19,pSparkShape:"diamond",pSparkSize:14,pSparkC:"#004d65",pSparkSeed:5,
+    pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:3},
+  "雷撃":{pText:"雷撃",pFont:"RocknRoll One",pSpacing:0,pLineH:105,
+    pFill:"diamond",pFillAngle:222,pFillRepeat:3,pTex:"facet",pTexInt:100,pTexScale:7,
+    ol:[[true,"#ffffff",16],[true,"#1a0e00",12],[true,"#ffd76a",7],[true,"#5a2d00",4]],
+    pExDepth:8,pExAngle:115,pExC1:"#00a1d8",pExC2:"#000000",pBevel:3,pExSpec:32,pExFlash:6,
+    pGlowOn:false,pGlossOn:true,pGlossPos:66,pGlossW:18,pGlossA:55,
+    pBolt:4,pBoltC:"#9adfff",pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,
+    pSparkN:20,pSparkShape:"dot",pSparkSize:36,pSparkLen:155,pSparkEdge:91,pSparkC:"#00374a",pSparkSeed:5,
+    pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:3},
+  "レインボー":{pText:"レインボー",pFont:"system-heavy",pSize:146,pSpacing:-6,pLineH:102,
+    pFill:"rainbow",pFillAngle:248,pFillRepeat:6,pTexScale:9,
+    ol:[[true,"#ffffff",12],[true,"#1a0e00",8],[true,"#ffd76a",3],[true,"#5a2d00",0]],
+    pExDepth:14,pExAngle:115,pExC1:"#7a4a00",pExC2:"#2b1600",pBevel:3,pExSpec:0,pExFlash:6,
+    pGlowOn:false,pGlossOn:true,pGlossPos:35,pGlossW:18,pGlossA:55,
+    pBolt:4,pBoltC:"#9adfff",pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,
+    pSparkN:18,pSparkShape:"mixed",pSparkSize:19,pSparkC:"#b51a00",pSparkSeed:99,
+    pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:3},
 };
 function applyPreset(name){
   const p={...DEFAULTS, ...PRESETS[name]};
@@ -1834,7 +2198,10 @@ function applyPreset(name){
   fillBrushTypes();
   buildLayerUI();
   commitState();
-  requestDraw();
+  warmupFont($("pFont").value);
+  // ブラウザのフォント差し替えが反映されるまで1フレーム待ってから本描画（前のフォントで
+  // 描かれてしまう既知の癖の対策）
+  requestAnimationFrame(()=>requestAnimationFrame(()=>requestDraw("high")));
 }
 Object.keys(PRESETS).forEach(name=>{
   const b=document.createElement("button");
@@ -1878,7 +2245,8 @@ function applyState(json){
   if(s.brushType && [...$("brushType").options].some(o=>o.value===s.brushType)) $("brushType").value=s.brushType;
   if(s.brushColor!==undefined) $("brushColor").value=s.brushColor;
   buildLayerUI();
-  requestDraw();
+  warmupFont($("pFont").value);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>requestDraw("high")));
 }
 function updateUndoBtns(){
   $("btnUndo").disabled=!undoStack.length;
@@ -1909,6 +2277,35 @@ document.addEventListener("keydown",e=>{
 // 全コントロールの確定時（change）にスナップショット
 document.querySelectorAll("#panel input[id], #panel select[id], #panel textarea[id]")
   .forEach(el=>el.addEventListener("change",commitState));
+
+/* ---------- スライダー横の数値を直接入力できるように ----------
+   .val(data-for="X"のinput、またはid="olV0"などのoutline幅用input)への
+   タイプ入力をスライダー本体(X / olW+番号)へ反映する。動的生成される
+   要素も多いため、個別にリスナーを貼らずdocument委譲で一括対応する。 */
+function syncValInput(el, sliderId){
+  const slider=$(sliderId);
+  if(!slider) return false;
+  let v=parseFloat(el.value);
+  if(isNaN(v)) return false;
+  const min=slider.min!==""?+slider.min:-Infinity, max=slider.max!==""?+slider.max:Infinity;
+  v=Math.max(min,Math.min(max,v));
+  slider.value=v;
+  return true;
+}
+document.addEventListener("input", e=>{
+  const t=e.target;
+  if(!(t.tagName==="INPUT" && t.type==="number" && t.classList.contains("val"))) return;
+  if(t.dataset.for){ if(syncValInput(t,t.dataset.for)) onInput(); }
+  else if(t.id && t.id.startsWith("olV")){ if(syncValInput(t,"olW"+t.id.slice(3))) onInput(); }
+});
+document.addEventListener("change", e=>{
+  const t=e.target;
+  if(!(t.tagName==="INPUT" && t.type==="number" && t.classList.contains("val"))) return;
+  // クランプ後の正しい値を表示に反映してから確定（範囲外を打ち込んだ場合の補正）
+  if(t.dataset.for){ syncValInput(t,t.dataset.for); t.value=$(t.dataset.for).value; }
+  else if(t.id && t.id.startsWith("olV")){ const w="olW"+t.id.slice(3); syncValInput(t,w); t.value=$(w).value; }
+  commitState();
+});
 
 /* ---------- 設定の保存・読込・URL共有 ---------- */
 $("btnSaveJson").addEventListener("click",()=>{
