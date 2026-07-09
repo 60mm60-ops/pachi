@@ -110,6 +110,17 @@ textarea{
 }
 #presets button:hover{border-color:var(--gold);}
 
+/* favorite chips: 名前ボタン+削除×のペア */
+.favChip{
+  display:flex; align-items:stretch; border:1px solid var(--line); border-radius:20px;
+  overflow:hidden; background:var(--panel2);
+}
+.favChip button{background:none; border:none; color:var(--txt); cursor:pointer; font-size:12px;}
+.favChip .favName{padding:6px 6px 6px 12px;}
+.favChip .favDel{padding:6px 10px 6px 6px; color:var(--sub);}
+.favChip:hover{border-color:var(--gold);}
+.favChip .favDel:hover{color:var(--accent);}
+
 button.primary{
   background:linear-gradient(180deg,#ffdf8a,#e8b64c 50%,#c08a1e);
   color:#3a2600; font-weight:700; border:none; border-radius:8px;
@@ -254,12 +265,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="plasma">プラズマ雲</option>
           <option value="glitter">ラメ（グリッター）</option>
           <option value="facet">ダイヤカット（多面体）</option>
-          <option value="gem">カラーストーン（散りばめ）</option>
         </select>
-      </div>
-      <div class="row" id="gemColorRow" style="display:none"><label>石の色</label>
-        <input type="color" id="pGemColor" value="#ffffff">
-        <label class="chk" style="margin:0 0 0 4px"><input type="checkbox" id="pGemRandom"><span>石ごとにランダム色</span></label>
       </div>
       <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
       <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="10" value="4"><input type="number" class="val" data-for="pTexScale"></div>
@@ -396,8 +402,8 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row" id="fanRow"><label>半径</label><input type="range" id="pFanRadius" min="-800" max="800" value="300"><input type="number" class="val" data-for="pFanRadius"></div>
       <p class="hint" id="fanHint" style="display:none">正＝ドーム状（中央が上がる）、負＝谷状（中央が下がる）。絶対値が小さいほどきつく曲がる。</p>
       <div class="row" id="perspRow1"><label>方向角度</label><input type="range" id="pPerspAngle" min="0" max="360" value="45"><input type="number" class="val" data-for="pPerspAngle"></div>
-      <div class="row" id="perspRow2"><label>開始サイズ</label><input type="range" id="pPerspFrom" min="30" max="150" value="60"><input type="number" class="val" data-for="pPerspFrom"></div>
-      <div class="row" id="perspRow3"><label>終了サイズ</label><input type="range" id="pPerspTo" min="50" max="250" value="130"><input type="number" class="val" data-for="pPerspTo"></div>
+      <div class="row" id="perspRow2"><label>開始サイズ</label><input type="range" id="pPerspFrom" min="30" max="150" value="80"><input type="number" class="val" data-for="pPerspFrom"></div>
+      <div class="row" id="perspRow3"><label>終了サイズ</label><input type="range" id="pPerspTo" min="50" max="250" value="120"><input type="number" class="val" data-for="pPerspTo"></div>
       <div class="row" id="perspRow4"><label>迫り出し量</label><input type="range" id="pPerspDrift" min="0" max="100" value="20"><input type="number" class="val" data-for="pPerspDrift"></div>
       <p class="hint" id="perspHint" style="display:none">方向角度0＝右へ、90＝下へ。「45」で左上始点→右下へ迫り出す見た目になる。</p>
       <div class="row"><label>傾き</label><input type="range" id="pTilt" min="-30" max="30" value="0"><input type="number" class="val" data-for="pTilt"></div>
@@ -411,8 +417,14 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>暴れシード</label><input type="range" id="pJitSeed" min="1" max="99" value="3"><input type="number" class="val" data-for="pJitSeed"></div>
     </div></details>
 
+    <details open><summary>⭐ お気に入り</summary><div class="sec">
+      <p class="hint">気に入った状態に名前をつけてこの端末に保存。次に開いた時もここに残ってる（JSONやURLと違って、文字列を自分で管理する必要がない）。</p>
+      <div id="favList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:9px"></div>
+      <button class="ghost" id="btnFavSave" style="margin-top:10px">＋ 現在の状態を保存</button>
+    </div></details>
+
     <details><summary>表示・設定の保存</summary><div class="sec">
-      <p class="hint">レイヤー確認は調整用（書き出しにも反映）。設定はJSONやURLで保存・共有できる。</p>
+      <p class="hint">レイヤー確認は調整用（書き出しにも反映）。設定はJSONやURLでも保存・共有できる（他人に渡す・別端末に移す用途はこちら）。</p>
       <div class="row"><label>レイヤー表示</label>
         <select id="pView">
           <option value="all">すべて</option>
@@ -462,7 +474,7 @@ const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillH
   "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
   "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed"];
-const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pGemColor","pGemRandom","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
+const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
   "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgC1","pBgC2","pTransformMode"];
 
 /* 縁取りスロット（外→内）4本 */
@@ -505,7 +517,6 @@ function readParams(){
     s.value = $(s.dataset.for).value;
   });
   $("customFillRow").style.display = P.pFill==="custom" ? "flex":"none";
-  $("gemColorRow").style.display = P.pTex==="gem" ? "flex":"none";
   $("pBgC2").style.display = P.pBg==="gradient" ? "inline-block":"none";
   // 変形モードに応じて関連スライダーだけ表示（他モードのスライダーは隠す）
   const tm = P.pTransformMode||"arch";
@@ -524,52 +535,10 @@ function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a
 const texCache = {key:"", canvas:null};
 const sideCache = {key:"", canvas:null};
 function makeTexture(type, scale, seed){
-  const gemExtra = type==="gem" ? "_"+(P.pGemColor||"#ffffff")+"_"+(P.pGemRandom?1:0) : "";
-  const key = type+"_"+scale+"_"+seed+gemExtra;
+  const key = type+"_"+scale+"_"+seed;
   if(texCache.key===key) return texCache.canvas;
   const S=256, c=document.createElement("canvas"); c.width=c.height=S;
   const x=c.getContext("2d");
-  if(type==="gem"){
-    // カラーストーン: ノイズ地は使わず、円形の"石"をランダム配置するベクター方式。
-    // 粒ごとに独立したハイライト(左上寄り)＋暗いエッジ(爪留め風)を持たせて「散りばめ」感を出す。
-    // scale(1~10)で石の密度、pGemColorで単色指定、pGemRandomONで宝石色パレットからランダム。
-    x.fillStyle="#141118"; x.fillRect(0,0,S,S); // 石の間から覗く金属地色
-    const gr=mulberry32(seed*733);
-    const n=Math.round(16+scale*7);
-    const baseR=S/Math.sqrt(n)*.62;
-    const palette=["#e63950","#3a7bff","#2ecc71","#a259ff","#ffd23e","#ff8fd0","#38d9d9"]; // ルビー/サファイア/エメラルド/アメジスト/トパーズ/ピンク/アクア
-    const gemHex=P.pGemColor||"#ffffff";
-    const useRandom=!!P.pGemRandom;
-    for(let i=0;i<n;i++){
-      const cx=gr()*S, cy=gr()*S;
-      const r=baseR*(.55+gr()*.85);
-      const [br,bgc,bb]=hex(useRandom ? palette[(gr()*palette.length)|0] : gemHex);
-      const hlx=cx-r*.32, hly=cy-r*.32;
-      const grad=x.createRadialGradient(hlx,hly,0,cx,cy,r*1.1);
-      grad.addColorStop(0,"rgba(255,255,255,.97)");
-      grad.addColorStop(.22,`rgb(${Math.min(255,br+70)},${Math.min(255,bgc+70)},${Math.min(255,bb+70)})`);
-      grad.addColorStop(.55,`rgb(${br},${bgc},${bb})`);
-      grad.addColorStop(.85,`rgb(${br*.45|0},${bgc*.45|0},${bb*.45|0})`);
-      grad.addColorStop(1,`rgb(${br*.2|0},${bgc*.2|0},${bb*.2|0})`);
-      x.beginPath(); x.arc(cx,cy,r,0,7); x.fillStyle=grad; x.fill();
-      // カット面風の細い明暗線を数本
-      const facetN=3+((gr()*3)|0);
-      for(let f=0;f<facetN;f++){
-        const a=gr()*Math.PI*2;
-        x.beginPath();
-        x.moveTo(cx+Math.cos(a)*r*.15, cy+Math.sin(a)*r*.15);
-        x.lineTo(cx+Math.cos(a)*r*.92, cy+Math.sin(a)*r*.92);
-        x.strokeStyle = gr()<.5 ? "rgba(255,255,255,.3)" : "rgba(0,0,0,.22)";
-        x.lineWidth=Math.max(.5,r*.05);
-        x.stroke();
-      }
-      // 爪留め風の暗いエッジ
-      x.beginPath(); x.arc(cx,cy,r,0,7);
-      x.strokeStyle="rgba(10,8,12,.8)"; x.lineWidth=Math.max(1,r*.08); x.stroke();
-    }
-    texCache.key=key; texCache.canvas=c;
-    return c;
-  }
   const img=x.createImageData(S,S), d=img.data;
   const rnd=mulberry32(seed*1013);
   const G=48, grid=[];
@@ -884,12 +853,38 @@ function applyTransformWarp(chars, size){
     const from=(P.pPerspFrom!==undefined?P.pPerspFrom:60)/100;
     const to=(P.pPerspTo!==undefined?P.pPerspTo:130)/100;
     const drift=P.pPerspDrift||0;
+    // ①まずスケールだけ決める(角度に沿った進行度tがそのまま拡大率になる)
     chars.forEach((c,i)=>{
-      const t=(projs[i]-pmin)/span;
-      const d=drift*t*t; // 進行方向ほど加速的にズレる＝迫り出す勢い
-      c.warpDx=px*d; c.warpDy=py*d;
-      c.warpRot=(t-0.5)*(drift/100)*0.6;
-      c.warpScale=lerp(from,to,t);
+      c.warpScale=lerp(from,to,(projs[i]-pmin)/span);
+      c._perspT=(projs[i]-pmin)/span;
+    });
+    // ②行ごとに、決まったスケールを踏まえて横位置を詰め直す。
+    // これをやらないと、縮んだ文字の周りだけ元のサイズ分の隙間が残って「字詰めスカスカ」になる。
+    const lineGroups={};
+    chars.forEach(c=>{ (lineGroups[c.cy]=lineGroups[c.cy]||[]).push(c); });
+    Object.values(lineGroups).forEach(line=>{
+      line.sort((a,b)=>a.cx-b.cx);
+      const n=line.length;
+      let cursor=0; const positions=[];
+      for(let i=0;i<n;i++){
+        const w=line[i].cw*line[i].warpScale;
+        if(i===0){ cursor=w/2; }
+        else{
+          const prevW=line[i-1].cw*line[i-1].warpScale;
+          const gap=P.pSpacing*(line[i-1].warpScale+line[i].warpScale)/2;
+          cursor += prevW/2+gap+w/2;
+        }
+        positions.push(cursor);
+      }
+      const lastW=line[n-1].cw*line[n-1].warpScale;
+      const centerOffset=-(cursor+lastW/2)/2;
+      line.forEach((c,i)=>{
+        const t=c._perspT, d=drift*t*t; // 進行方向ほど加速的にズレる＝迫り出す勢い
+        c.warpDx=(positions[i]+centerOffset-c.cx)+px*d;
+        c.warpDy=py*d;
+        c.warpRot=(t-0.5)*(drift/100)*0.6;
+        delete c._perspT;
+      });
     });
   }else if(mode==="none"){
     for(const c of chars){ c.warpDx=0; c.warpDy=0; c.warpRot=0; c.warpScale=1; }
@@ -981,36 +976,88 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
     g.globalCompositeOperation="source-over";
   }
 
-  // 2.5) 水銀: ぼかしハイトマップ→ジグザグのクロームカーブでシャープな反射縞に戻す
+  // 2.5) 水銀: 輪郭からの高さ場(エッジ)＋面の中にランダムな丸いハイライトの塊(ブロブ)を
+  // 加算した高さ場を作り、ジグザグのクロームカーブでシャープな反射縞に変換する。
+  // 輪郭距離だけだと太い画数の内側が減衰しきってベタ塗りの天井に張り付いてしまうため
+  // （どこも同じ高さ=cosカーブの同じ点になり、面としての情報量が消える）、
+  // ブロブで面の中に浮く光の塊を追加して「液体金属が丸く盛り上がる」質感を出す。
   // getImageDataの全ピクセルループが重いので、ドラッグ中(low)はスキップ
   if(P.pLiquid>0 && quality==="high"){
+    // エッジ高さ場とブロブ高さ場を「別々の独立したキャンバス」に描き、
+    // 最後にJSのMath.maxで1ピクセルずつ明示的に合成する。
+    // canvasの合成モード(lighter/destination-in)の重ね合わせに頼ると
+    // 挙動を目で確認しづらいため、確実性を優先してここは生のピクセル演算にする。
     const hm=document.createElement("canvas"); hm.width=W; hm.height=H;
     const hg=hm.getContext("2d");
     hg.translate(offX,offY); hg.scale(scale,scale);
     applyWholeRotation(hg,L);
     hg.font=fontStr(L.size); hg.textBaseline="middle"; hg.textAlign="center";
-    // 高さ場: シャープな白シルエットから「ぼかした輪郭stroke」を削る＝輪郭0→内側1の内側減衰
     hg.lineJoin="round"; hg.miterLimit=2;
-    hg.fillStyle="#ffffff"; drawChars(hg,L,"fill");
+    // ①エッジ高さ場: シャープな白シルエットから「ぼかした輪郭stroke」を削る＝輪郭0→内側1の内側減衰。
+    // ただし天井をalpha0.6程度に下げておく（フル1.0のままだと、後でMath.maxするブロブが
+    // 既に最大値の場所には勝てず、何を描いても反映されなくなるため）。
+    hg.fillStyle="rgba(255,255,255,0.6)"; drawChars(hg,L,"fill");
     hg.globalCompositeOperation="destination-out";
     softStroke(hg,L,"#000000",P.pLiquidR*.8,P.pLiquidR*3,scale);
     hg.globalCompositeOperation="source-over";
-    // クロームカーブ: 高さ→cos折り返しで「暗→明→暗→明」の縞（境界はシャープなS字）
-    // 出力は暗部色→明部色の補間（水銀の色を直接指定できる）
-    const id=hg.getImageData(0,0,W,H), dd=id.data;
+    const edgeAlpha=hg.getImageData(0,0,W,H).data; // ①だけの結果を退避しておく
+
+    // ②ブロブ高さ場: 文字ごとに縦長の楕円ハイライトを1〜2個、加算合成で重ねて描く。
+    // 丸い点を単に散らすと「粒々」に見えてしまうため、①縦に伸ばした楕円にする
+    // ②数を絞って大きくする ③重なった部分は加算合成でより明るく融け合わせる、
+    // の3つで「液体がヌルッと流れて繋がる」質感を狙う。
+    // 丸みスライダー(pLiquidR)でブロブの大きさも連動させ、既存スライダーの意味を保つ。
+    const bm=document.createElement("canvas"); bm.width=W; bm.height=H;
+    const bg=bm.getContext("2d");
+    bg.translate(offX,offY); bg.scale(scale,scale);
+    applyWholeRotation(bg,L);
+    const blobRnd=mulberry32(P.pSeed*443+7);
+    const blobScale=P.pLiquidR/14;
+    bg.globalCompositeOperation="lighter"; // ブロブ同士は加算＝重なるほど明るく融け合う
+    for(const c of L.chars){
+      const n=1+Math.floor(blobRnd()*2); // 1〜2個。数を絞って大きく＝粒々にしない
+      for(let k=0;k<n;k++){
+        const bx=c.cx+(blobRnd()*2-1)*c.cw*0.26*(c.warpScale||1);
+        const by=c.cy+c.jitY+(blobRnd()*2-1)*L.size*0.20*(c.warpScale||1);
+        const brY=L.size*(0.30+blobRnd()*0.26)*blobScale*(c.warpScale||1); // 縦長の主軸
+        const brX=brY*(0.5+blobRnd()*0.25); // 横は縦の50〜75%＝縦に流れる楕円
+        const rot=(blobRnd()*2-1)*0.35; // わずかに傾けて「流れ」を出す
+        if(brY<0.5) continue;
+        bg.save();
+        bg.translate(bx,by); bg.rotate(rot); bg.scale(brX/brY,1);
+        const grad=bg.createRadialGradient(0,0,0,0,0,brY);
+        grad.addColorStop(0,"rgba(255,255,255,1)");
+        grad.addColorStop(.55,"rgba(255,255,255,.8)");
+        grad.addColorStop(1,"rgba(255,255,255,0)");
+        bg.fillStyle=grad;
+        bg.beginPath(); bg.arc(0,0,brY,0,7); bg.fill();
+        bg.restore();
+      }
+    }
+    bg.globalCompositeOperation="source-over";
+    // ブロブが文字の外にはみ出した分をシルエットで切り落とす
+    bg.globalCompositeOperation="destination-in";
+    bg.fillStyle="#ffffff";
+    bg.font=fontStr(L.size); bg.textBaseline="middle"; bg.textAlign="center";
+    drawChars(bg,L,"fill");
+    const blobAlpha=bg.getImageData(0,0,W,H).data;
+
+    // ③2つの高さ場を1ピクセルずつ「大きい方」で合成してからクロームカーブへ変換
+    // （edgeとblobのどちらか強い方がその点の高さになる＝面の中に塊が浮く見た目）
+    const out=hg.createImageData(W,H), od=out.data;
     const nb=P.pLiquidBands*2-1;
     const lc1=hex(P.pLiquidC1), lc2=hex(P.pLiquidC2);
-    for(let i=0;i<dd.length;i+=4){
-      const a=dd[i+3]/255;
-      if(a<.02){dd[i+3]=0;continue;}
-      const t=Math.pow(Math.min(1,a),.6); // ガンマで縞を内側まで引き伸ばす
+    for(let i=0;i<od.length;i+=4){
+      const a=Math.max(edgeAlpha[i+3],blobAlpha[i+3])/255;
+      if(a<.02){ od[i+3]=0; continue; }
+      const t=Math.pow(a,.6); // ガンマで縞を内側まで引き伸ばす
       const v=.5-.5*Math.cos(t*Math.PI*nb);
-      dd[i]=lerp(lc2[0],lc1[0],v)|0;
-      dd[i+1]=lerp(lc2[1],lc1[1],v)|0;
-      dd[i+2]=lerp(lc2[2],lc1[2],v)|0;
-      dd[i+3]=255;
+      od[i]=lerp(lc2[0],lc1[0],v)|0;
+      od[i+1]=lerp(lc2[1],lc1[1],v)|0;
+      od[i+2]=lerp(lc2[2],lc1[2],v)|0;
+      od[i+3]=255;
     }
-    hg.putImageData(id,0,0);
+    hg.putImageData(out,0,0);
     // 面内にsource-atopで合成（強度＝置き換え率）
     g.save();
     g.setTransform(1,0,0,1,0,0);
@@ -1169,12 +1216,16 @@ function applyTrapezoid(mg, cw, ch, quality, contentHalfW, offX){
   const top=(P.pTrapTop!==undefined?P.pTrapTop:100)/100;
   const bottom=(P.pTrapBottom!==undefined?P.pTrapBottom:100)/100;
   if(Math.abs(top-1)<0.005 && Math.abs(bottom-1)<0.005) return; // 無変形なら何もしない
+  // ドラッグ中(low)は完全にスキップ。帯分割は最大で数百回のdrawImageを伴うため、
+  // 台形が有効な状態で「関係ない別のスライダー」を動かしただけでも毎フレーム重くなり、
+  // カクつきの主因になっていた。手を離した本描画(high)でのみ正確に適用する。
+  if(quality!=="high") return;
   const snapshot=document.createElement("canvas");
   snapshot.width=cw; snapshot.height=ch;
   snapshot.getContext("2d").drawImage(mg.canvas,0,0);
   mg.setTransform(1,0,0,1,0,0);
   mg.clearRect(0,0,cw,ch);
-  const STRIP = quality==="high" ? 2 : 6; // ドラッグ中(low)は帯を太くして軽量化
+  const STRIP=2;
   const srcL=Math.max(0,offX-contentHalfW), srcR=Math.min(cw,offX+contentHalfW);
   const leftPadW=srcL, rightPadW=cw-srcR;
   for(let y=0;y<ch;y+=STRIP){
@@ -2087,25 +2138,44 @@ function requestDraw(quality){
 function onInput(){requestDraw("low");}
 
 /* ---------- 書き出し ---------- */
-$("btnExport").addEventListener("click",()=>{
+$("btnExport").addEventListener("click",async()=>{
   const scale=+$("expScale").value;
   const off=document.createElement("canvas").getContext("2d");
   draw(off,scale,$("expBg").checked);
-  off.canvas.toBlob(b=>{
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(b);
-    a.download="pachimoji.png";
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  },"image/png");
+  // toBlob()は非同期(コールバックが1テック遅れて発火する)ため、その中でnavigator.share()を
+  // 呼ぶと「ユーザー操作の直接の結果ではない」と判定され、Safariがエラーも出さず
+  // 共有シートを出さないことがある。toDataURL()は同期処理なので、そこからBlobへの変換も
+  // 手動デコードで同期的に行い、クリック操作からshare()までの連鎖を途切れさせない。
+  const dataUrl=off.canvas.toDataURL("image/png");
+  const bin=atob(dataUrl.split(",")[1]);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  const blob=new Blob([bytes],{type:"image/png"});
+  const file=new File([blob],"pachimoji.png",{type:"image/png"});
+  // Web Share API対応環境(主にスマホのSafari/Chrome)では共有シートを開く。
+  // そこから「画像を保存」を選ぶとカメラロールに直接入る＝ダウンロードフォルダ経由にならない。
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title:"pachimoji.png"});
+      return;
+    }catch(err){
+      if(err && err.name==="AbortError") return; // ユーザーが共有をキャンセルしただけ
+      // 共有に失敗した場合は下のダウンロード方式にフォールバック
+    }
+  }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="pachimoji.png";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
 });
 
 /* ---------- プリセット ---------- */
 /* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
-const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pGemColor:"#ffffff",pGemRandom:false,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
+const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
   pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
-  pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:60,pPerspTo:130,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,pBg:"none"};
+  pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,pBg:"none"};
 const PRESETS = {
   "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
     pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",pMetal:0,
@@ -2340,6 +2410,57 @@ $("btnShareUrl").addEventListener("click",async()=>{
   if(!m) return;
   try{ applyState(decodeURIComponent(escape(atob(m[1])))); }catch(e){}
 })();
+
+/* ---------- お気に入り（この端末に保存、名前をつけて一覧から呼び出せる） ----------
+   JSON書き出し・URL共有は「他人に渡す/別端末に移す」用途、お気に入りは
+   「この端末で気に入った状態をすぐ呼び出す」用途、と役割を分けている。
+   localStorageに配列で保持。1件ごとの中身はsnapshot()と同じ形式(JSON文字列)。 */
+const FAV_KEY="pachimoji_favorites";
+function loadFavorites(){
+  try{
+    const raw=localStorage.getItem(FAV_KEY);
+    const arr=raw?JSON.parse(raw):[];
+    return Array.isArray(arr)?arr:[];
+  }catch(e){ return []; }
+}
+function saveFavorites(arr){
+  try{ localStorage.setItem(FAV_KEY, JSON.stringify(arr)); return true; }
+  catch(e){ alert("保存に失敗しました（保存容量の上限に達している可能性があります）"); return false; }
+}
+function renderFavList(){
+  const box=$("favList");
+  const favs=loadFavorites();
+  box.innerHTML="";
+  if(!favs.length){
+    const p=document.createElement("p"); p.className="hint"; p.textContent="まだ保存されたお気に入りはありません。";
+    box.appendChild(p);
+    return;
+  }
+  favs.forEach(f=>{
+    const chip=document.createElement("div"); chip.className="favChip";
+    const nameBtn=document.createElement("button"); nameBtn.className="favName"; nameBtn.textContent=f.name;
+    nameBtn.addEventListener("click",()=>{
+      try{ applyState(f.json); commitState(); }
+      catch(e){ alert("この設定を読み込めませんでした"); }
+    });
+    const delBtn=document.createElement("button"); delBtn.className="favDel"; delBtn.textContent="×";
+    delBtn.addEventListener("click",()=>{
+      if(!confirm(`「${f.name}」を削除しますか？`)) return;
+      saveFavorites(loadFavorites().filter(x=>x.id!==f.id));
+      renderFavList();
+    });
+    chip.appendChild(nameBtn); chip.appendChild(delBtn);
+    box.appendChild(chip);
+  });
+}
+$("btnFavSave").addEventListener("click",()=>{
+  const name=prompt("この状態の名前を入力してください（例: 俺ゴールド）");
+  if(!name || !name.trim()) return;
+  const favs=loadFavorites();
+  favs.push({id:Date.now(), name:name.trim().slice(0,20), json:snapshot()});
+  if(saveFavorites(favs)) renderFavList();
+});
+renderFavList();
 
 /* ---------- 初期化 ---------- */
 buildOutlineUI();
