@@ -342,13 +342,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         <input type="number" class="val" data-for="brushSize"></div>
       <div class="row"><label>流量</label><input type="range" id="brushFlow" min="1" max="100" value="40"><input type="number" class="val" data-for="brushFlow"></div>
       <div class="row"><label>色</label><input type="color" id="brushColor" value="#ffffff"></div>
-      <div class="row"><label>描画範囲</label>
-        <select id="brushMask">
-          <option value="face">文字のメインカラーのみ</option>
-          <option value="full">縁まで描画</option>
-          <option value="off">マスクOFF（はみ出し放題）</option>
-        </select>
-      </div>
       <div class="row" style="align-items:flex-start; flex-direction:column; gap:6px; margin-top:12px">
         <label style="width:auto">レイヤー（クリックで選択・チェックで表示切替）</label>
         <div id="layerList" style="width:100%"></div>
@@ -360,6 +353,14 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <button class="ghost" id="btnLayerDown">↓</button>
         </div>
       </div>
+      <div class="row"><label>描画範囲</label>
+        <select id="brushMask">
+          <option value="face">文字のメインカラーのみ</option>
+          <option value="full">縁まで描画</option>
+          <option value="off">マスクOFF（はみ出し放題）</option>
+        </select>
+      </div>
+      <p class="hint">「描画範囲」は<b>選択中レイヤーごと</b>の設定。レイヤーを分ければ「文字の中に収まるスパークル」と「周りにはみ出す用のスパークル」を別々に持てる。</p>
       <button class="ghost" id="btnClearBrush" style="margin-top:10px">選択中レイヤーを全消去</button>
     </div></details>
 
@@ -1461,7 +1462,7 @@ function draw(targetCtx, scale, withBg, quality){
         ? brushLayers.map(l => l.id===activeLayerId ? {...l, strokes:l.strokes.concat([currentStroke])} : l)
         : brushLayers;
     }
-    renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, $("brushMask").value, quality);
+    renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, quality);
   }
 
   // ライブプレビュー描画時のみ、ブラシのポインタ座標変換用にレイアウトを記録
@@ -1729,7 +1730,7 @@ function scatterSparkles(mg, face, cw, ch, scale){
    させるので、フリーハンドの揺れが3D面の奥行きと整合しない問題を防ぐ。
    スパークルは経路追従（points配列）のまま、流量=配置確率でランダム配置。
    レイヤー: brushLayers配列（下から順、各々{id,name,visible,strokes}）。 */
-let brushLayers = [{id:1, name:"レイヤー1", visible:true, strokes:[]}];
+let brushLayers = [{id:1, name:"レイヤー1", visible:true, strokes:[], maskMode:"face"}];
 let activeLayerId = 1;
 let nextLayerId = 2;
 let currentStroke = null;
@@ -1751,12 +1752,14 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
   tg.beginPath(); tg.arc(x,y,r,0,7); tg.fill();
 }
 
-function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, maskMode, quality){
-  // maskMode: "face"=面のみ / "full"=面＋縁 / "off"=クリップなし
-  const clipCanvas = maskMode==="face" ? faceMask : frontMask; // 中心判定・ピクセルクリップの基準
+function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, quality){
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
   for(const layer of layers){
     if(!layer.visible || !layer.strokes.length) continue;
+    // maskMode: "face"=面のみ / "full"=面＋縁 / "off"=クリップなし。レイヤーごとに持たせることで、
+    // 「文字の中に収まるレイヤー」と「周りにはみ出せるレイヤー」を同時に扱えるようにしてある。
+    const maskMode=layer.maskMode||"face";
+    const clipCanvas = maskMode==="face" ? faceMask : frontMask; // 中心判定・ピクセルクリップの基準
     const metal = layer.strokes.filter(s=>s.type==="metal-hi"||s.type==="metal-mid"||s.type==="metal-lo");
     const spark = layer.strokes.filter(s=>s.type==="spark");
     const bolt  = layer.strokes.filter(s=>s.type==="bolt");
@@ -1935,15 +1938,19 @@ function buildLayerUI(){
     row.addEventListener("click",(e)=>{ if(e.target===vis) return; activeLayerId=L.id; buildLayerUI(); });
     box.appendChild(row);
   }
+  // 「描画範囲」はレイヤーごとの設定なので、呼ばれるたびに選択中レイヤーの値へ同期する
+  // （＝レイヤーを切り替えるとセレクトの表示もそのレイヤーの設定に自動で切り替わる）
+  const active=activeLayer();
+  if(active) $("brushMask").value=active.maskMode||"face";
 }
 $("btnLayerAdd").addEventListener("click",()=>{
   const id=nextLayerId++;
-  brushLayers.push({id,name:"レイヤー"+id,visible:true,strokes:[]});
+  brushLayers.push({id,name:"レイヤー"+id,visible:true,strokes:[],maskMode:"face"});
   activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
 });
 $("btnLayerDup").addEventListener("click",()=>{
   const src=activeLayer(); const id=nextLayerId++;
-  brushLayers.push({id,name:src.name+"のコピー",visible:true,strokes:JSON.parse(JSON.stringify(src.strokes))});
+  brushLayers.push({id,name:src.name+"のコピー",visible:true,strokes:JSON.parse(JSON.stringify(src.strokes)),maskMode:src.maskMode||"face"});
   activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
 });
 $("btnLayerDel").addEventListener("click",()=>{
@@ -1974,6 +1981,11 @@ const BRUSH_COLORS={ "metal-hi":"#ffffff","metal-mid":"#d9a441","metal-lo":"#140
   "spark":"#ffe9c0","bolt":"#9adfff" };
 // ユーザーが色を手動で選んだら、以後その系統では推奨色で上書きしない
 let brushColorTouched=false;
+// 文字を自分でカスタマイズしたら、プリセット適用時に見本文字(プリセット名など)で
+// 上書きされないようにするためのフラグ。プリセット側のプログラム的な変更では
+// 立てず、テキストエリアへの直接入力だけで立てる。
+let textCustomized=false;
+$("pText").addEventListener("input",()=>{ textCustomized=true; });
 function applyBrushTypeColor(){
   if(brushColorTouched) return; // 自分で選んだ色を尊重
   const c=BRUSH_COLORS[$("brushType").value];
@@ -2006,7 +2018,11 @@ $("brushCategory").addEventListener("change",()=>{ brushColorTouched=false; fill
 $("brushType").addEventListener("change",()=>{ brushColorTouched=false; applyBrushTypeColor(); updateBrushRows(); });
 // 色ピッカーを触ったら以後尊重。プレビューも即更新
 $("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDraw("low"); });
-$("brushMask").addEventListener("change",()=>requestDraw());
+$("brushMask").addEventListener("change",()=>{
+  const l=activeLayer();
+  if(l){ l.maskMode=$("brushMask").value; commitState(); }
+  requestDraw();
+});
 $("brushMode").addEventListener("change",()=>{
   cv.classList.toggle("brush-active", $("brushMode").checked);
   if(!$("brushMode").checked) $("brushCursor").style.display="none";
@@ -2362,14 +2378,16 @@ function applyPreset(name){
       v.forEach((o,i)=>{$("olOn"+i).checked=o[0]; $("olC"+i).value=o[1]; $("olW"+i).value=o[2];});
     }else if(k==="brush"){
       // プリセット付属の手描きブラシストローク（金属反射の手仕上げなど）を1レイヤーとして反映
-      brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:JSON.parse(JSON.stringify(v))}];
+      brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:JSON.parse(JSON.stringify(v)),maskMode:"face"}];
       activeLayerId=1; nextLayerId=2;
+    }else if(k==="pText" && textCustomized){
+      continue; // 自分で文字を打ち込んでいたら、プリセットの見本文字では上書きしない
     }else{
       const el=$(k); if(!el) continue;
       if(el.type==="checkbox") el.checked=v; else el.value=v;
     }
   }
-  if(!("brush" in p)) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:[]}]; // ブラシ無指定なら初期化
+  if(!("brush" in p)) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:[],maskMode:"face"}]; // ブラシ無指定なら初期化
   brushColorTouched=true; // プリセットの色を推奨色で上書きさせない
   fillBrushTypes();
   buildLayerUI();
@@ -2401,13 +2419,17 @@ function applyState(json){
   const s=JSON.parse(json);
   for(const [id,v] of Object.entries(s)){
     if(id==="__brushLayers"){
-      brushLayers = (Array.isArray(v)&&v.length) ? v : [{id:1,name:"レイヤー1",visible:true,strokes:[]}];
+      brushLayers = (Array.isArray(v)&&v.length) ? v : [{id:1,name:"レイヤー1",visible:true,strokes:[],maskMode:"face"}];
+      // 旧保存データ(maskModeが無いレイヤー)は、当時のグローバル設定(brushMask)を引き継ぐ。
+      // それも無ければ面のみをデフォルトにする。
+      const fallbackMask=s.brushMask||"face";
+      brushLayers.forEach(l=>{ if(!l.maskMode) l.maskMode=fallbackMask; });
       continue;
     }
     if(id==="__activeLayerId"){ activeLayerId=v; continue; }
     if(id==="__nextLayerId"){ nextLayerId=v; continue; }
     if(id==="__brush"){ // 旧フォーマット互換: フラットなストローク配列を単一レイヤーへ変換
-      if(Array.isArray(v)&&v.length) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:v}];
+      if(Array.isArray(v)&&v.length) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:v,maskMode:s.brushMask||"face"}];
       continue;
     }
     const el=$(id); if(!el) continue;
