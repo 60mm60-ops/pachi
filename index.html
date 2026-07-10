@@ -428,6 +428,38 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>暴れシード</label><input type="range" id="pJitSeed" min="1" max="99" value="3"><input type="number" class="val" data-for="pJitSeed"></div>
     </div></details>
 
+    <details><summary>背景（プレビュー・書き出しオプション）</summary><div class="sec">
+      <div class="row"><label>タイプ</label>
+        <select id="pBg">
+          <option value="none">なし（透過）</option>
+          <option value="solid">単色ベタ塗り</option>
+          <option value="gradient">グラデ</option>
+          <option value="uni">ウニフラ（リング状のトゲ）</option>
+          <option value="beta">ベタフラ（芯ありのトゲ）</option>
+        </select>
+      </div>
+      <div class="row" id="bgGradShapeRow"><label>グラデ形状</label>
+        <select id="pBgGradShape">
+          <option value="radial">放射</option>
+          <option value="linear">直線</option>
+        </select>
+      </div>
+      <div class="row" id="bgGradAngleRow"><label>角度</label><input type="range" id="pBgAngle" min="0" max="360" value="90"><input type="number" class="val" data-for="pBgAngle"></div>
+      <div class="row" id="bgColor1Row"><label id="bgColor1Label">色</label><input type="color" id="pBgC1" value="#ffdd55">
+        <input type="color" id="pBgC2" value="#b31200"></div>
+      <div class="row" id="bgSpikeBgRow">
+        <label class="chk" style="margin:0"><input type="checkbox" id="pBgSpikeBgOn"><span>背景色を敷く</span></label>
+        <input type="color" id="pBgSpikeBgC" value="#1a0e00" style="margin-left:8px">
+      </div>
+      <div class="row" id="bgSpikeCountRow"><label>本数</label><input type="range" id="pBgSpikeCount" min="12" max="150" value="60"><input type="number" class="val" data-for="pBgSpikeCount"></div>
+      <div class="row" id="bgSpikeLenRow"><label>長さ</label><input type="range" id="pBgSpikeLen" min="10" max="100" value="45"><input type="number" class="val" data-for="pBgSpikeLen"></div>
+      <div class="row" id="bgSpikeWidthRow"><label>太さ</label><input type="range" id="pBgSpikeWidth" min="1" max="40" value="6"><input type="number" class="val" data-for="pBgSpikeWidth"></div>
+      <div class="row" id="bgSpikeInnerXRow"><label>横半径</label><input type="range" id="pBgSpikeInnerX" min="0" max="60" value="26"><input type="number" class="val" data-for="pBgSpikeInnerX"></div>
+      <div class="row" id="bgSpikeInnerYRow"><label>縦半径</label><input type="range" id="pBgSpikeInnerY" min="0" max="60" value="30"><input type="number" class="val" data-for="pBgSpikeInnerY"></div>
+      <div class="row" id="bgSpikeJitterRow"><label>乱れ</label><input type="range" id="pBgSpikeJitter" min="0" max="100" value="20"><input type="number" class="val" data-for="pBgSpikeJitter"></div>
+      <p class="hint" id="bgSpikeHint">ウニフラ＝トゲの形を色で塗る（中心は空洞のリング状）。ベタフラ＝画面のフチから中心へ刺さるトゲを描く（フチ側は自然にベタ塗りになり、中央は透明が残る。「横半径・縦半径」で中央の透明領域の大きさを調整）。</p>
+    </div></details>
+
     <details open><summary>⭐ お気に入り</summary><div class="sec">
       <p class="hint">気に入った状態に名前をつけてこの端末に保存。次に開いた時もここに残ってる（JSONやURLと違って、文字列を自分で管理する必要がない）。</p>
       <div id="favList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:9px"></div>
@@ -452,17 +484,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       </div>
       <input type="file" id="fileJson" accept=".json" style="display:none">
     </div></details>
-    <details><summary>背景（プレビュー・書き出しオプション）</summary><div class="sec">
-      <div class="row"><label>タイプ</label>
-        <select id="pBg">
-          <option value="none">なし（透過）</option>
-          <option value="solid">単色ベタ塗り</option>
-          <option value="gradient">グラデ（放射）</option>
-        </select>
-      </div>
-      <div class="row"><label>色</label><input type="color" id="pBgC1" value="#ffdd55">
-        <input type="color" id="pBgC2" value="#b31200"></div>
-    </div></details>
   </div>
 </div>
 </div>
@@ -484,9 +505,11 @@ const P = {};
 const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillHue","pFillSat","pFillLight","pTexInt","pTexScale","pSeed","pMetal","pVary","pLiquid","pLiquidR","pLiquidBands",
   "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
-  "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed"];
+  "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed",
+  "pBgAngle","pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY","pBgSpikeJitter"];
 const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
-  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgC1","pBgC2","pTransformMode"];
+  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgGradShape","pBgC1","pBgC2","pTransformMode",
+  "pBgSpikeBgOn","pBgSpikeBgC"];
 
 /* 縁取りスロット（外→内）4本 */
 const OUTLINE_DEFAULTS = [
@@ -528,7 +551,24 @@ function readParams(){
     s.value = $(s.dataset.for).value;
   });
   $("customFillRow").style.display = P.pFill==="custom" ? "flex":"none";
-  $("pBgC2").style.display = P.pBg==="gradient" ? "inline-block":"none";
+  // 背景タイプに応じて関連行だけ表示する
+  const bg=P.pBg;
+  const isGrad=bg==="gradient", isSpike=(bg==="uni"||bg==="beta");
+  $("bgGradShapeRow").style.display = isGrad ? "flex":"none";
+  $("bgGradAngleRow").style.display = (isGrad && P.pBgGradShape==="linear") ? "flex":"none";
+  $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike) ? "flex":"none";
+  $("pBgC2").style.display = isGrad ? "inline-block":"none";
+  $("bgColor1Label").textContent = isGrad ? "色" : (isSpike ? "トゲの色" : "色");
+  $("bgSpikeBgRow").style.display = isSpike ? "flex":"none";
+  $("pBgSpikeBgC").style.display = P.pBgSpikeBgOn ? "inline-block":"none";
+  // ベタフラは「フチから中心へ刺さるトゲを直接描く」方式のため、長さ・太さは
+  // 自動で決まる（本数・中央領域サイズ・乱れだけが効く）。効かないスライダーは隠す。
+  ["bgSpikeCountRow","bgSpikeInnerXRow","bgSpikeInnerYRow","bgSpikeJitterRow","bgSpikeHint"].forEach(id=>{
+    $(id).style.display = isSpike ? (id==="bgSpikeHint"?"block":"flex") : "none";
+  });
+  ["bgSpikeLenRow","bgSpikeWidthRow"].forEach(id=>{
+    $(id).style.display = (bg==="uni") ? "flex":"none";
+  });
   // 変形モードに応じて関連スライダーだけ表示（他モードのスライダーは隠す）
   const tm = P.pTransformMode||"arch";
   $("archRow").style.display = tm==="arch" ? "flex":"none";
@@ -1272,15 +1312,42 @@ function draw(targetCtx, scale, withBg, quality){
 
   const offX=cw/2, offY=(pad+L.size/2)*scale;
 
-  // 背景（放射グラデの中心は文字の縦中心に合わせる）
+  // 背景（グラデの中心/基準は文字の縦中心に合わせる）
   const bgCy = offY + ((L.lines-1)*L.lineH/2)*scale;
   if(withBg && P.pBg!=="none"){
     if(P.pBg==="solid"){
       mg.fillStyle=P.pBgC1; mg.fillRect(0,0,cw,ch);
     }else if(P.pBg==="gradient"){
-      const rg=mg.createRadialGradient(cw/2,bgCy,0,cw/2,bgCy,Math.max(cw,ch)*.7);
-      rg.addColorStop(0,P.pBgC1); rg.addColorStop(1,P.pBgC2);
-      mg.fillStyle=rg; mg.fillRect(0,0,cw,ch);
+      if(P.pBgGradShape==="linear"){
+        // 直線グラデ: 角度0=左→右、90=上→下（塗りのグラデと同じ向きの慣習に合わせる）
+        const ang=P.pBgAngle*Math.PI/180;
+        const rad=Math.max(cw,ch)*.75;
+        const dx=Math.cos(ang)*rad, dy=Math.sin(ang)*rad;
+        const lg=mg.createLinearGradient(cw/2-dx,bgCy-dy,cw/2+dx,bgCy+dy);
+        lg.addColorStop(0,P.pBgC1); lg.addColorStop(1,P.pBgC2);
+        mg.fillStyle=lg; mg.fillRect(0,0,cw,ch);
+      }else{
+        const rg=mg.createRadialGradient(cw/2,bgCy,0,cw/2,bgCy,Math.max(cw,ch)*.7);
+        rg.addColorStop(0,P.pBgC1); rg.addColorStop(1,P.pBgC2);
+        mg.fillStyle=rg; mg.fillRect(0,0,cw,ch);
+      }
+    }else if(P.pBg==="uni"){
+      // ウニフラ: 背景色を敷く(任意)→トゲの形を色で塗る（中心は空洞のリング状）。
+      if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
+      const base=Math.min(cw,ch);
+      drawSpikeRing(mg, cw/2, bgCy, P.pBgC1,
+        P.pBgSpikeCount, base*(P.pBgSpikeLen/100), base*(P.pBgSpikeWidth/100)*.12,
+        base*(P.pBgSpikeInnerX/100), base*(P.pBgSpikeInnerY/100),
+        P.pBgSpikeJitter/100, P.pSeed);
+    }else if(P.pBg==="beta"){
+      // ベタフラ: 「背景色を敷く」ONなら中央の透明部分から覗く色を先に敷く（OFFなら透明のまま）。
+      // その上に、フチから中心へ刺さる楔形トゲを直接描く（くり抜き方式は廃止）。
+      if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
+      const base=Math.min(cw,ch);
+      drawBetaflash(mg, cw/2, bgCy, cw, ch, P.pBgC1,
+        P.pBgSpikeCount,
+        base*(P.pBgSpikeInnerX/100)*1.6, base*(P.pBgSpikeInnerY/100)*1.6,
+        P.pBgSpikeJitter/100, P.pSeed);
     }
   }
 
@@ -1480,6 +1547,80 @@ function draw(targetCtx, scale, withBg, quality){
 }
 function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
 function lerp(a,b,t){return a+(b-a)*t;}
+/* ウニフラ用の形状パス（放射状のトゲのみ）を現在のcontextに構築して塗る。
+   中心の芯を塗る仕組みは撤去済み（ウニフラの中心は常に空洞）。
+   ベタフラは別方式（drawBetaflash、フチから中心へ刺さるトゲを直接描く）のため
+   この関数を使わない。 */
+function buildSpikeBurstPath(g, cx, cy, count, len, width, innerRX, innerRY, jitter, seed){
+  const rnd=mulberry32((seed||1)*677+11);
+  g.beginPath();
+  for(let i=0;i<count;i++){
+    // 角度・長さ・太さ・膨らみ位置、それぞれ別々にばらつかせる（乱れ量に応じて全部連動）。
+    // 長さだけ揺らしても放射状の規則正しさが目立ってしまうため、他の要素も揺らして
+    // 手描きのウニ／花火のような有機的な不揃いさにする。
+    // 角度のばらつきは「隣のトゲの持ち場を追い越さない」範囲に抑える。
+    // ここが広すぎると隣同士の並び順が入れ替わってしまい、トゲの輪郭が
+    // 互いに交差して見た目が崩れる（線がクロスして見える）ため、上限を0.45に固定。
+    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*(0.15+jitter*0.3);
+    const spikeLen=len*(1+(rnd()*2-1)*jitter);
+    if(spikeLen<=0) continue;
+    const halfW=Math.max(0.5,(width/2)*(1+(rnd()*2-1)*jitter*.8));
+    const cosA=Math.cos(a), sinA=Math.sin(a);
+    const ix=cx+cosA*innerRX, iy=cy+sinA*innerRY;
+    const ox=cx+cosA*(innerRX+spikeLen), oy=cy+sinA*(innerRY+spikeLen);
+    const perpX=-sinA, perpY=cosA;
+    // 紡錘形（根元・先端どちらも点に収束、中間だけ膨らむ）を二次ベジェ曲線2本で滑らかに描く。
+    // 直線でつなぐと角ばった凧形になってしまうため、制御点をふくらみの位置より少し
+    // 外側に置くことで、根元→ふくらみ→先端がなだらかな曲線でつながるようにしている。
+    const midT=0.28+rnd()*0.16; // 膨らみの位置も個体差を出す
+    const midX=ix+(ox-ix)*midT, midY=iy+(oy-iy)*midT;
+    const bulge=halfW*1.6;
+    g.moveTo(ix,iy);
+    g.quadraticCurveTo(midX+perpX*bulge, midY+perpY*bulge, ox, oy);
+    g.quadraticCurveTo(midX-perpX*bulge, midY-perpY*bulge, ix, iy);
+    g.closePath();
+  }
+  g.fill();
+}
+/* ウニフラ: トゲの形そのものを色で塗る。芯は常に空洞（中心をくり抜かない設定は撤去済み）。 */
+function drawSpikeRing(g, cx, cy, color, count, len, width, innerRX, innerRY, jitter, seed){
+  if(len<=0 || count<=0) return;
+  g.save();
+  g.fillStyle=color;
+  buildSpikeBurstPath(g, cx, cy, count, len, width, innerRX, innerRY, jitter, seed);
+  g.restore();
+}
+/* ベタフラ: 画面のフチから中心へ向かって刺さる、細長い楔形のトゲを大量に直接描く。
+   フチ側はトゲが太く隣同士が重なるため自然にベタ塗りになり、中心へ向かうほど
+   細く尖って、先端の届かない中央は透明のまま残る（参考画像の構造そのまま）。
+   以前の「全面を塗ってから形をくり抜く」方式は、くり抜く形の設計そのものが
+   イメージと合わず迷走したため、トゲを直接描く方式に全面変更した。
+   coreRX/coreRY=中央の透明領域の目安半径（トゲの先端がこの縁あたりで止まる）。 */
+function drawBetaflash(g, cx, cy, cw, ch, color, count, coreRX, coreRY, jitter, seed){
+  const rnd=mulberry32((seed||1)*677+11);
+  g.save();
+  g.fillStyle=color;
+  const edgeR=Math.hypot(cw,ch)/2; // キャンバス対角の半分=フチまで確実に届く長さ
+  g.beginPath();
+  for(let i=0;i<count;i++){
+    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*.5;
+    const cosA=Math.cos(a), sinA=Math.sin(a);
+    // トゲの先端: 中央の透明領域の縁を基準に、乱れに応じて内外へゆらぐ
+    const tipR=1+(rnd()*2-1)*jitter*.5;
+    const tipX=cx+cosA*coreRX*tipR, tipY=cy+sinA*coreRY*tipR;
+    // トゲの根元: フチの外側（確実に画面外）
+    const baseX=cx+cosA*edgeR*1.1, baseY=cy+sinA*edgeR*1.1;
+    // 根元の幅: 隣同士が重なる程度に太く（重なり具合にも個体差）
+    const baseHalfW=(Math.PI*2/count)*edgeR*0.75*(0.8+rnd()*0.5);
+    const perpX=-sinA, perpY=cosA;
+    g.moveTo(tipX,tipY);
+    g.lineTo(baseX+perpX*baseHalfW, baseY+perpY*baseHalfW);
+    g.lineTo(baseX-perpX*baseHalfW, baseY-perpY*baseHalfW);
+    g.closePath();
+  }
+  g.fill();
+  g.restore();
+}
 
 
 /* ---------- 側面レイヤー（マスク切り出し＋環境映り込み） ----------
@@ -2297,7 +2438,9 @@ $("btnExport").addEventListener("click",async()=>{
 const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
   pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
-  pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,pBg:"none"};
+  pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,
+  pBg:"none",pBgGradShape:"radial",pBgAngle:90,pBgSpikeCount:60,pBgSpikeLen:45,pBgSpikeWidth:6,pBgSpikeInnerX:26,pBgSpikeInnerY:30,pBgSpikeJitter:20,
+  pBgSpikeBgOn:false,pBgSpikeBgC:"#1a0e00"};
 const PRESETS = {
   "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
     pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",pMetal:0,
@@ -2533,10 +2676,15 @@ $("btnShareUrl").addEventListener("click",async()=>{
   catch(err){ prompt("このURLをコピーしてください", url); }
 });
 // URLハッシュから設定を復元
+// buildOutlineUI()は復元処理(olOn0等のDOM要素を触る)より前に実行する必要がある。
+// 以前はこれが「初期化」セクション（このIIFEより後）にしかなく、共有URL経由で
+// 開いた場合に縁取りの色・太さがDOM要素未生成のため復元されない潜在バグがあった。
+buildOutlineUI();
+let restoredFromUrl=false;
 (function(){
   const m=location.hash.match(/#p=(.+)/);
   if(!m) return;
-  try{ applyState(decodeURIComponent(escape(atob(m[1])))); }catch(e){}
+  try{ applyState(decodeURIComponent(escape(atob(m[1])))); restoredFromUrl=true; }catch(e){}
 })();
 
 /* ---------- お気に入り（この端末に保存、名前をつけて一覧から呼び出せる） ----------
@@ -2591,10 +2739,18 @@ $("btnFavSave").addEventListener("click",()=>{
 renderFavList();
 
 /* ---------- 初期化 ---------- */
-buildOutlineUI();
-buildLayerUI();
-fillBrushTypes();
+// ページを開いた時点のデフォルト状態。以前は「激アツ!!」の素の状態だったが、
+// 実際に作り込んだ設定（金の質感・スパークルブラシ配置済み等）をそのまま
+// 初期状態にしたいという要望に応じ、URL共有と同じ仕組み(applyState)で
+// まるごと復元する。60個以上のパラメータを手で個別に書き換えると転記ミスの
+// リスクが高いため、動作確認済みの状態を丸ごと読み込む方式にしてある。
+const INITIAL_STATE_JSON='{"pText":"激アツ‼︎","pFont":"system-heavy","pSize":"185","pSpacing":"-14","pLineH":"80","pFill":"metalGold","pFillC1":"#ffe37a","pFillC2":"#b34700","pFillAngle":"61","pFillRepeat":"5","pFillHue":"0","pFillSat":"199","pFillLight":"0","pTex":"none","pTexInt":"0","pTexScale":"4","pVary":"35","pLiquid":"30","pLiquidC1":"#fff5d0","pLiquidC2":"#7a4200","pLiquidR":"12","pLiquidBands":"1","pMetal":"0","pMetalC":"#ffb060","pSeed":"7","olOn0":true,"olC0":"#ffffff","olW0":"22","olV0":"22","olOn1":true,"olC1":"#1a0e00","olW1":"18","olV1":"18","olOn2":true,"olC2":"#ffd76a","olW2":"10","olV2":"10","olOn3":true,"olC3":"#5a2d00","olW3":"4","olV3":"4","pExDepth":"16","pExAngle":"115","pExC1":"#b8811a","pExC2":"#3a2000","pBevel":"3","pExBand":"2","pExSpec":"75","pExRefl":true,"pExFlash":"6","pRim":"0","pRimC":"#ffcc66","pExLight":"315","pExSpecW":"9","brushMode":true,"brushCategory":"glow","brushType":"spark","brushShape":"cross","brushSpacing":"60","brushScatter":"57","brushSize":"20","brushFlow":"40","brushColor":"#ffe9c0","brushMask":"face","pGlowOn":false,"pGlowC":"#ff3300","pGlowBlur":"18","pGlossOn":true,"pGlossPos":"87","pGlossW":"18","pGlossA":"100","pBolt":"0","pBoltC":"#d19d01","pBoltW":"4","pBoltBranch":"2","pBoltRough":"50","pBoltOver":false,"pSparkN":"14","pSparkShape":"dot","pSparkSize":"35","pSparkLen":"58","pSparkVar":"18","pSparkEdge":"100","pSparkC":"#ffa337","pSparkSeed":"1","pTransformMode":"none","pArch":"12","pFanRadius":"300","pPerspAngle":"45","pPerspFrom":"80","pPerspTo":"120","pPerspDrift":"20","pTilt":"0","pRotate":"0","pTrapTop":"100","pTrapBottom":"100","pJitR":"0","pJitY":"0","pJitSeed":"1","pView":"all","fileJson":"","pBg":"none","pBgC1":"#b51a00","pBgC2":"#ff3300","__brushLayers":[{"id":1,"name":"レイヤー1","visible":true,"strokes":[{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-4.18,"y":-35.01},"reach":139.6},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":35.16,"y":-38.68},"reach":155.89},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":70.82,"y":-27.14},"reach":149.61},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":118.03,"y":4.34},"reach":184.98},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":126.42,"y":-19.79},"reach":196.33},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":154.22,"y":-40.25},"reach":197.4},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":202.48,"y":6.96},"reach":172.3},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":215.59,"y":41.58},"reach":134.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-100.7,"y":23.74},"reach":161.62},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-174.66,"y":65.19},"reach":141.38},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-225.54,"y":-36.06},"reach":166.35},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-78.67,"y":15.88},"reach":154.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":18.9,"y":-73.3},"reach":174.84}],"maskMode":"face"}],"__activeLayerId":1,"__nextLayerId":2}';
 applyZoom();
+// 共有URL(#p=...)から開かれた場合はそちらを優先し、新デフォルトで上書きしない
+// (URL復元時はapplyState内で既にbuildLayerUI/fillBrushTypesが呼ばれているため、ここでは不要)
+if(!restoredFromUrl){
+  try{ applyState(INITIAL_STATE_JSON); }catch(e){ buildLayerUI(); fillBrushTypes(); }
+}
 lastState=snapshot(); updateUndoBtns();
 [...rangeIds,...otherIds].forEach(id=>$(id).addEventListener("input",onInput));
 $("expScale").addEventListener("input",requestDraw);
