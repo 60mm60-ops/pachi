@@ -150,8 +150,10 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 
 @media (max-width:760px){
   #main{flex-direction:column;}
-  #panel{width:100%; border-left:none; border-top:1px solid var(--line); max-height:52vh;}
-  #stage{min-height:200px; padding:10px;}
+  /* パネルの高さを固定的に確保し、プレビューが縦に伸びてもメニューが激狭に
+     ならないようにする。複数行の縦長文字でもstage側だけがスクロールする。 */
+  #stage{flex:none; height:38vh; min-height:180px; padding:10px;}
+  #panel{width:100%; border-left:none; border-top:1px solid var(--line); flex:1; min-height:0; max-height:none;}
 }
 :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
 .hint{color:var(--sub);font-size:11px;margin:8px 0 0;line-height:1.5;}
@@ -207,6 +209,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
   <div id="panel">
     <details open><summary>テキスト・フォント</summary><div class="sec">
       <textarea id="pText" rows="2">激アツ!!</textarea>
+      <p class="hint" style="margin-top:4px">改行で複数行に（最大10行）。</p>
       <div class="row"><label>フォント</label>
         <select id="pFont">
           <option value="system-heavy" selected>システム極太ゴシック</option>
@@ -330,14 +333,18 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="star8">8条スター</option>
           <option value="diamond">ダイヤ（鋭い2条）</option>
           <option value="dot">玉ボケ（光条なし）</option>
+          <option value="heart">ハート</option>
+          <option value="petal">花びら（散らし）</option>
           <option value="mixed">ミックス</option>
         </select>
       </div>
       <div class="row" id="brushSpacingRow"><label>間隔</label><input type="range" id="brushSpacing" min="10" max="200" value="60"><input type="number" class="val" data-for="brushSpacing"></div>
       <div class="row" id="brushScatterRow"><label>散布</label><input type="range" id="brushScatter" min="0" max="120" value="0"><input type="number" class="val" data-for="brushScatter"></div>
+      <div class="row" id="brushAngleRow"><label>角度</label><input type="range" id="brushAngle" min="0" max="360" value="0"><input type="number" class="val" data-for="brushAngle"></div>
+      <div class="row" id="brushAngleJitRow"><label>角度ジッター</label><input type="range" id="brushAngleJit" min="0" max="100" value="0"><input type="number" class="val" data-for="brushAngleJit"></div>
       <div class="row"><label>サイズ</label>
         <button class="ghost" id="btnSizeDown" style="padding:4px 10px">−</button>
-        <input type="range" id="brushSize" min="4" max="80" value="20" style="flex:1">
+        <input type="range" id="brushSize" min="4" max="160" value="20" style="flex:1">
         <button class="ghost" id="btnSizeUp" style="padding:4px 10px">＋</button>
         <input type="number" class="val" data-for="brushSize"></div>
       <div class="row"><label>流量</label><input type="range" id="brushFlow" min="1" max="100" value="40"><input type="number" class="val" data-for="brushFlow"></div>
@@ -357,10 +364,11 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         <select id="brushMask">
           <option value="face">文字のメインカラーのみ</option>
           <option value="full">縁まで描画</option>
+          <option value="outside">文字以外に描画（背景側）</option>
           <option value="off">マスクOFF（はみ出し放題）</option>
         </select>
       </div>
-      <p class="hint">「描画範囲」は<b>選択中レイヤーごと</b>の設定。レイヤーを分ければ「文字の中に収まるスパークル」と「周りにはみ出す用のスパークル」を別々に持てる。</p>
+      <p class="hint">「描画範囲」は<b>選択中レイヤーごと</b>の設定。レイヤーを分ければ「文字の中に収まるスパークル」と「文字以外（背景側）だけに散らすスパークル」を別々に持てる。</p>
       <button class="ghost" id="btnClearBrush" style="margin-top:10px">選択中レイヤーを全消去</button>
     </div></details>
 
@@ -391,7 +399,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="mixed">ミックス</option>
         </select>
       </div>
-      <div class="row"><label>大きさ</label><input type="range" id="pSparkSize" min="4" max="40" value="14"><input type="number" class="val" data-for="pSparkSize"></div>
+      <div class="row"><label>大きさ</label><input type="range" id="pSparkSize" min="4" max="80" value="14"><input type="number" class="val" data-for="pSparkSize"></div>
       <div class="row"><label>光条の長さ</label><input type="range" id="pSparkLen" min="50" max="220" value="100"><input type="number" class="val" data-for="pSparkLen"></div>
       <div class="row"><label>ばらつき</label><input type="range" id="pSparkVar" min="0" max="100" value="60"><input type="number" class="val" data-for="pSparkVar"></div>
       <div class="row"><label>エッジ配置</label><input type="range" id="pSparkEdge" min="0" max="100" value="70"><input type="number" class="val" data-for="pSparkEdge"></div>
@@ -446,7 +454,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       </div>
       <div class="row" id="bgGradAngleRow"><label>角度</label><input type="range" id="pBgAngle" min="0" max="360" value="90"><input type="number" class="val" data-for="pBgAngle"></div>
       <div class="row" id="bgColor1Row"><label id="bgColor1Label">色</label><input type="color" id="pBgC1" value="#ffdd55">
-        <input type="color" id="pBgC2" value="#b31200"></div>
+        <input type="color" id="pBgC2" value="#ffffff"></div>
       <div class="row" id="bgSpikeBgRow">
         <label class="chk" style="margin:0"><input type="checkbox" id="pBgSpikeBgOn"><span>背景色を敷く</span></label>
         <input type="color" id="pBgSpikeBgC" value="#1a0e00" style="margin-left:8px">
@@ -852,7 +860,9 @@ function warmupFont(fontName){
   g.fillText("激アツ",0,50);
 }
 function layoutText(g){
-  const size=P.pSize, lines=P.pText.split("\n");
+  const size=P.pSize;
+  // 行数は最大10。縦長すぎる文字は実用的でないため、11行目以降は切り捨てる。
+  const lines=P.pText.split("\n").slice(0,10);
   g.font=fontStr(size);
   const lineH=size*P.pLineH/100, spacing=P.pSpacing;
   const jr=mulberry32(P.pJitSeed*77);
@@ -1543,6 +1553,19 @@ function draw(targetCtx, scale, withBg, quality){
   // それより外側の余白は拡縮せず平行移動のみに留める(のっぺり化・過剰な肥大化を防ぐ)
   applyTrapezoid(mg, cw, ch, quality, (L.maxW/2+40)*scale, offX);
 
+  // 書き出し範囲(＝キャンバス外周)を薄いグレー枠で可視化する。
+  // これは画面プレビュー(cv)専用で、書き出し用の別キャンバス(off)には描かない
+  // ＝透過PNGには一切写り込まない。透明背景だと「どこまで描けるか」が分からず
+  // タップ位置を掴みづらいため、有効エリアの境界を示す。
+  if(mg.canvas===cv){
+    mg.save();
+    mg.setTransform(1,0,0,1,0,0);
+    mg.strokeStyle="rgba(160,160,160,0.5)";
+    mg.lineWidth=1;
+    mg.strokeRect(0.5,0.5,cw-1,ch-1); // 0.5オフセットで1pxをくっきり見せる
+    mg.restore();
+  }
+
   return {W:cw,H:ch};
 }
 function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
@@ -1603,7 +1626,10 @@ function drawBetaflash(g, cx, cy, cw, ch, color, count, coreRX, coreRY, jitter, 
   const edgeR=Math.hypot(cw,ch)/2; // キャンバス対角の半分=フチまで確実に届く長さ
   g.beginPath();
   for(let i=0;i<count;i++){
-    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*.5;
+    // 角度のばらつきは「隣のトゲの持ち場を追い越さない」範囲に抑える（ウニフラと同じ式）。
+    // ベタフラは根元が太いぶん、角度がばらつくと根元同士が重なって交差して見えるため、
+    // 乱れを上げても角度の揺れ幅だけは最大0.45に制限する（見た目の乱れは先端位置で出す）。
+    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*(0.15+jitter*0.3);
     const cosA=Math.cos(a), sinA=Math.sin(a);
     // トゲの先端: 中央の透明領域の縁を基準に、乱れに応じて内外へゆらぐ
     const tipR=1+(rnd()*2-1)*jitter*.5;
@@ -1796,21 +1822,71 @@ function drawSparkle(g,x,y,r,color,rot,shape){
   g.save(); g.translate(x,y); g.rotate(rot);
   const [cr,cg,cb]=hex(color);
   const lenK=P.pSparkLen/100;
-  // 色つきハロー: 芯の白→スパーク色→透明。加算なので中心ほど光る
-  const halo=g.createRadialGradient(0,0,0,0,0,r*.6);
-  halo.addColorStop(0,"rgba(255,255,255,.9)");
-  halo.addColorStop(.35,`rgba(${cr},${cg},${cb},.55)`);
+  const litFill=(cx,cy,rad)=>{ // シェイプ全体を光らせる用のグラデ（中心白→縁で色）
+    const gd=g.createRadialGradient(cx,cy,0,cx,cy,rad);
+    gd.addColorStop(0,"rgba(255,255,255,.95)");
+    gd.addColorStop(.5,`rgba(${Math.min(255,cr+90)},${Math.min(255,cg+90)},${Math.min(255,cb+90)},.95)`);
+    gd.addColorStop(1,`rgba(${cr},${cg},${cb},.8)`);
+    return gd;
+  };
+  // ハート・花びらは「丸いコア/ハローが形を殺す」ため、それらを一切使わず
+  // シェイプ全体を発光させる。中心の丸に視線が引っ張られる問題を避ける。
+  if(shape==="heart"){
+    // 外周のソフトなグロー（ハート型に沿う。丸ではない）を先に薄く重ねてから本体
+    g.save(); g.scale(1.15,1.15); drawHeartPath(g, r*1.1);
+    g.fillStyle=`rgba(${cr},${cg},${cb},.4)`; g.fill(); g.restore();
+    drawHeartPath(g, r*1.1);
+    g.fillStyle=litFill(0,-r*.1,r*.9); g.fill();
+    g.restore(); return;
+  }
+  if(shape==="petal"){
+    // 花びらは1スタンプにつき複数枚（3〜5枚）を、各自バラバラの角度・距離・形・サイズで散らす。
+    // スタンプ位置(x,y)から乱数シードを作るので、置くたびに違う散らばり方になる。
+    const pr=mulberry32(((x*131+y*57)|0)>>>0 || 1);
+    const n=1+Math.floor(pr()*2); // 1〜2枚（ブラシで多数置くと増えるので1スタンプは控えめに）
+    for(let k=0;k<n;k++){
+      const ang=pr()*Math.PI*2;               // 各花びらの向きは完全ランダム（斜め横もOK）
+      const dist=r*(0.15+pr()*0.55);           // 中心からの散らし距離
+      const psize=r*(0.45+pr()*0.5);           // 花びらごとにサイズを変える
+      const skew=0.55+pr()*0.9;                // 左右の膨らみ比＝形の歪みをランダム化
+      const bend=(pr()*2-1)*0.5;               // 反り（左右どちらかへ湾曲）
+      const px=Math.cos(ang)*dist, py=Math.sin(ang)*dist;
+      g.save();
+      g.translate(px,py);
+      g.rotate(ang+Math.PI/2+(pr()*2-1)*0.6);  // 向き＋さらに微ランダム
+      drawPetalPath(g, psize, skew, bend);
+      g.fillStyle=litFill(0,0,psize*1.1); g.fill();
+      g.restore();
+    }
+    g.restore(); return;
+  }
+  // ③ 色つきハロー: 芯の白→スパーク色→透明。以前より広げて(0.6→1.0)柔らかい光の滲みを出す。
+  const halo=g.createRadialGradient(0,0,0,0,0,r);
+  halo.addColorStop(0,"rgba(255,255,255,.95)");
+  halo.addColorStop(.28,`rgba(${cr},${cg},${cb},.6)`);
   halo.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
   g.fillStyle=halo;
-  g.beginPath(); g.arc(0,0,r*.6,0,7); g.fill();
+  g.beginPath(); g.arc(0,0,r,0,7); g.fill();
+  // ② 光条は「根元が白、先へ向かってスパーク色」のグラデで塗る。
+  // 以前は純白固定だったため、加算合成で白飛びして色がほぼ乗らなかった。
+  // 白飛びする芯は別途コアで作るので、光条自体に色を持たせて色を効かせる。
   const spike=(len,w,fill)=>{
     g.beginPath();
     g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
     g.quadraticCurveTo(-w,0,0,-len); g.closePath();
     g.fillStyle=fill; g.fill();
   };
-  // 光条は白の加算1本描き。中央のコアと重なった根元が白飛びして芯が立つ
-  const sp=(len,w)=>spike(len,w,"rgba(255,255,255,.92)");
+  const sp=(len,w)=>{
+    const grad=g.createLinearGradient(0,0,0,-len);
+    grad.addColorStop(0,"rgba(255,255,255,.95)");
+    grad.addColorStop(.4,`rgba(${Math.min(255,cr+80)},${Math.min(255,cg+80)},${Math.min(255,cb+80)},.9)`);
+    grad.addColorStop(1,`rgba(${cr},${cg},${cb},.35)`);
+    // 上下対称の光条なので、上半分用グラデで両方向まとめて塗る（回転で向きを変える）
+    g.beginPath();
+    g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
+    g.quadraticCurveTo(-w,0,0,-len); g.closePath();
+    g.fillStyle=grad; g.fill();
+  };
   if(shape==="dot"){
     // ハローとコアのみ（玉ボケ）
   }else if(shape==="star6"){
@@ -1826,10 +1902,35 @@ function drawSparkle(g,x,y,r,color,rot,shape){
     g.rotate(Math.PI/4); sp(r*.45*lenK,r*.05);
     g.rotate(Math.PI/2); sp(r*.45*lenK,r*.05);
   }
-  // 中心コア（芯の白飛び）
-  g.fillStyle="#ffffff";
-  g.beginPath(); g.arc(0,0,r*.1,0,7); g.fill();
+  // ③ 中心コア: 白飛びした芯＋その周りに強めのグロー（光条系のみ）。
+  const coreR = r*.2;
+  const coreGlow=g.createRadialGradient(0,0,0,0,0,coreR*2.2);
+  coreGlow.addColorStop(0,"rgba(255,255,255,1)");
+  coreGlow.addColorStop(.5,"rgba(255,255,255,.85)");
+  coreGlow.addColorStop(1,"rgba(255,255,255,0)");
+  g.fillStyle=coreGlow;
+  g.beginPath(); g.arc(0,0,coreR*2.2,0,7); g.fill();
   g.restore();
+}
+/* ハート形パス（中心原点、高さ約size）。塗りは呼び出し側で行う。 */
+function drawHeartPath(g, size){
+  const s=size/32;
+  g.beginPath();
+  g.moveTo(0, 10*s);
+  g.bezierCurveTo(-16*s, -6*s, -14*s, -20*s, 0, -12*s);
+  g.bezierCurveTo(14*s, -20*s, 16*s, -6*s, 0, 10*s);
+  g.closePath();
+}
+/* 花びら（歪んだ紡錘形1枚）パス。中心原点、縦長。塗りは呼び出し側。
+   skew=左右の膨らみ比（1で対称、小さいほど左右非対称）、bend=全体の反り。
+   これらをランダムに変えることで、1枚ごとに違う自然な花弁形になる。 */
+function drawPetalPath(g, r, skew=0.8, bend=0){
+  const bx=bend*r; // 反りの制御点オフセット
+  g.beginPath();
+  g.moveTo(0,-r);                                                  // 先端（尖る）
+  g.bezierCurveTo(r*.7+bx, -r*.5, r*.55+bx, r*.6, bx*0.5, r);      // 右側：太めに膨らむ＋反り
+  g.bezierCurveTo(-r*.5*skew+bx, r*.6, -r*.6*skew+bx, -r*.5, 0,-r);// 左側：skewで細く＝歪み
+  g.closePath();
 }
 function scatterSparkles(mg, face, cw, ch, scale){
   if(P.pSparkN<=0) return;
@@ -1895,12 +1996,24 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
 
 function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, quality){
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
+  // outside(文字以外に描画)のくり抜き基準は「文字の完全シルエット」＝面＋前面縁(frontMask)＋側面(sideMask)。
+  // frontMaskだけだと側面(押し出し部分)が抜けず、そこにブラシが乗ってしまうため、front∪sideを一度だけ合成しておく。
+  let outsideMask=frontMask;
+  if(sideMask && frontMask){
+    outsideMask=document.createElement("canvas");
+    outsideMask.width=frontMask.width; outsideMask.height=frontMask.height;
+    const og=outsideMask.getContext("2d");
+    og.drawImage(frontMask,0,0);
+    og.drawImage(sideMask,0,0); // 側面も足して完全シルエットにする
+  }
   for(const layer of layers){
     if(!layer.visible || !layer.strokes.length) continue;
-    // maskMode: "face"=面のみ / "full"=面＋縁 / "off"=クリップなし。レイヤーごとに持たせることで、
-    // 「文字の中に収まるレイヤー」と「周りにはみ出せるレイヤー」を同時に扱えるようにしてある。
+    // maskMode: "face"=面のみ / "full"=面＋縁 / "outside"=文字以外(背景側) / "off"=クリップなし。
+    // レイヤーごとに持たせることで、「文字の中に収まるレイヤー」と「周りにはみ出せるレイヤー」
+    // と「文字以外の背景側だけに置くレイヤー」を同時に扱えるようにしてある。
     const maskMode=layer.maskMode||"face";
-    const clipCanvas = maskMode==="face" ? faceMask : frontMask; // 中心判定・ピクセルクリップの基準
+    // outsideは文字＋縁の全体をくり抜く基準にするためfrontMaskを使う
+    const clipCanvas = maskMode==="face" ? faceMask : frontMask;
     const metal = layer.strokes.filter(s=>s.type==="metal-hi"||s.type==="metal-mid"||s.type==="metal-lo");
     const spark = layer.strokes.filter(s=>s.type==="spark");
     const bolt  = layer.strokes.filter(s=>s.type==="bolt");
@@ -1927,7 +2040,11 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
           }
         }
       }
-      if(maskMode!=="off"){
+      if(maskMode==="outside"){
+        // 文字以外に描画: 文字＋縁＋側面の完全シルエットで「消す」＝文字にかかった部分を抜いて背景側だけ残す
+        tg.globalCompositeOperation="destination-out";
+        tg.drawImage(outsideMask,0,0);
+      }else if(maskMode!=="off"){
         tg.globalCompositeOperation="destination-in";
         tg.drawImage(sideMask,0,0);
       }
@@ -1945,16 +2062,19 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
       // getImageDataはキャンバス全体を読み出す重い処理で、これを毎フレーム(ドラッグ中)
       // 呼んでいたのが「スパークルブラシがもっさりする」の主因だった。ドラッグ中(low)は
       // マスク判定を省略して全部描き、指を離した本描画(high)でだけ正確に絞り込む。
+      // outsideのときは側面も「文字」として扱う必要があるので完全シルエットで判定する
+      const sparkClip = maskMode==="outside" ? outsideMask : clipCanvas;
       let fmData=null;
       const onFace=(sx,sy)=>{
         if(maskMode==="off") return true;
         if(quality!=="high") return true;
-        if(!fmData) fmData=clipCanvas.getContext("2d").getImageData(0,0,cwv,chv).data;
+        if(!fmData) fmData=sparkClip.getContext("2d").getImageData(0,0,cwv,chv).data;
         const ix=sx|0, iy=sy|0;
-        if(ix<0||iy<0||ix>=cwv||iy>=chv) return false;
-        return fmData[(iy*cwv+ix)*4+3] > 40; // スタンプ中心が文字面上か
+        if(ix<0||iy<0||ix>=cwv||iy>=chv) return maskMode==="outside"; // 画面外はoutsideなら許容
+        const onChar = fmData[(iy*cwv+ix)*4+3] > 40; // その点が文字面上か
+        return maskMode==="outside" ? !onChar : onChar; // outsideは文字の外だけ通す
       };
-      const shapes=["cross","star6","star8","dot"];
+      const shapes=["cross","star6","star8","dot","heart","petal"];
       for(const st of spark){
         const shapeSel=st.shape||"mixed";
         const scatter=(st.scatter||0)/100;
@@ -1980,20 +2100,47 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
             acc-=segLen;
           }
         }
-        for(const s of stamps){
-          // 散布: 経路の法線方向へばらす（0ならぴったり線、大きいほどランダムに散る）
-          const off=(rnd()*2-1)*scatter*st.size;
+        // 角度: 基準角度(度→ラジアン)を軸に、角度ジッターぶんだけランダムに振る。
+        // angleJit=0で全スタンプが基準角度でピシッと揃い、100で±π(一周)まで完全ランダム。
+        // 角度フィールドが無い旧保存データは、当時のランダム見た目(±0.3rad)を維持する。
+        const hasAngle = (st.angle!==undefined || st.angleJit!==undefined);
+        const baseAng=((st.angle||0)*Math.PI/180);
+        const jitAmp=hasAngle ? ((st.angleJit||0)/100)*Math.PI : 0.3;
+        // 単発タップ(チョンと1点置き)は「狙った一点に確実に置く」ことを最優先し、
+        // 散布・角度ジッターを無効化する。どちらも「なぞって多数置いたときにばらけさせる」
+        // ための機能で、1点だけ置きたいときにズレると狙えず強いストレスになるため。
+        // 指ブレでわずかに動いた程度（移動量がサイズの半分未満）もタップ扱いにする。
+        let spanLocal=0;
+        if(st.points.length>1){
+          const p0=st.points[0];
+          for(const p of st.points) spanLocal=Math.max(spanLocal, Math.hypot(p.x-p0.x,p.y-p0.y));
+        }
+        const isTap = st.points.length<=1 || spanLocal < st.size*0.5;
+        // タップ扱いのときは、経路サンプリングで生じた複数スタンプを最初の1個(＝タップ点)に絞る。
+        // 同じ場所に加算で重なって不自然に明るくなるのを防ぎ、狙った1粒だけを置く。
+        const stampList = isTap ? stamps.slice(0,1) : stamps;
+        for(const s of stampList){
+          // 散布: 経路の法線方向へばらす（0ならぴったり線、大きいほどランダムに散る）。単発タップでは無効。
+          const off=isTap ? 0 : (rnd()*2-1)*scatter*st.size;
           const lx=s.x+s.nx*off, ly=s.y+s.ny*off;
           const sx=offX+lx*scale, sy=offY+ly*scale;
           if(!onFace(sx,sy)) continue; // 中心が面上のスタンプだけ（光条のはみ出しは許容）
           const shp = shapeSel==="mixed" ? shapes[(rnd()*shapes.length)|0] : shapeSel;
+          const rot = baseAng + (isTap ? 0 : (rnd()*2-1)*jitAmp); // 単発タップは基準角度そのまま
           // 流量=各スタンプの不透明度（フォトショ同様）。以前は確率で間引いていたため、
           // なぞった場所にスタンプが「来ない」ことがあり、狙った通りに置けない不満の原因だった。
           // 今はなぞった場所には必ずスタンプが置かれ、流量が低いほど薄く重なる。
           tg.globalAlpha=Math.max(0.05, st.flow/100);
-          drawSparkle(tg, sx, sy, st.size*scale*.8, st.color, (rnd()-.5)*.6, shp);
+          drawSparkle(tg, sx, sy, st.size*scale*.8, st.color, rot, shp);
         }
         tg.globalAlpha=1;
+      }
+      // outsideモードは中心判定だけだと光条が文字にはみ出すため、
+      // 文字＋縁＋側面の完全シルエットでピクセル単位でもくり抜いて、文字の上を完全にクリーンにする。
+      if(maskMode==="outside"){
+        tg.globalCompositeOperation="destination-out";
+        tg.drawImage(sparkClip,0,0);
+        tg.globalCompositeOperation="lighter";
       }
       mg.save(); mg.setTransform(1,0,0,1,0,0); mg.globalCompositeOperation="lighter";
       mg.drawImage(tmp,0,0); mg.restore();
@@ -2025,7 +2172,8 @@ function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, f
         pts.push([offX+last.x*scale, offY+last.y*scale]);
         strokeBolt(tg, pts, Math.max(1, st.size*scale*.05), st.color, st.size*scale*.7);
       }
-      if(maskMode!=="off"){ tg.globalCompositeOperation="destination-in"; tg.drawImage(clipCanvas,0,0); }
+      if(maskMode==="outside"){ tg.globalCompositeOperation="destination-out"; tg.drawImage(outsideMask,0,0); }
+      else if(maskMode!=="off"){ tg.globalCompositeOperation="destination-in"; tg.drawImage(clipCanvas,0,0); }
       mg.save(); mg.setTransform(1,0,0,1,0,0); mg.globalCompositeOperation="lighter";
       mg.drawImage(tmp,0,0); mg.restore();
     }
@@ -2148,7 +2296,7 @@ function fillBrushTypes(){
 // スパークルのときだけ形状・間隔・散布を表示（稲妻/金属/消しゴムでは隠す）
 function updateBrushRows(){
   const isSpark = ($("brushCategory").value==="glow" && $("brushType").value==="spark");
-  ["brushShapeRow","brushSpacingRow","brushScatterRow"].forEach(id=>{
+  ["brushShapeRow","brushSpacingRow","brushScatterRow","brushAngleRow","brushAngleJitRow"].forEach(id=>{
     $(id).style.display = isSpark ? "flex" : "none";
   });
 }
@@ -2173,10 +2321,10 @@ function updateBrushLabel(id){
   if(document.activeElement!==el) el.value = $(id).value;
 }
 $("btnSizeDown").addEventListener("click",()=>{ $("brushSize").value=Math.max(4,+$("brushSize").value-4); updateBrushLabel("brushSize"); onInput(); });
-$("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(80,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
+$("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(160,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
 // brushSize/brushFlowはP側のパラメータではない(=draw()を経由しない)ため、
 // 動かした瞬間にラベルが更新されない不具合があった。専用に直接更新する。
-["brushSize","brushFlow","brushSpacing","brushScatter"].forEach(id=>{
+["brushSize","brushFlow","brushSpacing","brushScatter","brushAngle","brushAngleJit"].forEach(id=>{
   $(id).addEventListener("input",()=>updateBrushLabel(id));
 });
 
@@ -2217,9 +2365,10 @@ cv.addEventListener("pointerdown", e=>{
   if(type==="metal-hi"||type==="metal-mid"||type==="metal-lo"){
     currentStroke={...base, anchor:p, reach:0}; // 角度追従型: 基準点のみ記録、伸びはdragで決める
   }else if(type==="spark"){
-    // スパークルはスタンプ配置: 形状・間隔・散布を保持
+    // スパークルはスタンプ配置: 形状・間隔・散布・角度・角度ジッターを保持
     currentStroke={...base, points:[p],
-      shape:$("brushShape").value, spacing:+$("brushSpacing").value, scatter:+$("brushScatter").value};
+      shape:$("brushShape").value, spacing:+$("brushSpacing").value, scatter:+$("brushScatter").value,
+      angle:+$("brushAngle").value, angleJit:+$("brushAngleJit").value};
   }else{
     currentStroke={...base, points:[p]};
   }
@@ -2744,7 +2893,7 @@ renderFavList();
 // 初期状態にしたいという要望に応じ、URL共有と同じ仕組み(applyState)で
 // まるごと復元する。60個以上のパラメータを手で個別に書き換えると転記ミスの
 // リスクが高いため、動作確認済みの状態を丸ごと読み込む方式にしてある。
-const INITIAL_STATE_JSON='{"pText":"激アツ‼︎","pFont":"system-heavy","pSize":"185","pSpacing":"-14","pLineH":"80","pFill":"metalGold","pFillC1":"#ffe37a","pFillC2":"#b34700","pFillAngle":"61","pFillRepeat":"5","pFillHue":"0","pFillSat":"199","pFillLight":"0","pTex":"none","pTexInt":"0","pTexScale":"4","pVary":"35","pLiquid":"30","pLiquidC1":"#fff5d0","pLiquidC2":"#7a4200","pLiquidR":"12","pLiquidBands":"1","pMetal":"0","pMetalC":"#ffb060","pSeed":"7","olOn0":true,"olC0":"#ffffff","olW0":"22","olV0":"22","olOn1":true,"olC1":"#1a0e00","olW1":"18","olV1":"18","olOn2":true,"olC2":"#ffd76a","olW2":"10","olV2":"10","olOn3":true,"olC3":"#5a2d00","olW3":"4","olV3":"4","pExDepth":"16","pExAngle":"115","pExC1":"#b8811a","pExC2":"#3a2000","pBevel":"3","pExBand":"2","pExSpec":"75","pExRefl":true,"pExFlash":"6","pRim":"0","pRimC":"#ffcc66","pExLight":"315","pExSpecW":"9","brushMode":true,"brushCategory":"glow","brushType":"spark","brushShape":"cross","brushSpacing":"60","brushScatter":"57","brushSize":"20","brushFlow":"40","brushColor":"#ffe9c0","brushMask":"face","pGlowOn":false,"pGlowC":"#ff3300","pGlowBlur":"18","pGlossOn":true,"pGlossPos":"87","pGlossW":"18","pGlossA":"100","pBolt":"0","pBoltC":"#d19d01","pBoltW":"4","pBoltBranch":"2","pBoltRough":"50","pBoltOver":false,"pSparkN":"14","pSparkShape":"dot","pSparkSize":"35","pSparkLen":"58","pSparkVar":"18","pSparkEdge":"100","pSparkC":"#ffa337","pSparkSeed":"1","pTransformMode":"none","pArch":"12","pFanRadius":"300","pPerspAngle":"45","pPerspFrom":"80","pPerspTo":"120","pPerspDrift":"20","pTilt":"0","pRotate":"0","pTrapTop":"100","pTrapBottom":"100","pJitR":"0","pJitY":"0","pJitSeed":"1","pView":"all","fileJson":"","pBg":"none","pBgC1":"#b51a00","pBgC2":"#ff3300","__brushLayers":[{"id":1,"name":"レイヤー1","visible":true,"strokes":[{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-4.18,"y":-35.01},"reach":139.6},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":35.16,"y":-38.68},"reach":155.89},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":70.82,"y":-27.14},"reach":149.61},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":118.03,"y":4.34},"reach":184.98},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":126.42,"y":-19.79},"reach":196.33},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":154.22,"y":-40.25},"reach":197.4},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":202.48,"y":6.96},"reach":172.3},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":215.59,"y":41.58},"reach":134.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-100.7,"y":23.74},"reach":161.62},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-174.66,"y":65.19},"reach":141.38},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-225.54,"y":-36.06},"reach":166.35},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-78.67,"y":15.88},"reach":154.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":18.9,"y":-73.3},"reach":174.84}],"maskMode":"face"}],"__activeLayerId":1,"__nextLayerId":2}';
+const INITIAL_STATE_JSON='{"pText":"激アツ‼︎","pFont":"system-heavy","pSize":"185","pSpacing":"-14","pLineH":"80","pFill":"metalGold","pFillC1":"#ffe37a","pFillC2":"#b34700","pFillAngle":"61","pFillRepeat":"5","pFillHue":"0","pFillSat":"199","pFillLight":"0","pTex":"none","pTexInt":"0","pTexScale":"4","pVary":"35","pLiquid":"30","pLiquidC1":"#fff5d0","pLiquidC2":"#7a4200","pLiquidR":"12","pLiquidBands":"1","pMetal":"0","pMetalC":"#ffb060","pSeed":"7","olOn0":true,"olC0":"#ffffff","olW0":"22","olV0":"22","olOn1":true,"olC1":"#1a0e00","olW1":"18","olV1":"18","olOn2":true,"olC2":"#ffd76a","olW2":"10","olV2":"10","olOn3":true,"olC3":"#5a2d00","olW3":"4","olV3":"4","pExDepth":"16","pExAngle":"115","pExC1":"#b8811a","pExC2":"#3a2000","pBevel":"3","pExBand":"2","pExSpec":"75","pExRefl":true,"pExFlash":"6","pRim":"0","pRimC":"#ffcc66","pExLight":"315","pExSpecW":"9","brushMode":true,"brushCategory":"glow","brushType":"spark","brushShape":"cross","brushSpacing":"60","brushScatter":"57","brushSize":"20","brushFlow":"40","brushColor":"#ffe9c0","brushMask":"face","pGlowOn":false,"pGlowC":"#ff3300","pGlowBlur":"18","pGlossOn":true,"pGlossPos":"87","pGlossW":"18","pGlossA":"100","pBolt":"0","pBoltC":"#d19d01","pBoltW":"4","pBoltBranch":"2","pBoltRough":"50","pBoltOver":false,"pSparkN":"14","pSparkShape":"dot","pSparkSize":"35","pSparkLen":"58","pSparkVar":"18","pSparkEdge":"100","pSparkC":"#ffa337","pSparkSeed":"1","pTransformMode":"none","pArch":"12","pFanRadius":"300","pPerspAngle":"45","pPerspFrom":"80","pPerspTo":"120","pPerspDrift":"20","pTilt":"0","pRotate":"0","pTrapTop":"100","pTrapBottom":"100","pJitR":"0","pJitY":"0","pJitSeed":"1","pView":"all","fileJson":"","pBg":"none","pBgC1":"#ffdd55","pBgC2":"#ffffff","__brushLayers":[{"id":1,"name":"レイヤー1","visible":true,"strokes":[{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-4.18,"y":-35.01},"reach":139.6},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":35.16,"y":-38.68},"reach":155.89},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":70.82,"y":-27.14},"reach":149.61},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":118.03,"y":4.34},"reach":184.98},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":126.42,"y":-19.79},"reach":196.33},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":154.22,"y":-40.25},"reach":197.4},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":202.48,"y":6.96},"reach":172.3},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":215.59,"y":41.58},"reach":134.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-100.7,"y":23.74},"reach":161.62},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-174.66,"y":65.19},"reach":141.38},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-225.54,"y":-36.06},"reach":166.35},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-78.67,"y":15.88},"reach":154.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":18.9,"y":-73.3},"reach":174.84}],"maskMode":"face"}],"__activeLayerId":1,"__nextLayerId":2}';
 applyZoom();
 // 共有URL(#p=...)から開かれた場合はそちらを優先し、新デフォルトで上書きしない
 // (URL復元時はapplyState内で既にbuildLayerUI/fillBrushTypesが呼ばれているため、ここでは不要)
