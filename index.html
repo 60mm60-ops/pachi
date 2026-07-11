@@ -210,6 +210,10 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
     <details open><summary>テキスト・フォント</summary><div class="sec">
       <textarea id="pText" rows="2">激アツ!!</textarea>
       <p class="hint" style="margin-top:4px">改行で複数行に（最大10行）。</p>
+      <div class="row" style="gap:6px">
+        <button class="ghost" id="btnAddSplit" style="padding:6px 12px">➕ 色わけを追加</button>
+        <span class="hint" style="margin:0">カーソル位置で文字の色を分けられる</span>
+      </div>
       <div class="row"><label>フォント</label>
         <select id="pFont">
           <option value="system-heavy" selected>システム極太ゴシック</option>
@@ -233,6 +237,12 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 
     <details open><summary>塗り（面）</summary><div class="sec">
       <p class="hint">文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「水銀」は液体クローム（ぼかし→急峻カーブ）、「輝きの暴れ」は文字ごとにグラデ位相を乱す。「色相/彩度/明るさ」はどのグラデにも後から掛けられる調整＝プリセットの色が強すぎる時などに。</p>
+      <p class="hint" style="border-left:2px solid #4ecdc4;padding-left:8px">上の <b>➕色わけを追加</b> を押すと、その位置で文字の色を分けられる。例:「激｜アツ」で〔激〕〔アツ〕を別の色に。下の「編集中の色わけ」で対象を選んでから色を設定する。</p>
+      <div class="row" id="segEditRow"><label>編集中の色わけ</label>
+        <select id="segEdit"><option value="0">色わけ1（先頭）</option></select>
+      </div>
+      <div class="row" id="segScaleRow" style="display:none"><label>この色わけの大きさ</label><input type="range" id="segScale" min="30" max="250" value="100"><input type="number" class="val" data-for="segScale"></div>
+      <div class="row" id="segRotRow" style="display:none"><label>この色わけの角度</label><input type="range" id="segRot" min="-45" max="45" value="0"><input type="number" class="val" data-for="segRot"></div>
       <div class="row"><label>グラデ</label>
         <select id="pFill">
           <option value="metalGold">リアルメタル金</option>
@@ -292,16 +302,27 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>シード</label><input type="range" id="pSeed" min="1" max="99" value="7"><input type="number" class="val" data-for="pSeed"></div>
     </div></details>
 
-    <details open><summary>縁取り（外側から）</summary><div class="sec" id="outlineSec">
-      <p class="hint" style="margin:8px 14px 0">多重の境界線。PSの境界線（ストローク）を外側から4本まで。</p>
-      <!-- slots injected -->
+    <details open><summary>縁取り（外側から）</summary><div class="sec">
+      <p class="hint" style="margin:8px 14px 0">多重の境界線。PSの境界線（ストローク）を外側から4本まで。<b style="color:#4ecdc4">太さ・ON/OFFは全体共通／色は色わけごと</b>に設定できる。</p>
+      <div id="outlineSec"><!-- slots injected --></div>
+      <div id="segOutlineBlock" style="display:none;margin:6px 14px 0;padding:8px;border-left:2px solid #4ecdc4">
+        <p class="hint" style="margin:0 0 6px"><b id="segOutlineLabel">色わけ2</b> の縁色（外→内）</p>
+        <div class="row" style="gap:6px">
+          <input type="color" id="segOlC0" value="#ffffff"><input type="color" id="segOlC1" value="#1a0e00">
+          <input type="color" id="segOlC2" value="#ffd76a"><input type="color" id="segOlC3" value="#5a2d00">
+        </div>
+      </div>
     </div></details>
 
     <details open><summary>立体押し出し</summary><div class="sec">
-      <p class="hint">文字の厚み（側面）。ずらしコピーの積層＝パチ文字職人の力技をコード化。「側面ツヤ」が金属光沢の本体。</p>
+      <p class="hint">文字の厚み（側面）。ずらしコピーの積層＝パチ文字職人の力技をコード化。「側面ツヤ」が金属光沢の本体。<b style="color:#4ecdc4">深さ・方向などの形は全体共通／色は色わけごと</b>。</p>
       <div class="row"><label>深さ</label><input type="range" id="pExDepth" min="0" max="40" value="14"><input type="number" class="val" data-for="pExDepth"></div>
       <div class="row"><label>方向</label><input type="range" id="pExAngle" min="0" max="360" value="115"><input type="number" class="val" data-for="pExAngle"></div>
       <div class="row"><label>色（手前）</label><input type="color" id="pExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="pExC2" value="#2b1600"></div>
+      <div id="segSideBlock" style="display:none;margin:2px 0 6px;padding:8px;border-left:2px solid #4ecdc4">
+        <p class="hint" style="margin:0 0 6px"><b id="segSideLabel">色わけ2</b> の側面色</p>
+        <div class="row"><label>色（手前）</label><input type="color" id="segExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="segExC2" value="#2b1600"></div>
+      </div>
       <div class="row"><label>ベベル</label><input type="range" id="pBevel" min="0" max="10" value="3"><input type="number" class="val" data-for="pBevel"></div>
       <div class="row"><label>側面バンド</label><input type="range" id="pExBand" min="0" max="4" value="0"><input type="number" class="val" data-for="pExBand"></div>
       <div class="row"><label>側面ツヤ</label><input type="range" id="pExSpec" min="0" max="100" value="0"><input type="number" class="val" data-for="pExSpec"></div>
@@ -558,6 +579,39 @@ function readParams(){
     if(document.activeElement===s) return;
     s.value = $(s.dataset.for).value;
   });
+  // --- セグメント別の面グラデ同期 ---
+  // 面グラデ系コントロールは「編集中セグメント」の色を常に指し示す。読むたびに
+  // 現在の編集対象seg(0=全体 含む)の値をUIから吸い上げてP.segFillsに保存しておく。
+  // これにより別セグメントに切り替えて戻ってきても各segの色が保持される。
+  if(!P.segFills) P.segFills={};
+  const segEditEl=$("segEdit");
+  const segEdit=segEditEl?+segEditEl.value:0;
+  P.segFills[segEdit]={
+    fill:P.pFill, c1:P.pFillC1, c2:P.pFillC2,
+    hue:+$("pFillHue").value, sat:+$("pFillSat").value, light:+$("pFillLight").value
+  };
+  // --- 色わけごとの大きさ・角度 ---
+  // 全体(色わけ1=seg0)の大きさは本体のサイズ設定(pSize)が担うので、ここでは色わけ2以降(seg>0)だけ扱う。
+  if(!P.segShapes) P.segShapes={};
+  if(segEdit>0){
+    P.segShapes[segEdit]={ scale:+$("segScale").value, rot:+$("segRot").value };
+  }
+  // 大きさ・角度スライダーは色わけ2以降を編集中のときだけ表示する
+  const showShape = segEdit>0;
+  $("segScaleRow").style.display = showShape ? "flex":"none";
+  $("segRotRow").style.display = showShape ? "flex":"none";
+  // --- 色わけごとの縁色・側面色 ---
+  if(!P.segOutlineColors) P.segOutlineColors={};
+  if(!P.segSideColors) P.segSideColors={};
+  if(segEdit>0){
+    P.segOutlineColors[segEdit]=[$("segOlC0").value,$("segOlC1").value,$("segOlC2").value,$("segOlC3").value];
+    P.segSideColors[segEdit]={ c1:$("segExC1").value, c2:$("segExC2").value };
+  }
+  // 色わけ用の縁色・側面色ブロックは色わけ2以降を編集中のときだけ表示
+  const segLbl = "色わけ"+(segEdit+1);
+  $("segOutlineBlock").style.display = showShape ? "block":"none";
+  $("segSideBlock").style.display = showShape ? "block":"none";
+  if(showShape){ $("segOutlineLabel").textContent=segLbl; $("segSideLabel").textContent=segLbl; }
   $("customFillRow").style.display = P.pFill==="custom" ? "flex":"none";
   // 背景タイプに応じて関連行だけ表示する
   const bg=P.pBg;
@@ -829,14 +883,21 @@ function adjustColor(c, hueDeg, satPct, lightPct){
   const [nr,ng,nb]=hslToRgb(h,s,l);
   return `rgb(${nr|0},${ng|0},${nb|0})`;
 }
-function getFillStops(){
+function getFillStops(seg){
+  // 各セグメントの色はP.segFills[seg]に保存されている(seg0=全体も含む)。
+  // 無ければグローバル(P.pFill等)にフォールバック＝区切り未使用や旧データと完全一致。
+  seg=seg||0;
+  const ov = (P.segFills && P.segFills[seg]) ? P.segFills[seg] : null;
+  const fill = ov ? ov.fill : P.pFill;
   let stops;
-  if(P.pFill==="custom") stops=[[0,P.pFillC1],[1,P.pFillC2]];
-  else if(METAL_PAL[P.pFill]){
-    const [d,l]=METAL_PAL[P.pFill];
+  if(fill==="custom") stops=[[0, ov?ov.c1:P.pFillC1],[1, ov?ov.c2:P.pFillC2]];
+  else if(METAL_PAL[fill]){
+    const [d,l]=METAL_PAL[fill];
     stops=makeMetalStops(P.pSeed*7+3,d,l,false);
-  }else stops=GRADS[P.pFill];
-  const hue=P.pFillHue||0, sat=P.pFillSat!==undefined?P.pFillSat:100, light=P.pFillLight||0;
+  }else stops=GRADS[fill]||GRADS[P.pFill];
+  const hue=(ov&&ov.hue!==undefined?ov.hue:P.pFillHue)||0;
+  const sat=(ov&&ov.sat!==undefined?ov.sat:(P.pFillSat!==undefined?P.pFillSat:100));
+  const light=(ov&&ov.light!==undefined?ov.light:P.pFillLight)||0;
   if(hue===0 && sat===100 && light===0) return stops;
   return stops.map(([p,c])=>[p, adjustColor(c,hue,sat,light)]);
 }
@@ -868,23 +929,47 @@ function layoutText(g){
   const jr=mulberry32(P.pJitSeed*77);
   const chars=[]; let maxW=0;
   lines.forEach((line,li)=>{
-    // 行幅計測
-    let w=0; const ws=[];
-    for(const ch of line){const cw=g.measureText(ch).width; ws.push(cw); w+=cw+spacing;}
-    if(line.length) w-=spacing;
+    // セグメント区切り「|」は文字として描かず、以降の文字のsegインデックスを進める。
+    // 「文字ごとに面グラデ等を変える」ための区切りで、区切り自体は字幅にも数えない。
+    let seg=0;
+    // 各文字の実サイズ倍率(色わけごとの大きさ)を先に確定してから幅を測る。
+    // これで字幅・字間・センタリングが実サイズに追従し、デカい文字の周りがスカスカにならない。
+    const segScaleOf=(s)=> (P.segShapes && P.segShapes[s] && P.segShapes[s].scale!==undefined)
+      ? P.segShapes[s].scale/100 : 1;
+    let w=0; const cells=[];
+    for(const ch of line){
+      if(ch==="|"||ch==="｜"){ cells.push({sep:true}); seg++; continue; } // 区切り: 字幅に数えず色わけを進める
+      const sc=segScaleOf(seg);
+      const cw=g.measureText(ch).width*sc; // 実サイズでの字幅
+      cells.push({ch,cw,sc,seg});
+      w+=cw+spacing*sc; // 字間もその色わけの倍率でスケール
+    }
+    // 末尾に足した余分な字間を引く（最後の実文字の分）
+    let lastSc=1; for(let i=cells.length-1;i>=0;i--){ if(!cells[i].sep){ lastSc=cells[i].sc; break; } }
+    if(cells.some(c=>!c.sep)) w-=spacing*lastSc;
     maxW=Math.max(maxW,w);
     let x=-w/2;
-    let ci=0;
-    for(const ch of line){
-      const cw=ws[ci++];
+    for(const cell of cells){
+      if(cell.sep){ continue; } // 区切りはスキップ（segは各cellが自分の値を持っている）
+      const cw=cell.cw, sc=cell.sc;
       const cx=x+cw/2;
       const jitR=(jr()*2-1)*P.pJitR*Math.PI/180;
       const jitY=(jr()*2-1)*P.pJitY;
-      chars.push({ch, cx, cy:li*lineH, cw, jitR, jitY, lineW:w});
-      x+=cw+spacing;
+      // 下揃え: 倍率scで拡大したぶん、中心cyを上へずらして下辺を等倍時と揃える。
+      // textBaseline="middle"なので文字は中心±size/2。下辺=cy+sc*size/2 を cy+size/2 に合わせる。
+      const cyBottom = li*lineH - (sc-1)*size/2;
+      // 色わけごとの追加回転(度→ラジアン)。warpRotと別枠で持ち、drawChars側は既存のwarpRotに足すだけ。
+      const segR=(P.segShapes && P.segShapes[cell.seg] && P.segShapes[cell.seg].rot)
+        ? P.segShapes[cell.seg].rot*Math.PI/180 : 0;
+      chars.push({ch:cell.ch, cx, cy:cyBottom, cw, jitR, jitY, lineW:w, seg:cell.seg, segScale:sc, segRot:segR});
+      x+=cw+spacing*sc;
     }
   });
-  const totalH=(lines.length-1)*lineH+size;
+  // 下揃えで拡大した色わけは上方向に伸びるため、最大倍率ぶん全体の高さを広げる。
+  // これをしないとデカい文字の上部がキャンバス上端で見切れる。
+  let maxSegScale=1;
+  for(const c of chars){ if(c.segScale&&c.segScale>maxSegScale) maxSegScale=c.segScale; }
+  const totalH=(lines.length-1)*lineH+size*maxSegScale;
   applyTransformWarp(chars, size); // モード別(アーチ/扇形/パース)の位置・回転・拡縮を文字ごとに1回だけ計算
   return {chars, maxW, totalH, size, lines:lines.length, lineH};
 }
@@ -959,14 +1044,24 @@ function applyTransformWarp(chars, size){
       c.warpScale=1;
     }
   }
+  // 色わけごとの大きさ・角度を最後に全モード共通で合成する。
+  // 字幅・字詰め(cx/cw)と下揃え(cy)はlayoutTextで既に実サイズ反映済みなので、
+  // ここでは描画変換用のwarpScale/warpRotに掛け足すだけ＝各モードの字詰めを壊さない。
+  for(const c of chars){
+    if(c.segScale!==undefined && c.segScale!==1) c.warpScale=(c.warpScale||1)*c.segScale;
+    if(c.segRot) c.warpRot=(c.warpRot||0)+c.segRot;
+  }
 }
 
-/* 全文字を指定スタイルで描画（mode: "fill"|"stroke"、styleFnで文字ごとにfillStyle変更可） */
-function drawChars(g, L, mode, dx=0, dy=0, styleFn=null){
+/* 全文字を指定スタイルで描画（mode: "fill"|"stroke"、styleFnで文字ごとに色変更可）。
+   styleFnはfill時はfillStyle、stroke時はstrokeStyleに適用される。
+   segOnlyを渡すと、そのセグメントの文字だけを描く（側面の色わけ塗り分け用）。 */
+function drawChars(g, L, mode, dx=0, dy=0, styleFn=null, segOnly=null){
   const tilt=P.pTilt*Math.PI/180;
   let i=0;
   for(const c of L.chars){
-    if(styleFn) g.fillStyle=styleFn(c,i);
+    if(segOnly!==null && (c.seg||0)!==segOnly){ i++; continue; }
+    if(styleFn){ const st=styleFn(c,i); if(mode==="fill") g.fillStyle=st; else g.strokeStyle=st; }
     i++;
     g.save();
     g.translate(c.cx+c.warpDx+dx, c.cy+c.jitY+c.warpDy+dy);
@@ -992,10 +1087,17 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   const ang=P.pFillAngle*Math.PI/180;
   const R=Math.max(L.maxW,L.totalH)/2;
   const gx=Math.cos(ang)*R, gy=Math.sin(ang)*R;
-  const stops = getFillStops();
   const cyMid=(L.lines-1)*L.lineH/2;
-  const baseGrad=makeGradient(g,-gx,cyMid-gy,gx,cyMid+gy,P.pFillRepeat,stops);
-  let styleFn=null;
+  // セグメント別グラデ: 登場するsegごとに色(stops)を差し替えたベースグラデを用意。
+  // 区切り「|」を入れてなければ全文字seg=0で、従来と完全に同じ1枚のグラデになる。
+  const segStopCache={};
+  const stopsFor=(seg)=>{ if(!(seg in segStopCache)) segStopCache[seg]=getFillStops(seg); return segStopCache[seg]; };
+  const baseGradCache={};
+  const baseGradFor=(seg)=>{
+    if(!(seg in baseGradCache)) baseGradCache[seg]=makeGradient(g,-gx,cyMid-gy,gx,cyMid+gy,P.pFillRepeat,stopsFor(seg));
+    return baseGradCache[seg];
+  };
+  let styleFn=(c)=>baseGradFor(c.seg||0);
   if(P.pVary>0){
     const vary=P.pVary/100;
     const vr=mulberry32(P.pSeed*991+P.pJitSeed);
@@ -1003,14 +1105,17 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
       dy:(vr()*2-1)*L.size*.6*vary,
       da:(vr()*2-1)*.7*vary
     }));
-    const gradCache=phases.map(ph=>{
+    // vary時は「文字ごとの位相ずらし × その文字のセグメント色」でグラデを作る
+    const gradCache=L.chars.map((c,i)=>{
+      const ph=phases[i];
       const a2=ang+ph.da;
       const gx2=Math.cos(a2)*R, gy2=Math.sin(a2)*R;
       const yc=cyMid+ph.dy;
-      return makeGradient(g,-gx2,yc-gy2,gx2,yc+gy2,P.pFillRepeat,stops);
+      return makeGradient(g,-gx2,yc-gy2,gx2,yc+gy2,P.pFillRepeat,stopsFor(c.seg||0));
     });
     styleFn=(c,i)=>gradCache[i];
   }
+  const baseGrad=baseGradFor(0);
   g.fillStyle=baseGrad;
   drawChars(g,L,"fill",0,0,styleFn);
 
@@ -1375,11 +1480,11 @@ function draw(targetCtx, scale, withBg, quality){
   const showGlow=(V==="all"), showEx=(V==="all"||V==="extrude"||V==="nofx");
   const showOL=(V==="all"||V==="outline"||V==="nofx"), showFace=(V==="all"||V==="face"||V==="nofx");
   const showFx=(V==="all");
-  // 縁込みシルエットを1色で描くヘルパー
-  const silhouette=(color,dx,dy)=>{
+  // 縁込みシルエットを1色で描くヘルパー（segOnly指定でその色わけの文字だけ）
+  const silhouette=(color,dx,dy,segOnly=null)=>{
     mg.fillStyle=color;
-    if(maxOW>0){mg.strokeStyle=color; mg.lineWidth=maxOW; drawChars(mg,L,"stroke",dx,dy);}
-    drawChars(mg,L,"fill",dx,dy);
+    if(maxOW>0){mg.strokeStyle=color; mg.lineWidth=maxOW; drawChars(mg,L,"stroke",dx,dy,null,segOnly);}
+    drawChars(mg,L,"fill",dx,dy,null,segOnly);
   };
 
   // ① グロー（縁込みシルエットを発光色で）
@@ -1392,12 +1497,21 @@ function draw(targetCtx, scale, withBg, quality){
     mg.restore();
   }
 
-  // ② 押し出し（縁込み外形を奥→手前、色補間）
+  // ② 押し出し（縁込み外形を奥→手前、色補間）。側面色は色わけごとに差し替え可能。
   const d=P.pExDepth;
   if(d>0&&showEx){
     const ea=P.pExAngle*Math.PI/180;
     const ux=Math.cos(ea), uy=Math.sin(ea);
-    const c1=hex(P.pExC1), c2=hex(P.pExC2);
+    // この文字列に登場する色わけの一覧。色わけごとに側面色(c1/c2)を用意する。
+    // seg0(先頭)はグローバル設定、seg>0はP.segSideColorsがあればそれ、無ければグローバルに従う。
+    const usedSegs=[...new Set(L.chars.map(c=>c.seg||0))].sort((a,b)=>a-b);
+    const sideColorOf=(seg)=>{
+      const ov=(seg>0 && P.segSideColors && P.segSideColors[seg]) ? P.segSideColors[seg] : null;
+      return { c1:hex(ov?ov.c1:P.pExC1), c2:hex(ov?ov.c2:P.pExC2) };
+    };
+    const segCols={}; usedSegs.forEach(s=>segCols[s]=sideColorOf(s));
+    // 色わけが1つだけなら従来通り全文字一括で描く(segOnly不要=わずかに速い)
+    const singleSeg = usedSegs.length<=1;
     // 底面リムライト: 先端(最奥)のさらに外側にrim色を敷く→ループが上書きし先端縁だけ残る
     if(P.pRim>0){
       mg.globalAlpha=Math.min(1,P.pRim/100);
@@ -1411,23 +1525,37 @@ function draw(targetCtx, scale, withBg, quality){
     // ドラッグ中(low)は深さが大きいほど重くなる(1層=全文字1回描画)ため間引く。
     // 手を離した本描画(high)では全層を正確に描く。
     const exStep = (quality==="low" && d>10) ? Math.ceil(d/10) : 1;
-    for(let i=d;i>=1;i-=exStep){
-      const t=i/d;
+    // 深さ層ごとの色を計算するヘルパー(色わけの基準色c1/c2から、その層tの側面色を出す)
+    const layerColor=(c1,c2,t)=>{
       let r=lerp(c1[0],c2[0],t), gc=lerp(c1[1],c2[1],t), b=lerp(c1[2],c2[2],t);
       if(P.pExBand>0){
-        // 側面のクローム反射: フラットな帯＋シャープな遷移（水銀的な折り返し）
         const s=Math.sin(t*Math.PI*2*P.pExBand+1.1);
         const k=1+Math.sign(s)*Math.pow(Math.abs(s),.35)*.55;
         r=Math.min(255,r*k); gc=Math.min(255,gc*k); b=Math.min(255,b*k);
       }
-      silhouette(`rgb(${r|0},${gc|0},${b|0})`,ux*i,uy*i);
+      return `rgb(${r|0},${gc|0},${b|0})`;
+    };
+    for(let i=d;i>=1;i-=exStep){
+      const t=i/d;
+      if(singleSeg){
+        const cc=segCols[usedSegs[0]||0];
+        silhouette(layerColor(cc.c1,cc.c2,t),ux*i,uy*i);
+      }else{
+        // 同じ深さ層の中で色わけごとに、その色わけの文字だけを塗る。
+        // 積み順(奥→手前)は全色わけ共通なので前後関係は保たれる。
+        for(const seg of usedSegs){
+          const cc=segCols[seg];
+          silhouette(layerColor(cc.c1,cc.c2,t),ux*i,uy*i,seg);
+        }
+      }
     }
     // 側面ツヤ（結果はキャッシュ: 側面に関係するパラメータが不変なら再利用）
     if(P.pExSpec>0){
       const sideKey=JSON.stringify([P.pText,P.pFont,P.pSize,P.pSpacing,P.pLineH,
         P.pExDepth,P.pExAngle,P.pExSpec,P.pExLight,P.pExSpecW,P.pExFlash,P.pExC1,P.pExC2,
         P.pSeed,P.pLiquidBands,P.pArch,P.pTilt,P.pJitR,P.pJitY,P.pJitSeed,maxOW,scale,cw,ch,
-        P.outlines,P.pGlowOn,P.pGlowBlur,offX,offY]);
+        P.outlines,P.pGlowOn,P.pGlowBlur,offX,offY,
+        P.segShapes,P.segSideColors]);
       let refl=null;
       if(sideCache.key===sideKey){ refl=sideCache.canvas; }
       else if(quality==="high"){
@@ -1447,10 +1575,20 @@ function draw(targetCtx, scale, withBg, quality){
     }
   }
 
-  // ③ 縁取り（外側から太い順に上書き）
-  if(showOL) for(const o of act){
-    mg.strokeStyle=o.color; mg.lineWidth=o.w;
-    drawChars(mg,L,"stroke");
+  // ③ 縁取り（外側から太い順に上書き）。色は色わけごとに差し替え可能（太さ・有効は全体共通）。
+  if(showOL) for(let oi=0; oi<act.length; oi++){
+    const o=act[oi];
+    // このスロット(act内index)が全体の何番目の縁かを求める（segOutlineColorsはスロット番号で引く）
+    const slotIdx=P.outlines.indexOf(o);
+    mg.lineWidth=o.w;
+    // 色わけごとの縁色があれば文字ごとに切り替える。無ければ全文字この縁の共通色。
+    const strokeStyleFn=(c)=>{
+      const seg=c.seg||0;
+      const sc=(P.segOutlineColors && P.segOutlineColors[seg] && P.segOutlineColors[seg][slotIdx]);
+      return sc || o.color;
+    };
+    mg.strokeStyle=o.color;
+    drawChars(mg,L,"stroke",0,0,strokeStyleFn);
   }
   mg.restore();
 
@@ -2274,7 +2412,103 @@ let brushColorTouched=false;
 // 上書きされないようにするためのフラグ。プリセット側のプログラム的な変更では
 // 立てず、テキストエリアへの直接入力だけで立てる。
 let textCustomized=false;
-$("pText").addEventListener("input",()=>{ textCustomized=true; });
+$("pText").addEventListener("input",()=>{ textCustomized=true; rebuildSegSelector(); });
+
+/* 「➕色わけを追加」: テキストのカーソル位置に区切り「｜」を挿入する。
+   手で縦棒を打たなくても色わけを増やせる。挿入後は新しくできた色わけを編集対象にする。 */
+$("btnAddSplit").addEventListener("click",()=>{
+  const ta=$("pText");
+  const start=ta.selectionStart!=null?ta.selectionStart:ta.value.length;
+  const end=ta.selectionEnd!=null?ta.selectionEnd:ta.value.length;
+  const before=ta.value.slice(0,start), after=ta.value.slice(end);
+  ta.value = before + "｜" + after;
+  textCustomized=true;
+  // カーソルを区切りの直後へ
+  const pos=start+1;
+  ta.focus(); ta.setSelectionRange(pos,pos);
+  rebuildSegSelector();
+  // 挿入位置より前にある区切りの数＝新しくできた右側パートのindex。そこを編集対象にする。
+  const segIdx=(before.match(/[|｜]/g)||[]).length+1;
+  const sel=$("segEdit");
+  if(sel && segIdx < sel.options.length){ sel.value=segIdx; loadSegToUI(segIdx); }
+  onInput();
+});
+
+/* テキスト中の「|」の数からセグメント数を数え、「編集中」セレクタを作り直す。
+   区切りが無ければセグメントは1つ＝セレクタは実質「全体」だけになり、従来UIと変わらない。 */
+function rebuildSegSelector(){
+  const sel=$("segEdit"); if(!sel) return;
+  const text=$("pText").value;
+  // 行ごとに区切り数が違ってもいいよう、全体で最大のセグメント数を採用する
+  let segCount=1;
+  text.split("\n").forEach(line=>{
+    const n=(line.match(/[|｜]/g)||[]).length+1; // 半角|・全角｜どちらも区切りとして数える
+    if(n>segCount) segCount=n;
+  });
+  const prev=+sel.value||0;
+  sel.innerHTML="";
+  for(let i=0;i<segCount;i++){
+    const o=document.createElement("option");
+    o.value=i;
+    o.textContent = i===0 ? "色わけ1（先頭）" : ("色わけ"+(i+1));
+    sel.appendChild(o);
+  }
+  // 以前選んでいた色わけが範囲内なら維持、外れたら0に戻す
+  sel.value = (prev<segCount) ? prev : 0;
+  // 色わけが1つ(区切り無し)のときはセレクタを出さない＝従来UIと同じ見た目でスッキリ
+  const segEditRow=$("segEditRow");
+  if(segEditRow) segEditRow.style.display = segCount>1 ? "flex" : "none";
+  // 色わけ数が減って消えた上書き設定は掃除
+  if(P.segFills){ Object.keys(P.segFills).forEach(k=>{ if(+k>=segCount) delete P.segFills[+k]; }); }
+  if(P.segShapes){ Object.keys(P.segShapes).forEach(k=>{ if(+k>=segCount) delete P.segShapes[+k]; }); }
+  if(P.segOutlineColors){ Object.keys(P.segOutlineColors).forEach(k=>{ if(+k>=segCount) delete P.segOutlineColors[+k]; }); }
+  if(P.segSideColors){ Object.keys(P.segSideColors).forEach(k=>{ if(+k>=segCount) delete P.segSideColors[+k]; }); }
+}
+
+/* 「編集中」セグメントを切り替えたとき、そのセグメントの保存済み色をUIに流し込む。
+   まだ設定が無いセグメントは、seg0(全体)の現在値をコピーして初期値にする＝
+   「追加したては先頭と同じ見た目」になり、そこから調整できる。 */
+function loadSegToUI(seg){
+  if(seg===0){
+    // 全体は特別な保存先を持たず、メインUIの値がそのままseg0
+    return;
+  }
+  if(!P.segFills) P.segFills={};
+  let s=P.segFills[seg];
+  if(!s){
+    // 初期値は現在のメインUI(seg0)の色をコピー
+    s={ fill:$("pFill").value, c1:$("pFillC1").value, c2:$("pFillC2").value,
+        hue:+$("pFillHue").value, sat:+$("pFillSat").value, light:+$("pFillLight").value };
+    P.segFills[seg]=s;
+  }
+  $("pFill").value=s.fill;
+  $("pFillC1").value=s.c1; $("pFillC2").value=s.c2;
+  $("pFillHue").value=s.hue; $("pFillSat").value=s.sat; $("pFillLight").value=s.light;
+  // 大きさ・角度も反映（未設定なら等倍・無回転）
+  if(!P.segShapes) P.segShapes={};
+  const sh=P.segShapes[seg]||{scale:100,rot:0};
+  $("segScale").value=sh.scale!==undefined?sh.scale:100;
+  $("segRot").value=sh.rot!==undefined?sh.rot:0;
+  // 縁色: 未設定なら全体の現在の縁色をコピーして初期値にする
+  if(!P.segOutlineColors) P.segOutlineColors={};
+  let oc=P.segOutlineColors[seg];
+  if(!oc){ oc=[0,1,2,3].map(i=>$("olC"+i).value); P.segOutlineColors[seg]=oc; }
+  for(let i=0;i<4;i++) $("segOlC"+i).value=oc[i];
+  // 側面色: 未設定なら全体の側面色をコピー
+  if(!P.segSideColors) P.segSideColors={};
+  let sd=P.segSideColors[seg];
+  if(!sd){ sd={c1:$("pExC1").value, c2:$("pExC2").value}; P.segSideColors[seg]=sd; }
+  $("segExC1").value=sd.c1; $("segExC2").value=sd.c2;
+  // 数値表示(.val)も追従させる
+  document.querySelectorAll('.val[data-for="pFillHue"],.val[data-for="pFillSat"],.val[data-for="pFillLight"],.val[data-for="segScale"],.val[data-for="segRot"]')
+    .forEach(v=>{ v.value=$(v.dataset.for).value; });
+}
+
+$("segEdit").addEventListener("change",()=>{ loadSegToUI(+$("segEdit").value); onInput(); });
+// 色わけの大きさ・角度スライダー本体の操作でも再描画（rangeIds/otherIdsに無いため個別配線）
+["segScale","segRot"].forEach(id=>$(id).addEventListener("input",onInput));
+// 色わけの縁色・側面色ピッカーも同様に個別配線
+["segOlC0","segOlC1","segOlC2","segOlC3","segExC1","segExC2"].forEach(id=>$(id).addEventListener("input",onInput));
 function applyBrushTypeColor(){
   if(brushColorTouched) return; // 自分で選んだ色を尊重
   const c=BRUSH_COLORS[$("brushType").value];
@@ -2705,11 +2939,22 @@ function snapshot(){
   s.__brushLayers = brushLayers;
   s.__activeLayerId = activeLayerId;
   s.__nextLayerId = nextLayerId;
+  s.__segFills = P.segFills||{};
+  s.__segShapes = P.segShapes||{};
+  s.__segOutlineColors = P.segOutlineColors||{};
+  s.__segSideColors = P.segSideColors||{};
   return JSON.stringify(s);
 }
 function applyState(json){
   const s=JSON.parse(json);
+  // セグメント別の面グラデ設定を復元。保存に含まれない(旧データ/プリセット)ときは空にリセット。
+  // これをやらないと、前の状態のセグメント色が残ってプリセットの色が反映されない。
+  P.segFills = (s.__segFills && typeof s.__segFills==="object") ? {...s.__segFills} : {};
+  P.segShapes = (s.__segShapes && typeof s.__segShapes==="object") ? {...s.__segShapes} : {};
+  P.segOutlineColors = (s.__segOutlineColors && typeof s.__segOutlineColors==="object") ? {...s.__segOutlineColors} : {};
+  P.segSideColors = (s.__segSideColors && typeof s.__segSideColors==="object") ? {...s.__segSideColors} : {};
   for(const [id,v] of Object.entries(s)){
+    if(id==="__segFills"||id==="__segShapes"||id==="__segOutlineColors"||id==="__segSideColors") continue;
     if(id==="__brushLayers"){
       brushLayers = (Array.isArray(v)&&v.length) ? v : [{id:1,name:"レイヤー1",visible:true,strokes:[],maskMode:"face"}];
       // 旧保存データ(maskModeが無いレイヤー)は、当時のグローバル設定(brushMask)を引き継ぐ。
@@ -2735,6 +2980,8 @@ function applyState(json){
   if(s.brushType && [...$("brushType").options].some(o=>o.value===s.brushType)) $("brushType").value=s.brushType;
   if(s.brushColor!==undefined) $("brushColor").value=s.brushColor;
   buildLayerUI();
+  rebuildSegSelector();
+  loadSegToUI(+($("segEdit").value||0));
   warmupFont($("pFont").value);
   requestAnimationFrame(()=>requestAnimationFrame(()=>requestDraw("high")));
 }
