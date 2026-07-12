@@ -6,7 +6,7 @@
 <title>激アツ文字工房 — パチ文字ジェネレーター</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Shippori+Mincho+B1:wght@800&family=Kaisei+Tokumin:wght@800&family=DotGothic16&family=M+PLUS+Rounded+1c:wght@800&family=Zen+Maru+Gothic:wght@900&family=Hachi+Maru+Pop&family=Potta+One&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Shippori+Mincho+B1:wght@800&family=Kaisei+Tokumin:wght@800&family=DotGothic16&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#151220; --panel:#1e1a2b; --panel2:#262133; --line:#37304a;
@@ -82,7 +82,7 @@ details summary::-webkit-details-marker{display:none;}
 details summary::before{content:"▸"; margin-right:7px; color:var(--gold-dim); transition:transform .15s;}
 details[open] summary::before{transform:rotate(90deg);}
 .sec{padding:2px 14px 14px;}
-.row{display:flex; align-items:center; gap:8px; margin-top:6px;}
+.row{display:flex; align-items:center; gap:8px; margin-top:9px;}
 .row label{width:86px; flex-shrink:0; color:var(--sub); font-size:12px;}
 .row input[type=range]{flex:1; accent-color:var(--gold); min-width:0;}
 .val{
@@ -157,18 +157,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 }
 :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
 .hint{color:var(--sub);font-size:11px;margin:8px 0 0;line-height:1.5;}
-/* ヒント文はデフォルト非表示。「使い方」トグルで各セクションごとに表示する */
-.sec .hint{display:none;}
-.sec.show-hints .hint{display:block;}
-.usage-toggle{
-  display:inline-block; margin:8px 14px 0; padding:3px 10px;
-  font-size:11px; color:var(--sub); background:none;
-  border:1px solid rgba(255,255,255,.18); border-radius:12px; cursor:pointer;
-}
-.sec.show-hints .usage-toggle{color:var(--gold); border-color:var(--gold);}
-.fav-empty{color:var(--sub);font-size:11px;margin:8px 0 0;line-height:1.5;}
-.seg-label{color:var(--sub);font-size:11px;line-height:1.5;}
-.puff-note{font-size:11px;line-height:1.5;}
 #cv.brush-active{cursor:crosshair; touch-action:none;}
 #zoomBar{
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -231,11 +219,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="system-heavy" selected>システム極太ゴシック</option>
           <option value="Reggae One">Reggae One（勘亭流風）</option>
           <option value="RocknRoll One">RocknRoll One（丸ゴ極太）</option>
-          <option value="M PLUS Rounded 1c">M PLUS 丸ゴシック 極太</option>
-          <option value="Zen Maru Gothic">Zen 丸ゴシック 極太</option>
-          <option value="Hachi Maru Pop">はちまるポップ（ぷにぷに丸文字）</option>
-          <option value="Potta One">ポッタ One（ぽってり丸）</option>
-          <option value="Mochiy Pop One">モッチーポップ（もちもち）</option>
           <option value="Rampart One">Rampart One（立体袋文字）</option>
           <option value="Shippori Mincho B1">しっぽり明朝B1 極太</option>
           <option value="Kaisei Tokumin">解星 特ミン 極太</option>
@@ -247,22 +230,21 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>行間</label><input type="range" id="pLineH" min="80" max="160" value="105"><input type="number" class="val" data-for="pLineH"></div>
     </div></details>
 
-    <details><summary>プリセット</summary><div class="sec">
+    <details open><summary>プリセット</summary><div class="sec">
       <p class="hint">構成ごと一括適用。ここから始めて下のセクションで微調整するのがおすすめ。</p>
       <div id="presets"></div>
     </div></details>
 
-    <details><summary>塗り（面）</summary><div class="sec">
-      <p class="hint">文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「輝きの暴れ」は文字ごとにグラデ位相を乱す。「色相/彩度/明るさ」はどのグラデにも後から掛けられる調整＝プリセットの色が強すぎる時などに。</p>
+    <details open><summary>塗り（面）</summary><div class="sec">
+      <p class="hint">文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「水銀」は液体クローム（ぼかし→急峻カーブ）、「輝きの暴れ」は文字ごとにグラデ位相を乱す。「色相/彩度/明るさ」はどのグラデにも後から掛けられる調整＝プリセットの色が強すぎる時などに。</p>
       <p class="hint" style="border-left:2px solid #4ecdc4;padding-left:8px">上の <b>➕色わけを追加</b> を押すと、その位置で文字の色を分けられる。例:「激｜アツ」で〔激〕〔アツ〕を別の色に。下の「編集中の色わけ」で対象を選んでから色を設定する。</p>
       <div class="row" id="segEditRow"><label>編集中の色わけ</label>
         <select id="segEdit"><option value="0">色わけ1（先頭）</option></select>
       </div>
       <div class="row" id="segScaleRow" style="display:none"><label>この色わけの大きさ</label><input type="range" id="segScale" min="30" max="250" value="100"><input type="number" class="val" data-for="segScale"></div>
       <div class="row" id="segRotRow" style="display:none"><label>この色わけの角度</label><input type="range" id="segRot" min="-45" max="45" value="0"><input type="number" class="val" data-for="segRot"></div>
-      <div class="row"><label>塗り方</label>
+      <div class="row"><label>グラデ</label>
         <select id="pFill">
-          <option value="solid">単色（ベタ塗り）</option>
           <option value="metalGold">リアルメタル金</option>
           <option value="metalSilver">リアルメタル銀</option>
           <option value="metalCopper">リアルメタル銅</option>
@@ -311,24 +293,20 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
       <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="10" value="4"><input type="number" class="val" data-for="pTexScale"></div>
       <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><input type="number" class="val" data-for="pVary"></div>
+      <div class="row"><label>水銀</label><input type="range" id="pLiquid" min="0" max="100" value="0"><input type="number" class="val" data-for="pLiquid"></div>
+      <div class="row"><label>水銀色 明/暗</label><input type="color" id="pLiquidC1" value="#ffffff"><input type="color" id="pLiquidC2" value="#2a3140"></div>
+      <div class="row"><label>丸み</label><input type="range" id="pLiquidR" min="4" max="60" value="14"><input type="number" class="val" data-for="pLiquidR"></div>
+      <div class="row"><label>反射縞</label><input type="range" id="pLiquidBands" min="1" max="4" value="2"><input type="number" class="val" data-for="pLiquidBands"></div>
       <div class="row"><label>メタルツヤ</label><input type="range" id="pMetal" min="0" max="100" value="0"><input type="number" class="val" data-for="pMetal"></div>
       <div class="row"><label>映り込み色</label><input type="color" id="pMetalC" value="#ffb060"></div>
       <div class="row"><label>シード</label><input type="range" id="pSeed" min="1" max="99" value="7"><input type="number" class="val" data-for="pSeed"></div>
-      <div class="row" style="border-top:1px solid rgba(255,255,255,.08);margin-top:10px;padding-top:10px"><label style="color:#4ecdc4">ぷくぷく</label><input type="range" id="pPuff" min="0" max="40" value="0"><input type="number" class="val" data-for="pPuff"></div>
-      <p class="puff-note puff-sub" style="margin:0 14px 4px;color:#4ecdc4">※ぷくぷくは色わけに関係なく文字全体にかかります</p>
-      <div class="row puff-sub"><label>フチ影</label><input type="range" id="pPuffEdge" min="0" max="100" value="60"><input type="number" class="val" data-for="pPuffEdge"></div>
-      <div class="row puff-sub"><label>ソフト影</label><input type="range" id="pPuffSoft" min="0" max="100" value="45"><input type="number" class="val" data-for="pPuffSoft"></div>
-      <div class="row puff-sub"><label>白ツヤ</label><input type="range" id="pPuffSpec" min="0" max="100" value="65"><input type="number" class="val" data-for="pPuffSpec"></div>
-      <div class="row puff-sub"><label>ツヤの硬さ</label><input type="range" id="pPuffHard" min="0" max="100" value="30"><input type="number" class="val" data-for="pPuffHard"></div>
-      <div class="row puff-sub"><label>ツヤ広がり</label><input type="range" id="pPuffGlow" min="0" max="100" value="45"><input type="number" class="val" data-for="pPuffGlow"></div>
-      <div class="row puff-sub"><label>光の向き</label><input type="range" id="pPuffLight" min="0" max="100" value="45"><input type="number" class="val" data-for="pPuffLight"></div>
     </div></details>
 
-    <details><summary>縁取り（外側から）</summary><div class="sec">
+    <details open><summary>縁取り（外側から）</summary><div class="sec">
       <p class="hint" style="margin:8px 14px 0">多重の境界線。PSの境界線（ストローク）を外側から4本まで。<b style="color:#4ecdc4">太さ・ON/OFFは全体共通／色は色わけごと</b>に設定できる。</p>
       <div id="outlineSec"><!-- slots injected --></div>
       <div id="segOutlineBlock" style="display:none;margin:6px 14px 0;padding:8px;border-left:2px solid #4ecdc4">
-        <p class="seg-label" style="margin:0 0 6px"><b id="segOutlineLabel">色わけ2</b> の縁色（外→内）</p>
+        <p class="hint" style="margin:0 0 6px"><b id="segOutlineLabel">色わけ2</b> の縁色（外→内）</p>
         <div class="row" style="gap:6px">
           <input type="color" id="segOlC0" value="#ffffff"><input type="color" id="segOlC1" value="#1a0e00">
           <input type="color" id="segOlC2" value="#ffd76a"><input type="color" id="segOlC3" value="#5a2d00">
@@ -336,13 +314,13 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       </div>
     </div></details>
 
-    <details><summary>立体押し出し</summary><div class="sec">
+    <details open><summary>立体押し出し</summary><div class="sec">
       <p class="hint">文字の厚み（側面）。ずらしコピーの積層＝パチ文字職人の力技をコード化。「側面ツヤ」が金属光沢の本体。<b style="color:#4ecdc4">深さ・方向などの形は全体共通／色は色わけごと</b>。</p>
       <div class="row"><label>深さ</label><input type="range" id="pExDepth" min="0" max="40" value="14"><input type="number" class="val" data-for="pExDepth"></div>
       <div class="row"><label>方向</label><input type="range" id="pExAngle" min="0" max="360" value="115"><input type="number" class="val" data-for="pExAngle"></div>
       <div class="row"><label>色（手前）</label><input type="color" id="pExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="pExC2" value="#2b1600"></div>
       <div id="segSideBlock" style="display:none;margin:2px 0 6px;padding:8px;border-left:2px solid #4ecdc4">
-        <p class="seg-label" style="margin:0 0 6px"><b id="segSideLabel">色わけ2</b> の側面色</p>
+        <p class="hint" style="margin:0 0 6px"><b id="segSideLabel">色わけ2</b> の側面色</p>
         <div class="row"><label>色（手前）</label><input type="color" id="segExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="segExC2" value="#2b1600"></div>
       </div>
       <div class="row"><label>ベベル</label><input type="range" id="pBevel" min="0" max="10" value="3"><input type="number" class="val" data-for="pBevel"></div>
@@ -356,7 +334,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>ツヤ幅</label><input type="range" id="pExSpecW" min="2" max="30" value="14"><input type="number" class="val" data-for="pExSpecW"></div>
     </div></details>
 
-    <details><summary>✏️ ブラシで直描き</summary><div class="sec">
+    <details open><summary>✏️ ブラシで直描き</summary><div class="sec">
       <p class="hint">スライダーの自動処理じゃなく、プレビュー上を直接なぞって狙った場所に効果を置ける。金属反射は「基準点」をタップして押し出し方向へドラッグ＝角度が今の押し出し角度にスナップして伸びる。角度スライダーを後で変えても追従する。</p>
       <label class="chk"><input type="checkbox" id="brushMode"><span>ブラシモードON（プレビューに直接描く）</span></label>
       <div class="row"><label>ブラシ系統</label>
@@ -487,8 +465,6 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="gradient">グラデ</option>
           <option value="uni">ウニフラ（リング状のトゲ）</option>
           <option value="beta">ベタフラ（芯ありのトゲ）</option>
-          <option value="burst">バースト（放射光線の爆発）</option>
-          <option value="bolt">稲妻（電撃＋集中線）</option>
         </select>
       </div>
       <div class="row" id="bgGradShapeRow"><label>グラデ形状</label>
@@ -513,7 +489,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <p class="hint" id="bgSpikeHint">ウニフラ＝トゲの形を色で塗る（中心は空洞のリング状）。ベタフラ＝画面のフチから中心へ刺さるトゲを描く（フチ側は自然にベタ塗りになり、中央は透明が残る。「横半径・縦半径」で中央の透明領域の大きさを調整）。</p>
     </div></details>
 
-    <details><summary>⭐ お気に入り</summary><div class="sec">
+    <details open><summary>⭐ お気に入り</summary><div class="sec">
       <p class="hint">気に入った状態に名前をつけてこの端末に保存。次に開いた時もここに残ってる（JSONやURLと違って、文字列を自分で管理する必要がない）。</p>
       <div id="favList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:9px"></div>
       <button class="ghost" id="btnFavSave" style="margin-top:10px">＋ 現在の状態を保存</button>
@@ -555,12 +531,12 @@ const cv = $("cv"), ctx = cv.getContext("2d");
 
 /* ---------- パラメータ収集 ---------- */
 const P = {};
-const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillHue","pFillSat","pFillLight","pTexInt","pTexScale","pSeed","pMetal","pVary","pPuff","pPuffEdge","pPuffSoft","pPuffSpec","pPuffHard","pPuffGlow","pPuffLight",
+const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillHue","pFillSat","pFillLight","pTexInt","pTexScale","pSeed","pMetal","pVary","pLiquid","pLiquidR","pLiquidBands",
   "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
   "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed",
   "pBgAngle","pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY","pBgSpikeJitter"];
-const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC",
+const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC","pLiquidC1","pLiquidC2",
   "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgGradShape","pBgC1","pBgC2","pTransformMode",
   "pBgSpikeBgOn","pBgSpikeBgC"];
 
@@ -636,35 +612,25 @@ function readParams(){
   $("segOutlineBlock").style.display = showShape ? "block":"none";
   $("segSideBlock").style.display = showShape ? "block":"none";
   if(showShape){ $("segOutlineLabel").textContent=segLbl; $("segSideLabel").textContent=segLbl; }
-  $("customFillRow").style.display = (P.pFill==="custom"||P.pFill==="solid") ? "flex":"none";
-  // 単色は色1だけ使うので2つ目のスウォッチを隠し、ラベルを変える
-  const isSolid=P.pFill==="solid";
-  $("pFillC2").style.display = isSolid ? "none":"inline-block";
-  const cfLabel=$("customFillRow").querySelector("label");
-  if(cfLabel) cfLabel.textContent = isSolid ? "塗り色" : "カスタム色";
-  // ぷくぷきのサブ項目(フチ影・ツヤ等)は、膨らみ>0のときだけ表示
-  document.querySelectorAll(".puff-sub").forEach(el=>{ el.style.display = P.pPuff>0 ? "flex":"none"; });
+  $("customFillRow").style.display = P.pFill==="custom" ? "flex":"none";
   // 背景タイプに応じて関連行だけ表示する
   const bg=P.pBg;
   const isGrad=bg==="gradient", isSpike=(bg==="uni"||bg==="beta");
-  const isBurst=bg==="burst", isBolt=bg==="bolt", isFx=(isBurst||isBolt);
   $("bgGradShapeRow").style.display = isGrad ? "flex":"none";
   $("bgGradAngleRow").style.display = (isGrad && P.pBgGradShape==="linear") ? "flex":"none";
-  $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike||isFx) ? "flex":"none";
-  $("pBgC2").style.display = (isGrad||isFx) ? "inline-block":"none"; // バースト/稲妻は2色使う
-  $("bgColor1Label").textContent = isGrad ? "色" : (isSpike ? "トゲの色" : (isBolt ? "芯/グロー色" : (isBurst ? "芯/中間色" : "色")));
-  $("bgSpikeBgRow").style.display = (isSpike||isFx) ? "flex":"none"; // 背景色を敷くはFxでも使える
+  $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike) ? "flex":"none";
+  $("pBgC2").style.display = isGrad ? "inline-block":"none";
+  $("bgColor1Label").textContent = isGrad ? "色" : (isSpike ? "トゲの色" : "色");
+  $("bgSpikeBgRow").style.display = isSpike ? "flex":"none";
   $("pBgSpikeBgC").style.display = P.pBgSpikeBgOn ? "inline-block":"none";
   // ベタフラは「フチから中心へ刺さるトゲを直接描く」方式のため、長さ・太さは
   // 自動で決まる（本数・中央領域サイズ・乱れだけが効く）。効かないスライダーは隠す。
-  // バースト/稲妻は 本数・横半径(コア)・縦半径(コア)・乱れ を共通で使う。
-  ["bgSpikeCountRow","bgSpikeInnerXRow","bgSpikeInnerYRow","bgSpikeJitterRow"].forEach(id=>{
-    $(id).style.display = (isSpike||isFx) ? "flex" : "none";
+  ["bgSpikeCountRow","bgSpikeInnerXRow","bgSpikeInnerYRow","bgSpikeJitterRow","bgSpikeHint"].forEach(id=>{
+    $(id).style.display = isSpike ? (id==="bgSpikeHint"?"block":"flex") : "none";
   });
-  $("bgSpikeHint").style.display = isSpike ? "block" : "none";
-  // 長さ: ウニフラとバースト / 太さ: ウニフラと稲妻
-  $("bgSpikeLenRow").style.display = (bg==="uni"||isBurst) ? "flex":"none";
-  $("bgSpikeWidthRow").style.display = (bg==="uni"||isBolt) ? "flex":"none";
+  ["bgSpikeLenRow","bgSpikeWidthRow"].forEach(id=>{
+    $(id).style.display = (bg==="uni") ? "flex":"none";
+  });
   // 変形モードに応じて関連スライダーだけ表示（他モードのスライダーは隠す）
   const tm = P.pTransformMode||"arch";
   $("archRow").style.display = tm==="arch" ? "flex":"none";
@@ -924,8 +890,7 @@ function getFillStops(seg){
   const ov = (P.segFills && P.segFills[seg]) ? P.segFills[seg] : null;
   const fill = ov ? ov.fill : P.pFill;
   let stops;
-  if(fill==="solid"){ const cc=ov?ov.c1:P.pFillC1; stops=[[0,cc],[1,cc]]; } // 単色ベタ塗り
-  else if(fill==="custom") stops=[[0, ov?ov.c1:P.pFillC1],[1, ov?ov.c2:P.pFillC2]];
+  if(fill==="custom") stops=[[0, ov?ov.c1:P.pFillC1],[1, ov?ov.c2:P.pFillC2]];
   else if(METAL_PAL[fill]){
     const [d,l]=METAL_PAL[fill];
     stops=makeMetalStops(P.pSeed*7+3,d,l,false);
@@ -938,16 +903,11 @@ function getFillStops(seg){
 }
 
 /* ---------- レイアウト（文字ごと配置） ---------- */
-// フォントごとの太さ。太ウェイトを積んでいるものは重い数値を指定する。
-function fontWeight(f){
-  if(f==="Shippori Mincho B1"||f==="Kaisei Tokumin"||f==="M PLUS Rounded 1c") return "800 ";
-  if(f==="Zen Maru Gothic") return "900 ";
-  return "400 ";
-}
 function fontStr(size){
   const f=P.pFont;
   if(f==="system-heavy") return `900 ${size}px "Hiragino Sans","Yu Gothic",sans-serif`;
-  return `${fontWeight(f)}${size}px "${f}"`;
+  const w=(f==="Shippori Mincho B1"||f==="Kaisei Tokumin")?"800 ":"400 ";
+  return `${w}${size}px "${f}"`;
 }
 /* Canvas+Webフォントの既知の癖対策: プリセット適用など「スクリプトから一気にフォントを
    差し替えて即描画」すると、ブラウザのフォントシェイピングが追いつかず前のフォントの
@@ -956,7 +916,8 @@ function fontStr(size){
 function warmupFont(fontName){
   if(!fontName || fontName==="system-heavy") return;
   const g=document.createElement("canvas").getContext("2d");
-  g.font=`${fontWeight(fontName)}150px "${fontName}"`;
+  const w=(fontName==="Shippori Mincho B1"||fontName==="Kaisei Tokumin")?"800 ":"400 ";
+  g.font=`${w}150px "${fontName}"`;
   g.fillText("激アツ",0,50);
 }
 function layoutText(g){
@@ -1114,99 +1075,6 @@ function drawChars(g, L, mode, dx=0, dy=0, styleFn=null, segOnly=null){
 }
 
 /* ---------- 面レイヤー生成（fill→bevel→texture→bolt→gloss） ---------- */
-/* ぷくぷく用: チャンファー距離変換(2パス, 重み1/√2)。region[i]=1の画素について
-   region外(=文字の輪郭)までの距離を返す。この距離場からドーム状の高さ場を作り、
-   輪郭沿いの陰影と頂点ハイライトを生成する＝「面が風船のように膨らむ」表現の土台。 */
-function pukuChamfer(region, w, h){
-  const INF=1e7, D=1.41421356;
-  const d=new Float32Array(w*h);
-  for(let i=0;i<w*h;i++) d[i]=region[i]?INF:0;
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(d[i]===0)continue;let v=d[i];
-    if(x>0&&d[i-1]+1<v)v=d[i-1]+1; if(y>0&&d[i-w]+1<v)v=d[i-w]+1;
-    if(x>0&&y>0&&d[i-w-1]+D<v)v=d[i-w-1]+D; if(x<w-1&&y>0&&d[i-w+1]+D<v)v=d[i-w+1]+D; d[i]=v;}
-  for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){const i=y*w+x;if(d[i]===0)continue;let v=d[i];
-    if(x<w-1&&d[i+1]+1<v)v=d[i+1]+1; if(y<h-1&&d[i+w]+1<v)v=d[i+w]+1;
-    if(x<w-1&&y<h-1&&d[i+w+1]+D<v)v=d[i+w+1]+D; if(x>0&&y<h-1&&d[i+w-1]+D<v)v=d[i+w-1]+D; d[i]=v;}
-  return d;
-}
-function pukuBoxBlur(src,w,h,r,passes){
-  if(r<1)return src.slice(); let a=src.slice(),b=new Float32Array(w*h);const n=2*r+1;
-  for(let p=0;p<passes;p++){
-    for(let y=0;y<h;y++){const off=y*w;let acc=0;
-      for(let x=-r;x<=r;x++)acc+=a[off+Math.min(w-1,Math.max(0,x))];
-      for(let x=0;x<w;x++){b[off+x]=acc/n;acc+=a[off+Math.min(w-1,x+r+1)]-a[off+Math.max(0,x-r)];}}
-    for(let x=0;x<w;x++){let acc=0;for(let y=-r;y<=r;y++)acc+=b[Math.min(h-1,Math.max(0,y))*w+x];
-      for(let y=0;y<h;y++){a[y*w+x]=acc/n;acc+=b[Math.min(h-1,y+r+1)*w+x]-b[Math.max(0,y-r)*w+x];}}}
-  return a;
-}
-/* ぷくぷき陰影を「既に面が描かれたキャンバスc」の上に乗せる。
-   cのアルファからシルエットを取り距離変換→高さ場→フチ影/ソフト影/頂点ハイライトを
-   source-atopで面内だけに合成する。faceScaleは表示スケール(高さ量の基準)。 */
-function applyPuff(c, faceScale, glyphSize){
-  const g=c.getContext("2d");
-  const W=c.width, H=c.height, N=W*H;
-  const src=g.getImageData(0,0,W,H);
-  const sd=src.data;
-  const bin=new Uint8Array(N), alpha=new Float32Array(N);
-  for(let i=0;i<N;i++){ const a=sd[i*4+3]/255; alpha[i]=a; bin[i]=a>0.5?1:0; }
-  const din=pukuChamfer(bin,W,H);
-  let maxDin=1; for(let i=0;i<N;i++) if(din[i]>maxDin)maxDin=din[i];
-  // 膨らみ幅: サイズ比(pPuff%)。ただしストローク半幅で自動キャップ(塊化防止)
-  const effPuff=Math.max(3, Math.min(glyphSize*faceScale*P.pPuff/100, maxDin*0.98));
-  const hgt=new Float32Array(N);
-  for(let i=0;i<N;i++){ if(!din[i])continue; const t=Math.min(1,din[i]/effPuff); hgt[i]=Math.sqrt(1-(1-t)*(1-t)); }
-  const hs=pukuBoxBlur(hgt,W,H,2,2);
-  const amp=effPuff*1.15;
-  // 光: 上方向。角度スライダpPuffLightで仰角
-  let ly=-(0.30+ (P.pPuffLight/100)*0.85), lz=0.85; const ln=Math.hypot(ly,lz); ly/=ln; lz/=ln;
-  let hy=ly, hz=lz+1; const hn=Math.hypot(hy,hz); hy/=hn; hz/=hn;
-  const w1=Math.max(2.5, glyphSize*faceScale*0.018);
-  const contour=P.pPuffEdge/100, soft=P.pPuffSoft/100;
-  const specPoint=P.pPuffSpec/100, specGlow=P.pPuffGlow/100;
-  // ツヤの硬さ: スペキュラのべき指数。低い=柔らかく広いツヤ(グミ/ぷにぷに)、
-  // 高い=頂点に集中した鋭いツヤ(金属/ガラス/エナメル)。0→約8乗, 100→約90乗。
-  const hard = 8 + (P.pPuffHard/100)*82;
-  // 影の色を面の平均色から自動判定する。無彩色の黒で暗くすると影がグレーに濁って
-  // 「かわいさ」が死ぬため、面と同系のまま明度だけ落とした色(青みをわずかに残す)へ寄せる。
-  let ar=0,ag=0,ab=0,an=0;
-  for(let i=0;i<N;i++){ if(bin[i]){ ar+=sd[i*4]; ag+=sd[i*4+1]; ab+=sd[i*4+2]; an++; } }
-  an=Math.max(1,an);
-  const shR=ar/an*0.42, shG=ag/an*0.42, shB=ab/an*0.50; // 明度を落とし、青みをやや残す
-  const out=g.createImageData(W,H); const od=out.data;
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    const i=y*W+x, o=i*4;
-    const ma=alpha[i];
-    if(ma<0.003){ od[o+3]=0; continue; }
-    let cr=sd[o], cg=sd[o+1], cb=sd[o+2];
-    const xl=x>0?i-1:i, xr=x<W-1?i+1:i, yu=y>0?i-W:i, yd=y<H-1?i+W:i;
-    const gx=(hs[xr]-hs[xl])*amp*0.5, gy=(hs[yd]-hs[yu])*amp*0.5;
-    const nrm=1/Math.sqrt(gx*gx+gy*gy+1);
-    const ny=-gy*nrm, nz=nrm;
-    const diff=Math.max(0,ny*ly+nz*lz);
-    const ndh=Math.max(0,ny*hy+nz*hz);
-    // 影の総量(0..1): ソフト影(縁→頂点)＋フチ影(輪郭際)。同系暗色へ寄せる。
-    const c2=(1-hgt[i])*soft*0.5;
-    const c1=Math.min(1,Math.exp(-(din[i]-1)/w1)*contour)*0.55;
-    const shade=Math.min(0.82, c2 + c1);
-    cr=cr*(1-shade)+shR*shade;
-    cg=cg*(1-shade)+shG*shade;
-    cb=cb*(1-shade)+shB*shade;
-    // 拡散ライトで軽く持ち上げ
-    const lit=1+diff*0.16;
-    cr*=lit; cg*=lit; cb*=lit;
-    // ③ 頂点ハイライト(加算合成)。硬さでべき指数を可変。グローは広め、ポイントは更に鋭く。
-    const ndBase=Math.pow(ndh, hard*0.5);       // グロー用(やや広い)
-    const ndSharp=Math.pow(ndh, hard);          // ポイント用(鋭い)
-    const sp=Math.min(1, ndBase*specGlow*0.5 + ndSharp*specPoint*1.0);
-    cr+=255*sp*0.85; cg+=255*sp*0.85; cb+=255*sp*0.85; // 加算=発光的な白ツヤ
-    od[o]=Math.max(0,Math.min(255,cr));
-    od[o+1]=Math.max(0,Math.min(255,cg));
-    od[o+2]=Math.max(0,Math.min(255,cb));
-    od[o+3]=sd[o+3]; // 元のアルファを保持(AAエッジもそのまま)
-  }
-  g.putImageData(out,0,0);
-}
-
 function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   quality = quality || "high";
   const c=document.createElement("canvas"); c.width=W; c.height=H;
@@ -1274,6 +1142,96 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
     g.globalCompositeOperation="source-over";
   }
 
+  // 2.5) 水銀: 輪郭からの高さ場(エッジ)＋面の中にランダムな丸いハイライトの塊(ブロブ)を
+  // 加算した高さ場を作り、ジグザグのクロームカーブでシャープな反射縞に変換する。
+  // 輪郭距離だけだと太い画数の内側が減衰しきってベタ塗りの天井に張り付いてしまうため
+  // （どこも同じ高さ=cosカーブの同じ点になり、面としての情報量が消える）、
+  // ブロブで面の中に浮く光の塊を追加して「液体金属が丸く盛り上がる」質感を出す。
+  // getImageDataの全ピクセルループが重いので、ドラッグ中(low)はスキップ
+  if(P.pLiquid>0 && quality==="high"){
+    // エッジ高さ場とブロブ高さ場を「別々の独立したキャンバス」に描き、
+    // 最後にJSのMath.maxで1ピクセルずつ明示的に合成する。
+    // canvasの合成モード(lighter/destination-in)の重ね合わせに頼ると
+    // 挙動を目で確認しづらいため、確実性を優先してここは生のピクセル演算にする。
+    const hm=document.createElement("canvas"); hm.width=W; hm.height=H;
+    const hg=hm.getContext("2d");
+    hg.translate(offX,offY); hg.scale(scale,scale);
+    applyWholeRotation(hg,L);
+    hg.font=fontStr(L.size); hg.textBaseline="middle"; hg.textAlign="center";
+    hg.lineJoin="round"; hg.miterLimit=2;
+    // ①エッジ高さ場: シャープな白シルエットから「ぼかした輪郭stroke」を削る＝輪郭0→内側1の内側減衰。
+    // ただし天井をalpha0.6程度に下げておく（フル1.0のままだと、後でMath.maxするブロブが
+    // 既に最大値の場所には勝てず、何を描いても反映されなくなるため）。
+    hg.fillStyle="rgba(255,255,255,0.6)"; drawChars(hg,L,"fill");
+    hg.globalCompositeOperation="destination-out";
+    softStroke(hg,L,"#000000",P.pLiquidR*.8,P.pLiquidR*3,scale);
+    hg.globalCompositeOperation="source-over";
+    const edgeAlpha=hg.getImageData(0,0,W,H).data; // ①だけの結果を退避しておく
+
+    // ②ブロブ高さ場: 文字ごとに縦長の楕円ハイライトを1〜2個、加算合成で重ねて描く。
+    // 丸い点を単に散らすと「粒々」に見えてしまうため、①縦に伸ばした楕円にする
+    // ②数を絞って大きくする ③重なった部分は加算合成でより明るく融け合わせる、
+    // の3つで「液体がヌルッと流れて繋がる」質感を狙う。
+    // 丸みスライダー(pLiquidR)でブロブの大きさも連動させ、既存スライダーの意味を保つ。
+    const bm=document.createElement("canvas"); bm.width=W; bm.height=H;
+    const bg=bm.getContext("2d");
+    bg.translate(offX,offY); bg.scale(scale,scale);
+    applyWholeRotation(bg,L);
+    const blobRnd=mulberry32(P.pSeed*443+7);
+    const blobScale=P.pLiquidR/14;
+    bg.globalCompositeOperation="lighter"; // ブロブ同士は加算＝重なるほど明るく融け合う
+    for(const c of L.chars){
+      const n=1+Math.floor(blobRnd()*2); // 1〜2個。数を絞って大きく＝粒々にしない
+      for(let k=0;k<n;k++){
+        const bx=c.cx+(blobRnd()*2-1)*c.cw*0.26*(c.warpScale||1);
+        const by=c.cy+c.jitY+(blobRnd()*2-1)*L.size*0.20*(c.warpScale||1);
+        const brY=L.size*(0.30+blobRnd()*0.26)*blobScale*(c.warpScale||1); // 縦長の主軸
+        const brX=brY*(0.5+blobRnd()*0.25); // 横は縦の50〜75%＝縦に流れる楕円
+        const rot=(blobRnd()*2-1)*0.35; // わずかに傾けて「流れ」を出す
+        if(brY<0.5) continue;
+        bg.save();
+        bg.translate(bx,by); bg.rotate(rot); bg.scale(brX/brY,1);
+        const grad=bg.createRadialGradient(0,0,0,0,0,brY);
+        grad.addColorStop(0,"rgba(255,255,255,1)");
+        grad.addColorStop(.55,"rgba(255,255,255,.8)");
+        grad.addColorStop(1,"rgba(255,255,255,0)");
+        bg.fillStyle=grad;
+        bg.beginPath(); bg.arc(0,0,brY,0,7); bg.fill();
+        bg.restore();
+      }
+    }
+    bg.globalCompositeOperation="source-over";
+    // ブロブが文字の外にはみ出した分をシルエットで切り落とす
+    bg.globalCompositeOperation="destination-in";
+    bg.fillStyle="#ffffff";
+    bg.font=fontStr(L.size); bg.textBaseline="middle"; bg.textAlign="center";
+    drawChars(bg,L,"fill");
+    const blobAlpha=bg.getImageData(0,0,W,H).data;
+
+    // ③2つの高さ場を1ピクセルずつ「大きい方」で合成してからクロームカーブへ変換
+    // （edgeとblobのどちらか強い方がその点の高さになる＝面の中に塊が浮く見た目）
+    const out=hg.createImageData(W,H), od=out.data;
+    const nb=P.pLiquidBands*2-1;
+    const lc1=hex(P.pLiquidC1), lc2=hex(P.pLiquidC2);
+    for(let i=0;i<od.length;i+=4){
+      const a=Math.max(edgeAlpha[i+3],blobAlpha[i+3])/255;
+      if(a<.02){ od[i+3]=0; continue; }
+      const t=Math.pow(a,.6); // ガンマで縞を内側まで引き伸ばす
+      const v=.5-.5*Math.cos(t*Math.PI*nb);
+      od[i]=lerp(lc2[0],lc1[0],v)|0;
+      od[i+1]=lerp(lc2[1],lc1[1],v)|0;
+      od[i+2]=lerp(lc2[2],lc1[2],v)|0;
+      od[i+3]=255;
+    }
+    hg.putImageData(out,0,0);
+    // 面内にsource-atopで合成（強度＝置き換え率）
+    g.save();
+    g.setTransform(1,0,0,1,0,0);
+    g.globalCompositeOperation="source-atop";
+    g.globalAlpha=P.pLiquid/100;
+    g.drawImage(hm,0,0);
+    g.restore();
+  }
 
   // 3) テクスチャ（面内のみ）
   if(P.pTex!=="none" && P.pTexInt>0){
@@ -1307,13 +1265,6 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
     g.fillStyle=mgrad;
     g.fillRect(-9999,from-9999,19998,total+19998);
     g.globalCompositeOperation="source-over";
-  }
-
-  // 3.7) ぷくぷく: 面が膨らんで見える立体陰影。ここまでで作った面の色(グラデ・色わけ・
-  // テクスチャ・メタルツヤ込み)の上に、距離変換ベースの陰影とハイライトを乗せる。
-  // 重い(全ピクセル距離変換)ので本描画(high)のみ。ドラッグ中は素の面を見せる。
-  if(P.pPuff>0 && quality==="high"){
-    applyPuff(c, scale, L.size);
   }
 
   // 4) 稲妻（面内クリップ。「はみ出す」オン時はdraw側で最前面に描く）
@@ -1353,6 +1304,16 @@ function softChars(g,L,color,blur,dx,dy,scale){
   g.restore();
 }
 /* 同・stroke版（ぼけた輪郭線） */
+function softStroke(g,L,color,blur,lw,scale){
+  const OFF=20000;
+  g.save();
+  g.shadowColor=color; g.shadowBlur=blur*scale;
+  g.shadowOffsetX=OFF; g.shadowOffsetY=0;
+  g.strokeStyle="#000"; g.lineWidth=lw; g.lineJoin="round"; g.miterLimit=2;
+  g.translate(-OFF/scale,0);
+  drawChars(g,L,"stroke");
+  g.restore();
+}
 
 /* ベベル用: わずかに縮小した本体（中央塗り戻し） */
 function drawCharsInset(g,L,bv,styleFn=null){
@@ -1502,22 +1463,6 @@ function draw(targetCtx, scale, withBg, quality){
         P.pBgSpikeCount,
         base*(P.pBgSpikeInnerX/100)*1.6, base*(P.pBgSpikeInnerY/100)*1.6,
         P.pBgSpikeJitter/100, P.pSeed);
-    }else if(P.pBg==="burst"){
-      // バースト: 背景色を敷く(任意)→放射光線＋楕円コア。色1=芯側、色2=中間色。
-      if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
-      const base=Math.min(cw,ch);
-      drawBurstBg(mg, cw/2, bgCy, cw, ch, P.pBgC1, P.pBgC2,
-        P.pBgSpikeCount, P.pBgSpikeLen/100,
-        base*(P.pBgSpikeInnerX/100), base*(P.pBgSpikeInnerY/100),
-        P.pBgSpikeJitter/100, P.pSeed);
-    }else if(P.pBg==="bolt"){
-      // 稲妻: 背景色を敷く(任意)→集中線＋電撃＋楕円コア。色1=芯(白系)、色2=グロー色。
-      if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
-      const base=Math.min(cw,ch);
-      drawBoltBg(mg, cw/2, bgCy, cw, ch, P.pBgC1, P.pBgC2,
-        P.pBgSpikeCount, base*(P.pBgSpikeWidth/100)*.08,
-        base*(P.pBgSpikeInnerX/100), base*(P.pBgSpikeInnerY/100),
-        P.pBgSpikeJitter/100, P.pSeed);
     }
   }
 
@@ -1560,8 +1505,6 @@ function draw(targetCtx, scale, withBg, quality){
     // この文字列に登場する色わけの一覧。色わけごとに側面色(c1/c2)を用意する。
     // seg0(先頭)はグローバル設定、seg>0はP.segSideColorsがあればそれ、無ければグローバルに従う。
     const usedSegs=[...new Set(L.chars.map(c=>c.seg||0))].sort((a,b)=>a-b);
-    // 文字が1つも無ければ側面は存在しない＝何も描かずスキップ（空テキストでのクラッシュ防止）
-    if(usedSegs.length>0){
     const sideColorOf=(seg)=>{
       const ov=(seg>0 && P.segSideColors && P.segSideColors[seg]) ? P.segSideColors[seg] : null;
       return { c1:hex(ov?ov.c1:P.pExC1), c2:hex(ov?ov.c2:P.pExC2) };
@@ -1610,7 +1553,7 @@ function draw(targetCtx, scale, withBg, quality){
     if(P.pExSpec>0){
       const sideKey=JSON.stringify([P.pText,P.pFont,P.pSize,P.pSpacing,P.pLineH,
         P.pExDepth,P.pExAngle,P.pExSpec,P.pExLight,P.pExSpecW,P.pExFlash,P.pExC1,P.pExC2,
-        P.pSeed,P.pArch,P.pTilt,P.pJitR,P.pJitY,P.pJitSeed,maxOW,scale,cw,ch,
+        P.pSeed,P.pLiquidBands,P.pArch,P.pTilt,P.pJitR,P.pJitY,P.pJitSeed,maxOW,scale,cw,ch,
         P.outlines,P.pGlowOn,P.pGlowBlur,offX,offY,
         P.segShapes,P.segSideColors]);
       let refl=null;
@@ -1630,7 +1573,6 @@ function draw(targetCtx, scale, withBg, quality){
         mg.restore();
       }
     }
-    } // usedSegs.length>0 (空テキストガード) の閉じ
   }
 
   // ③ 縁取り（外側から太い順に上書き）。色は色わけごとに差し替え可能（太さ・有効は全体共通）。
@@ -1844,101 +1786,6 @@ function drawBetaflash(g, cx, cy, cw, ch, color, count, coreRX, coreRY, jitter, 
   g.restore();
 }
 
-/* 楕円コア: 中心の白熱フラッシュ。translate→scale(rx,ry)で単位円グラデを楕円化。
-   ウニフラと同じく横半径・縦半径で形を、sizeで大きさを制御する。
-   coreCol=芯色(中心寄り)、edgeCol=外周へ向かう色。芯色を効かせるため中間に挟む。 */
-function drawEllipseCore(g, cx, cy, rx, ry, coreCol, edgeCol){
-  g.save();
-  g.translate(cx,cy); g.scale(Math.max(1,rx), Math.max(1,ry));
-  const core=g.createRadialGradient(0,0,0,0,0,1);
-  core.addColorStop(0,"rgba(255,255,255,1)");   // 中心は白熱
-  core.addColorStop(0.22, coreCol);              // すぐ芯色に(青などがここで出る)
-  core.addColorStop(0.55, edgeCol||coreCol);     // 外周へ向かって中間色
-  core.addColorStop(1,"rgba(0,0,0,0)");
-  g.fillStyle=core;
-  g.beginPath(); g.arc(0,0,1,0,7); g.fill();
-  g.restore();
-}
-
-/* バースト: 中心から放射する三角光線(加算)＋楕円コア。col1=芯側/col2=中間色。 */
-function drawBurstBg(g, cx, cy, cw, ch, col1, col2, count, lenPct, coreRX, coreRY, jitter, seed){
-  const rnd=mulberry32((seed||1)*97+1);
-  const maxR=Math.hypot(cw,ch)*0.6;
-  g.save();
-  g.globalCompositeOperation="lighter";
-  for(let i=0;i<count;i++){
-    const a=(i/count)*Math.PI*2 + (rnd()-0.5)*jitter*0.3;
-    const len=maxR*lenPct*(0.5+rnd()*0.6);
-    const halfW=(Math.PI*2/count)*(0.18+rnd()*0.5); // 光線の角度半幅
-    const a1=a-halfW*0.5, a2=a+halfW*0.5;
-    g.beginPath();
-    g.moveTo(cx,cy);
-    g.lineTo(cx+Math.cos(a1)*len, cy+Math.sin(a1)*len);
-    g.lineTo(cx+Math.cos(a2)*len, cy+Math.sin(a2)*len);
-    g.closePath();
-    const grad=g.createLinearGradient(cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len);
-    grad.addColorStop(0,col1);
-    grad.addColorStop(0.3,col2);
-    grad.addColorStop(1,"rgba(0,0,0,0)");
-    g.fillStyle=grad; g.fill();
-  }
-  drawEllipseCore(g,cx,cy,coreRX,coreRY,col1,col2); // 芯=col1, 外周=col2
-  g.restore();
-}
-
-/* 稲妻: 集中線＋枝分かれする太い電撃(3層グロー)＋キラキラ＋楕円コア。
-   col=芯(白)/glowCol=グロー色。太さwidthPx、本数mainCount。 */
-function drawBoltBg(g, cx, cy, cw, ch, col, glowCol, mainCount, widthPx, coreRX, coreRY, jitter, seed){
-  const rnd=mulberry32((seed||1)*131+7);
-  const maxR=Math.hypot(cw,ch)*0.62;
-  g.save();
-  g.globalCompositeOperation="lighter";
-  // ① 集中線(スピードライン)
-  const lineN=90;
-  for(let i=0;i<lineN;i++){
-    const a=(i/lineN)*Math.PI*2+(rnd()-0.5)*0.05;
-    const r0=maxR*(0.12+rnd()*0.1), r1=maxR*(0.7+rnd()*0.5);
-    g.strokeStyle=glowCol; g.globalAlpha=0.10+rnd()*0.13; g.lineWidth=0.4+rnd()*1.4;
-    g.beginPath(); g.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
-    g.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); g.stroke();
-  }
-  g.globalAlpha=1;
-  // ② 稲妻本体(枝分かれ再帰、3層描画)
-  function bolt(x,y,ang,len,wid,depth){
-    const segs=Math.max(4,(len/26)|0); const pts=[[x,y]];
-    for(let s=0;s<segs;s++){
-      const t=(s+1)/segs;
-      const jit=(rnd()-0.5)*len*0.20*(1-t*0.2)*(0.5+jitter);
-      const perp=ang+Math.PI/2;
-      const px=x+Math.cos(ang)*len*t+Math.cos(perp)*jit;
-      const py=y+Math.sin(ang)*len*t+Math.sin(perp)*jit;
-      pts.push([px,py]);
-      if(depth>0&&rnd()<0.32&&s>0&&s<segs-1) bolt(px,py,ang+(rnd()-0.5)*1.1,len*(0.4+rnd()*0.35),wid*0.55,depth-1);
-    }
-    const stroke=(w,color,al)=>{ g.strokeStyle=color; g.lineWidth=w; g.globalAlpha=al;
-      g.lineCap="round"; g.lineJoin="round"; g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
-      for(const p of pts)g.lineTo(p[0],p[1]); g.stroke(); };
-    stroke(wid*6,glowCol,0.22); stroke(wid*2.6,glowCol,0.55); stroke(wid*1.15,col,1);
-  }
-  for(let i=0;i<mainCount;i++){
-    const a=(i/mainCount)*Math.PI*2+(rnd()-0.5)*0.35;
-    bolt(cx,cy,a,maxR*(0.6+rnd()*0.4),widthPx,2);
-  }
-  g.globalAlpha=1;
-  // ③ キラキラ粒
-  for(let i=0;i<40;i++){
-    const a=rnd()*Math.PI*2, r=maxR*(0.15+rnd()*0.8);
-    const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r, sz=0.5+rnd()*2.5;
-    g.globalAlpha=0.5+rnd()*0.5;
-    const sg=g.createRadialGradient(sx,sy,0,sx,sy,sz*2);
-    sg.addColorStop(0,"#ffffff"); sg.addColorStop(1,"rgba(255,255,255,0)");
-    g.fillStyle=sg; g.beginPath(); g.arc(sx,sy,sz*2,0,7); g.fill();
-  }
-  g.globalAlpha=1;
-  // ④ 中心フラッシュ(楕円コア)。芯色を中心、グロー色を外周に。
-  drawEllipseCore(g,cx,cy,coreRX,coreRY,col,glowCol);
-  g.restore();
-}
 
 /* ---------- 側面レイヤー（マスク切り出し＋環境映り込み） ----------
    側面領域＝押し出しスタンプの和集合−本体シルエット。その中に
@@ -2284,7 +2131,6 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
   tg.fillStyle=g2;
   tg.beginPath(); tg.arc(x,y,r,0,7); tg.fill();
 }
-
 
 function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, quality){
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
@@ -2899,7 +2745,7 @@ $("btnFillReset").addEventListener("click",()=>{
 });
 
 /* ---------- プレビュー更新（プログレッシブ描画） ----------
-   ドラッグ中は quality="low"（側面ツヤ・スパークル・稲妻を省いた骨組み）
+   ドラッグ中は quality="low"（水銀・側面ツヤ・スパークル・稲妻を省いた骨組み）
    ＋解像度0.6で即描画。操作が止まった瞬間に一度だけ quality="high" で
    フル解像度の完成品に差し替える。「触ってる最中に完成品は要らない」設計。 */
 let rafPending=false, nextQuality="high", idleTimer=null;
@@ -2972,7 +2818,7 @@ $("btnExport").addEventListener("click",async()=>{
 
 /* ---------- プリセット ---------- */
 /* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
-const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pPuff:0,pPuffEdge:60,pPuffSoft:45,pPuffSpec:65,pPuffHard:30,pPuffGlow:45,pPuffLight:45,
+const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pLiquid:0,pLiquidR:14,pLiquidBands:2,pLiquidC1:"#ffffff",pLiquidC2:"#2a3140",
   pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
   pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,
@@ -2980,7 +2826,7 @@ const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",p
   pBgSpikeBgOn:false,pBgSpikeBgC:"#1a0e00"};
 const PRESETS = {
   "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
-    pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pMetal:0,
+    pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pLiquid:30,pLiquidR:12,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",pMetal:0,
     ol:[[true,"#ffffff",22],[true,"#1a0e00",18],[true,"#ffd76a",10],[true,"#5a2d00",4]],
     pExDepth:16,pExAngle:115,pExC1:"#b8811a",pExC2:"#3a2000",pBevel:3,pExBand:2,pExSpec:75,pExLight:315,pExSpecW:9,pExFlash:6,pRim:0,
     pGlowOn:false,pGlossOn:true,pGlossPos:35,pGlossW:18,pGlossA:55,
@@ -3001,7 +2847,7 @@ const PRESETS = {
       {type:"metal-lo",color:"#140a04",size:20,flow:40,anchor:{x:18.90,y:-73.30},reach:174.84}
     ]},
   "夜職ゴールド":{pText:"夜職ゴールド",pFont:"Shippori Mincho B1",pSpacing:-26,
-    pFill:"metalGold",pFillAngle:80,pFillRepeat:1,pVary:65,pMetal:55,pMetalC:"#ff9040",
+    pFill:"metalGold",pFillAngle:80,pFillRepeat:1,pVary:65,pMetal:55,pMetalC:"#ff9040",pLiquid:35,pLiquidR:14,pLiquidBands:1,pLiquidC1:"#fff5d0",pLiquidC2:"#7a4200",
     ol:[[true,"#7a4a00",10],[true,"#3a1c00",7],[true,"#fdc700",6],[false,"#ffffff",0]],
     pExDepth:18,pExAngle:118,pExC1:"#c08a1e",pExC2:"#241000",pBevel:4,pExBand:1,pExSpec:85,pExLight:318,pExSpecW:5,pExFlash:17,pRim:80,pRimC:"#ffcc66",
     pGlowOn:false,pGlossOn:true,pGlossPos:49,pGlossW:22,pGlossA:45,
@@ -3020,7 +2866,7 @@ const PRESETS = {
     pGlowOn:false,
     pArch:0,pTilt:0,pJitR:5,pJitY:6,pJitSeed:1},
   "ピンクグロス":{pText:"ピンクグロス",pFont:"Shippori Mincho B1",pSpacing:-14,pLineH:80,
-    pFill:"chromePink",pFillAngle:242,pFillRepeat:5,pVary:35,
+    pFill:"chromePink",pFillAngle:242,pFillRepeat:5,pVary:35,pLiquid:30,pLiquidC1:"#e22400",pLiquidC2:"#e63b7a",pLiquidR:12,pLiquidBands:1,
     ol:[[true,"#f4a4c0",22],[true,"#3c071b",0],[true,"#551029",9],[true,"#e63b7a",4]],
     pExDepth:16,pExAngle:115,pExC1:"#e63b7a",pExC2:"#3c071b",pBevel:3,pExBand:2,pExSpec:75,pExFlash:6,
     pGlowOn:false,pGlossOn:true,pGlossPos:75,pGlossW:19,pGlossA:55,
@@ -3258,7 +3104,7 @@ function renderFavList(){
   const favs=loadFavorites();
   box.innerHTML="";
   if(!favs.length){
-    const p=document.createElement("p"); p.className="fav-empty"; p.textContent="まだ保存されたお気に入りはありません。";
+    const p=document.createElement("p"); p.className="hint"; p.textContent="まだ保存されたお気に入りはありません。";
     box.appendChild(p);
     return;
   }
@@ -3294,7 +3140,7 @@ renderFavList();
 // 初期状態にしたいという要望に応じ、URL共有と同じ仕組み(applyState)で
 // まるごと復元する。60個以上のパラメータを手で個別に書き換えると転記ミスの
 // リスクが高いため、動作確認済みの状態を丸ごと読み込む方式にしてある。
-const INITIAL_STATE_JSON='{"pText":"激アツ‼︎","pFont":"system-heavy","pSize":"185","pSpacing":"-14","pLineH":"80","pFill":"metalGold","pFillC1":"#ffe37a","pFillC2":"#b34700","pFillAngle":"61","pFillRepeat":"5","pFillHue":"0","pFillSat":"199","pFillLight":"0","pTex":"none","pTexInt":"0","pTexScale":"4","pVary":"35","pMetal":"0","pMetalC":"#ffb060","pPuff":"0","pPuffEdge":"60","pPuffSoft":"45","pPuffSpec":"65","pPuffHard":"30","pPuffGlow":"45","pPuffLight":"45","pSeed":"7","olOn0":true,"olC0":"#ffffff","olW0":"22","olV0":"22","olOn1":true,"olC1":"#1a0e00","olW1":"18","olV1":"18","olOn2":true,"olC2":"#ffd76a","olW2":"10","olV2":"10","olOn3":true,"olC3":"#5a2d00","olW3":"4","olV3":"4","pExDepth":"16","pExAngle":"115","pExC1":"#b8811a","pExC2":"#3a2000","pBevel":"3","pExBand":"2","pExSpec":"75","pExRefl":true,"pExFlash":"6","pRim":"0","pRimC":"#ffcc66","pExLight":"315","pExSpecW":"9","brushMode":true,"brushCategory":"glow","brushType":"spark","brushShape":"cross","brushSpacing":"60","brushScatter":"57","brushAngle":"0","brushAngleJit":"0","brushSize":"20","brushFlow":"40","brushColor":"#ffe9c0","brushMask":"face","pGlowOn":false,"pGlowC":"#ff3300","pGlowBlur":"18","pGlossOn":false,"pGlossPos":"87","pGlossW":"18","pGlossA":"100","pBolt":"0","pBoltC":"#d19d01","pBoltW":"4","pBoltBranch":"2","pBoltRough":"50","pBoltOver":false,"pSparkN":"0","pSparkShape":"dot","pSparkSize":"35","pSparkLen":"58","pSparkVar":"18","pSparkEdge":"100","pSparkC":"#ffa337","pSparkSeed":"1","pTransformMode":"none","pArch":"12","pFanRadius":"300","pPerspAngle":"45","pPerspFrom":"80","pPerspTo":"120","pPerspDrift":"20","pTilt":"0","pRotate":"0","pTrapTop":"100","pTrapBottom":"100","pJitR":"0","pJitY":"0","pJitSeed":"1","pBg":"none","pBgGradShape":"radial","pBgAngle":"90","pBgC1":"#ffdd55","pBgC2":"#ffffff","pBgSpikeBgOn":false,"pBgSpikeBgC":"#1a0e00","pBgSpikeCount":"60","pBgSpikeLen":"45","pBgSpikeWidth":"6","pBgSpikeInnerX":"26","pBgSpikeInnerY":"30","pBgSpikeJitter":"20","pView":"all","fileJson":"","__brushLayers":[{"id":1,"name":"レイヤー1","visible":true,"strokes":[{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-4.18,"y":-35.01},"reach":139.6},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":35.16,"y":-38.68},"reach":155.89},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":70.82,"y":-27.14},"reach":149.61},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":118.03,"y":4.34},"reach":184.98},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":126.42,"y":-19.79},"reach":196.33},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":154.22,"y":-40.25},"reach":197.4},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":202.48,"y":6.96},"reach":172.3},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":215.59,"y":41.58},"reach":134.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-100.7,"y":23.74},"reach":161.62},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-174.66,"y":65.19},"reach":141.38},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-225.54,"y":-36.06},"reach":166.35},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-78.67,"y":15.88},"reach":154.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":18.9,"y":-73.3},"reach":174.84}],"maskMode":"face"}],"__activeLayerId":1,"__nextLayerId":2,"__segFills":{"0":{"fill":"metalGold","c1":"#ffe37a","c2":"#b34700","hue":0,"sat":199,"light":0}},"__segShapes":{},"__segOutlineColors":{},"__segSideColors":{}}';
+const INITIAL_STATE_JSON='{"pText":"激アツ‼︎","pFont":"system-heavy","pSize":"185","pSpacing":"-14","pLineH":"80","pFill":"metalGold","pFillC1":"#ffe37a","pFillC2":"#b34700","pFillAngle":"61","pFillRepeat":"5","pFillHue":"0","pFillSat":"199","pFillLight":"0","pTex":"none","pTexInt":"0","pTexScale":"4","pVary":"35","pLiquid":"30","pLiquidC1":"#fff5d0","pLiquidC2":"#7a4200","pLiquidR":"12","pLiquidBands":"1","pMetal":"0","pMetalC":"#ffb060","pSeed":"7","olOn0":true,"olC0":"#ffffff","olW0":"22","olV0":"22","olOn1":true,"olC1":"#1a0e00","olW1":"18","olV1":"18","olOn2":true,"olC2":"#ffd76a","olW2":"10","olV2":"10","olOn3":true,"olC3":"#5a2d00","olW3":"4","olV3":"4","pExDepth":"16","pExAngle":"115","pExC1":"#b8811a","pExC2":"#3a2000","pBevel":"3","pExBand":"2","pExSpec":"75","pExRefl":true,"pExFlash":"6","pRim":"0","pRimC":"#ffcc66","pExLight":"315","pExSpecW":"9","brushMode":true,"brushCategory":"glow","brushType":"spark","brushShape":"cross","brushSpacing":"60","brushScatter":"57","brushSize":"20","brushFlow":"40","brushColor":"#ffe9c0","brushMask":"face","pGlowOn":false,"pGlowC":"#ff3300","pGlowBlur":"18","pGlossOn":true,"pGlossPos":"87","pGlossW":"18","pGlossA":"100","pBolt":"0","pBoltC":"#d19d01","pBoltW":"4","pBoltBranch":"2","pBoltRough":"50","pBoltOver":false,"pSparkN":"14","pSparkShape":"dot","pSparkSize":"35","pSparkLen":"58","pSparkVar":"18","pSparkEdge":"100","pSparkC":"#ffa337","pSparkSeed":"1","pTransformMode":"none","pArch":"12","pFanRadius":"300","pPerspAngle":"45","pPerspFrom":"80","pPerspTo":"120","pPerspDrift":"20","pTilt":"0","pRotate":"0","pTrapTop":"100","pTrapBottom":"100","pJitR":"0","pJitY":"0","pJitSeed":"1","pView":"all","fileJson":"","pBg":"none","pBgC1":"#ffdd55","pBgC2":"#ffffff","__brushLayers":[{"id":1,"name":"レイヤー1","visible":true,"strokes":[{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-4.18,"y":-35.01},"reach":139.6},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":35.16,"y":-38.68},"reach":155.89},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":70.82,"y":-27.14},"reach":149.61},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":118.03,"y":4.34},"reach":184.98},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":126.42,"y":-19.79},"reach":196.33},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":154.22,"y":-40.25},"reach":197.4},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":202.48,"y":6.96},"reach":172.3},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":215.59,"y":41.58},"reach":134.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-100.7,"y":23.74},"reach":161.62},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-174.66,"y":65.19},"reach":141.38},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-225.54,"y":-36.06},"reach":166.35},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-78.67,"y":15.88},"reach":154.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":18.9,"y":-73.3},"reach":174.84}],"maskMode":"face"}],"__activeLayerId":1,"__nextLayerId":2}';
 applyZoom();
 // 共有URL(#p=...)から開かれた場合はそちらを優先し、新デフォルトで上書きしない
 // (URL復元時はapplyState内で既にbuildLayerUI/fillBrushTypesが呼ばれているため、ここでは不要)
@@ -3307,22 +3153,7 @@ $("expScale").addEventListener("input",requestDraw);
 
 /* フォント読込 → 再描画 */
 const FONT_LIST=['400 40px "Reggae One"','400 40px "RocknRoll One"','400 40px "Rampart One"',
-  '800 40px "Shippori Mincho B1"','800 40px "Kaisei Tokumin"','400 40px "DotGothic16"',
-  '800 40px "M PLUS Rounded 1c"','900 40px "Zen Maru Gothic"',
-  '400 40px "Hachi Maru Pop"','400 40px "Potta One"','400 40px "Mochiy Pop One"'];
-/* 各セクションのヒント文(説明書き)はデフォルト非表示にし、「使い方」ボタンで
-   そのセクションだけ表示を切り替える。説明はUIを圧迫する一方で初見には必要なので、
-   常時表示ではなく「読みたい時に読める」形に引き算した。 */
-document.querySelectorAll(".sec").forEach(sec=>{
-  if(!sec.querySelector(".hint")) return; // ヒントが無いセクションにはボタン不要
-  const btn=document.createElement("button");
-  btn.type="button";
-  btn.className="usage-toggle";
-  btn.textContent="使い方";
-  btn.addEventListener("click",()=>sec.classList.toggle("show-hints"));
-  sec.insertBefore(btn, sec.firstChild);
-});
-
+  '800 40px "Shippori Mincho B1"','800 40px "Kaisei Tokumin"','400 40px "DotGothic16"'];
 Promise.all(FONT_LIST.map(f=>document.fonts.load(f).catch(()=>[])))
   .then(rs=>{
     const ok=rs.filter(r=>r.length).length;
