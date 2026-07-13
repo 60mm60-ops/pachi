@@ -6,7 +6,7 @@
 <title>激アツ文字工房 — パチ文字ジェネレーター</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Shippori+Mincho+B1:wght@800&family=Kaisei+Tokumin:wght@800&family=DotGothic16&family=M+PLUS+Rounded+1c:wght@800&family=Zen+Maru+Gothic:wght@900&family=Hachi+Maru+Pop&family=Potta+One&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Reggae+One&family=RocknRoll+One&family=Rampart+One&family=Shippori+Mincho+B1:wght@800&family=Kaisei+Tokumin:wght@800&family=DotGothic16&family=M+PLUS+Rounded+1c:wght@800&family=Zen+Maru+Gothic:wght@900&family=Hachi+Maru+Pop&family=Potta+One&family=Mochiy+Pop+One&family=Titan+One&family=Luckiest+Guy&family=Lilita+One&family=Modak&family=Baloo+2:wght@800&family=Alfa+Slab+One&family=Shrikhand&family=Bungee&family=Bangers&family=Chewy&family=Passion+One:wght@900&family=Pacifico&family=Lobster&family=Leckerli+One&family=Berkshire+Swash&family=Kaushan+Script&family=Courgette&family=Yellowtail&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#151220; --panel:#1e1a2b; --panel2:#262133; --line:#37304a;
@@ -183,6 +183,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 .layerRow.active{background:var(--panel2); border-color:var(--gold-dim);}
 .layerRow input[type=checkbox]{accent-color:var(--gold); flex-shrink:0;}
 .layerName{font-size:12px; color:var(--txt); flex:1;}
+.catbtn.active{border-color:var(--gold); color:var(--gold);}
 </style>
 </head>
 <body>
@@ -190,7 +191,8 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 <header>
   <h1>激アツ文字工房</h1>
   <span class="tag">パチ文字ジェネレーター</span>
-  <span id="fontStatus">フォント読込中…</span>
+  <span id="fontStatus" data-i18n-skip>フォント読込中…</span>
+  <button class="ghost" id="langToggle" data-i18n-skip style="padding:4px 10px;flex:0 0 auto">EN</button>
 </header>
 
 <div id="main">
@@ -227,20 +229,13 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         <span class="hint" style="margin:0">カーソル位置で文字の色を分けられる</span>
       </div>
       <div class="row"><label>フォント</label>
-        <select id="pFont">
-          <option value="system-heavy" selected>システム極太ゴシック</option>
-          <option value="Reggae One">Reggae One（勘亭流風）</option>
-          <option value="RocknRoll One">RocknRoll One（丸ゴ極太）</option>
-          <option value="M PLUS Rounded 1c">M PLUS 丸ゴシック 極太</option>
-          <option value="Zen Maru Gothic">Zen 丸ゴシック 極太</option>
-          <option value="Hachi Maru Pop">はちまるポップ（ぷにぷに丸文字）</option>
-          <option value="Potta One">ポッタ One（ぽってり丸）</option>
-          <option value="Mochiy Pop One">モッチーポップ（もちもち）</option>
-          <option value="Rampart One">Rampart One（立体袋文字）</option>
-          <option value="Shippori Mincho B1">しっぽり明朝B1 極太</option>
-          <option value="Kaisei Tokumin">解星 特ミン 極太</option>
-          <option value="DotGothic16">ドットゴシック16</option>
-        </select>
+        <div id="fontCatSeg" style="display:flex;gap:4px;flex:1">
+          <button type="button" class="ghost catbtn active" data-cat="ja" style="flex:1;padding:5px 0">日本語</button>
+          <button type="button" class="ghost catbtn" data-cat="latin" style="flex:1;padding:5px 0">欧文</button>
+        </div>
+      </div>
+      <div class="row"><label></label>
+        <select id="pFont" data-i18n-skip></select>
       </div>
       <div class="row"><label>サイズ</label><input type="range" id="pSize" min="40" max="300" value="150"><input type="number" class="val" data-for="pSize"></div>
       <div class="row"><label>字間</label><input type="range" id="pSpacing" min="-30" max="60" value="0"><input type="number" class="val" data-for="pSpacing"></div>
@@ -280,7 +275,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="custom">カスタム2色</option>
         </select>
       </div>
-      <div class="row" id="customFillRow" style="display:none"><label>カスタム色</label>
+      <div class="row" id="customFillRow" style="display:none"><label data-i18n-skip>カスタム色</label>
         <input type="color" id="pFillC1" value="#ffe37a"><input type="color" id="pFillC2" value="#b34700">
       </div>
       <div class="row"><label>角度</label><input type="range" id="pFillAngle" min="0" max="360" value="90"><input type="number" class="val" data-for="pFillAngle"></div>
@@ -328,7 +323,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <p class="hint" style="margin:8px 14px 0">多重の境界線。PSの境界線（ストローク）を外側から4本まで。<b style="color:#4ecdc4">太さ・ON/OFFは全体共通／色は色わけごと</b>に設定できる。</p>
       <div id="outlineSec"><!-- slots injected --></div>
       <div id="segOutlineBlock" style="display:none;margin:6px 14px 0;padding:8px;border-left:2px solid #4ecdc4">
-        <p class="seg-label" style="margin:0 0 6px"><b id="segOutlineLabel">色わけ2</b> の縁色（外→内）</p>
+        <p class="seg-label" style="margin:0 0 6px"><b id="segOutlineLabel" data-i18n-skip>色わけ2</b> の縁色（外→内）</p>
         <div class="row" style="gap:6px">
           <input type="color" id="segOlC0" value="#ffffff"><input type="color" id="segOlC1" value="#1a0e00">
           <input type="color" id="segOlC2" value="#ffd76a"><input type="color" id="segOlC3" value="#5a2d00">
@@ -342,7 +337,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>方向</label><input type="range" id="pExAngle" min="0" max="360" value="115"><input type="number" class="val" data-for="pExAngle"></div>
       <div class="row"><label>色（手前）</label><input type="color" id="pExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="pExC2" value="#2b1600"></div>
       <div id="segSideBlock" style="display:none;margin:2px 0 6px;padding:8px;border-left:2px solid #4ecdc4">
-        <p class="seg-label" style="margin:0 0 6px"><b id="segSideLabel">色わけ2</b> の側面色</p>
+        <p class="seg-label" style="margin:0 0 6px"><b id="segSideLabel" data-i18n-skip>色わけ2</b> の側面色</p>
         <div class="row"><label>色（手前）</label><input type="color" id="segExC1" value="#7a4a00"><label style="width:auto">奥</label><input type="color" id="segExC2" value="#2b1600"></div>
       </div>
       <div class="row"><label>ベベル</label><input type="range" id="pBevel" min="0" max="10" value="3"><input type="number" class="val" data-for="pBevel"></div>
@@ -498,7 +493,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         </select>
       </div>
       <div class="row" id="bgGradAngleRow"><label>角度</label><input type="range" id="pBgAngle" min="0" max="360" value="90"><input type="number" class="val" data-for="pBgAngle"></div>
-      <div class="row" id="bgColor1Row"><label id="bgColor1Label">色</label><input type="color" id="pBgC1" value="#ffdd55">
+      <div class="row" id="bgColor1Row"><label id="bgColor1Label" data-i18n-skip>色</label><input type="color" id="pBgC1" value="#ffdd55">
         <input type="color" id="pBgC2" value="#ffffff"></div>
       <div class="row" id="bgSpikeBgRow">
         <label class="chk" style="margin:0"><input type="checkbox" id="pBgSpikeBgOn"><span>背景色を敷く</span></label>
@@ -564,6 +559,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
      §13 プレビュー制御（ズーム・再描画スケジューリング）
      §14 プリセット
      §15 状態管理（undo/redo・保存・共有・お気に入り）
+     §17 国際化（日本語/英語）・フォントカテゴリ ※§16より前に配置
      §16 イベント配線・初期化（このセクションのみ実行順に意味がある）
 
    描画パイプライン:
@@ -759,7 +755,7 @@ function readParams(){
     P.segSideColors[segEdit]={ c1:$("segExC1").value, c2:$("segExC2").value };
   }
   // 色わけ用の縁色・側面色ブロックは色わけ2以降を編集中のときだけ表示
-  const segLbl = "色わけ"+(segEdit+1);
+  const segLbl = segDisplayName(segEdit);
   $("segOutlineBlock").style.display = showShape ? "block":"none";
   $("segSideBlock").style.display = showShape ? "block":"none";
   if(showShape){ $("segOutlineLabel").textContent=segLbl; $("segSideLabel").textContent=segLbl; }
@@ -768,7 +764,7 @@ function readParams(){
   const isSolid=P.pFill==="solid";
   $("pFillC2").style.display = isSolid ? "none":"inline-block";
   const cfLabel=$("customFillRow").querySelector("label");
-  if(cfLabel) cfLabel.textContent = isSolid ? "塗り色" : "カスタム色";
+  if(cfLabel) cfLabel.textContent = isSolid ? t("塗り色") : t("カスタム色");
   // ぷくぷきのサブ項目(フチ影・ツヤ等)は、膨らみ>0のときだけ表示
   document.querySelectorAll(".puff-sub").forEach(el=>{ el.style.display = P.pPuff>0 ? "flex":"none"; });
   // 背景タイプに応じて関連行だけ表示する
@@ -779,7 +775,7 @@ function readParams(){
   $("bgGradAngleRow").style.display = (isGrad && P.pBgGradShape==="linear") ? "flex":"none";
   $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike||isFx) ? "flex":"none";
   $("pBgC2").style.display = (isGrad||isFx) ? "inline-block":"none"; // バースト/稲妻は2色使う
-  $("bgColor1Label").textContent = isGrad ? "色" : (isSpike ? "トゲの色" : (isBolt ? "芯/グロー色" : (isBurst ? "芯/中間色" : "色")));
+  $("bgColor1Label").textContent = t(isGrad ? "色" : (isSpike ? "トゲの色" : (isBolt ? "芯/グロー色" : (isBurst ? "芯/中間色" : "色"))));
   $("bgSpikeBgRow").style.display = (isSpike||isFx) ? "flex":"none"; // 背景色を敷くはFxでも使える
   $("pBgSpikeBgC").style.display = P.pBgSpikeBgOn ? "inline-block":"none";
   // ベタフラは「フチから中心へ刺さるトゲを直接描く」方式のため、長さ・太さは
@@ -1014,9 +1010,8 @@ function getFillStops(seg){
 /* ---------- レイアウト（文字ごと配置） ---------- */
 // フォントごとの太さ。太ウェイトを積んでいるものは重い数値を指定する。
 function fontWeight(f){
-  if(f==="Shippori Mincho B1"||f==="Kaisei Tokumin"||f==="M PLUS Rounded 1c") return "800 ";
-  if(f==="Zen Maru Gothic") return "900 ";
-  return "400 ";
+  const rec=FONTS.find(x=>x.v===f);
+  return (rec&&rec.w) ? rec.w : "400 ";
 }
 
 function fontStr(size){
@@ -1817,8 +1812,17 @@ function drawBoltBg(g, cx, cy, cw, ch, col, glowCol, mainCount, widthPx, coreRX,
   }
   g.globalAlpha=1;
   // ② 稲妻本体(枝分かれ再帰、3層描画)
-  function bolt(x,y,ang,len,wid,depth){
+  // 【修正】旧実装は「セグメントごとに32%で枝分かれ」だったため、枝の数が
+  // 稲妻のピクセル長(=キャンバスサイズ)に比例して爆発し、大きな画面ほど
+  // 毛玉状に密集していた。さらに加算合成でグロー3層が重なって白飛びし、
+  // 「太さ」を上げてもグローの面積が育つだけで流量が増えたように見えていた。
+  // → 枝は「1本あたり深さぶんだけ」(深さ2→2本、枝は1本)の固定予算にして
+  //   画面サイズ非依存に。グローは2層に減らして枝ほど減光(fade)し、
+  //   芯の線幅はスライダー値がそのまま太さとして読めるようにした。
+  function bolt(x,y,ang,len,wid,depth,fade){
     const segs=Math.max(4,(len/26)|0); const pts=[[x,y]];
+    const branchAt=new Set();
+    if(depth>0){ for(let b=0;b<depth;b++) branchAt.add(1+((rnd()*(segs-2))|0)); }
     for(let s=0;s<segs;s++){
       const t=(s+1)/segs;
       const jit=(rnd()-0.5)*len*0.20*(1-t*0.2)*(0.5+jitter);
@@ -1826,16 +1830,16 @@ function drawBoltBg(g, cx, cy, cw, ch, col, glowCol, mainCount, widthPx, coreRX,
       const px=x+Math.cos(ang)*len*t+Math.cos(perp)*jit;
       const py=y+Math.sin(ang)*len*t+Math.sin(perp)*jit;
       pts.push([px,py]);
-      if(depth>0&&rnd()<0.32&&s>0&&s<segs-1) bolt(px,py,ang+(rnd()-0.5)*1.1,len*(0.4+rnd()*0.35),wid*0.55,depth-1);
+      if(branchAt.has(s)) bolt(px,py,ang+(rnd()-0.5)*1.1,len*(0.4+rnd()*0.35),wid*0.6,depth-1,fade*0.65);
     }
     const stroke=(w,color,al)=>{ g.strokeStyle=color; g.lineWidth=w; g.globalAlpha=al;
       g.lineCap="round"; g.lineJoin="round"; g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
       for(const p of pts)g.lineTo(p[0],p[1]); g.stroke(); };
-    stroke(wid*6,glowCol,0.22); stroke(wid*2.6,glowCol,0.55); stroke(wid*1.15,col,1);
+    stroke(wid*3.5,glowCol,0.13*fade); stroke(wid*1.8,glowCol,0.35*fade); stroke(Math.max(1,wid),col,fade);
   }
   for(let i=0;i<mainCount;i++){
     const a=(i/mainCount)*Math.PI*2+(rnd()-0.5)*0.35;
-    bolt(cx,cy,a,maxR*(0.6+rnd()*0.4),widthPx,2);
+    bolt(cx,cy,a,maxR*(0.6+rnd()*0.4),widthPx,2,1);
   }
   g.globalAlpha=1;
   // ③ キラキラ粒
@@ -2688,6 +2692,7 @@ function buildLayerUI(){
   // （＝レイヤーを切り替えるとセレクトの表示もそのレイヤーの設定に自動で切り替わる）
   const active=activeLayer();
   if(active) $("brushMask").value=active.maskMode||"face";
+  applyLang(); // 英語モードならレイヤー名（レイヤーN）も翻訳する
 }
 
 function applyBrushTypeColor(){
@@ -2708,6 +2713,7 @@ function fillBrushTypes(){
   $("brushTypeRow").style.display = cat==="eraser" ? "none" : "flex";
   applyBrushTypeColor();
   updateBrushRows();
+  applyLang(); // 英語モードなら生成し直した選択肢も翻訳する
 }
 
 // スパークルのときだけ形状・間隔・散布を表示（稲妻/金属/消しゴムでは隠す）
@@ -2831,7 +2837,7 @@ function rebuildSegSelector(){
   for(let i=0;i<segCount;i++){
     const o=document.createElement("option");
     o.value=i;
-    o.textContent = i===0 ? "色わけ1（先頭）" : ("色わけ"+(i+1));
+    o.textContent = segDisplayName(i);
     sel.appendChild(o);
   }
   // 以前選んでいた色わけが範囲内なら維持、外れたら0に戻す
@@ -3060,14 +3066,17 @@ function applyPreset(name){
       // プリセット付属の手描きブラシストローク（金属反射の手仕上げなど）を1レイヤーとして反映
       brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:JSON.parse(JSON.stringify(v)),maskMode:"face"}];
       activeLayerId=1; nextLayerId=2;
-    }else if(k==="pText" && textCustomized){
-      continue; // 自分で文字を打ち込んでいたら、プリセットの見本文字では上書きしない
+    }else if(k==="pText"){
+      // 自分で文字を打ち込んでいたら、プリセットの見本文字では上書きしない
+      if(textCustomized) continue;
+      $("pText").value = (LANG==="en" && PRESET_TEXT_EN[name]) ? PRESET_TEXT_EN[name] : v;
     }else{
       const el=$(k); if(!el) continue;
       if(el.type==="checkbox") el.checked=v; else el.value=v;
     }
   }
   if(!("brush" in p)) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:[],maskMode:"face"}]; // ブラシ無指定なら初期化
+  if(p.pFont) syncFontToValue(p.pFont); // 別カテゴリのフォントを含むプリセットにも対応
   // 【バグ修正】プリセットは「構成一式の置き換え」なので、前の状態のセグメント別上書き
   // （色わけごとの色・大きさ・縁色・側面色）は全てリセットする。残したままだと、
   // 色わけ2以降を編集中(segEdit>0)にプリセットを押した際、プリセットの色が
@@ -3146,6 +3155,7 @@ function applyState(json){
     const el=$(id); if(!el) continue;
     if(el.type==="checkbox") el.checked=v; else el.value=v;
   }
+  if(s.pFont) syncFontToValue(s.pFont); // 別カテゴリのフォントでも正しく復元する
   if(!brushLayers.some(l=>l.id===activeLayerId)) activeLayerId=brushLayers[0].id;
   // ブラシ種類はcategory依存で動的生成なので、復元後に整合を取り直す
   // 復元色を推奨色で潰さないよう touched を立ててから再構築する
@@ -3197,7 +3207,7 @@ function loadFavorites(){
 
 function saveFavorites(arr){
   try{ localStorage.setItem(FAV_KEY, JSON.stringify(arr)); return true; }
-  catch(e){ alert("保存に失敗しました（保存容量の上限に達している可能性があります）"); return false; }
+  catch(e){ alert(t("保存に失敗しました（保存容量の上限に達している可能性があります）")); return false; }
 }
 
 function renderFavList(){
@@ -3205,7 +3215,7 @@ function renderFavList(){
   const favs=loadFavorites();
   box.innerHTML="";
   if(!favs.length){
-    const p=document.createElement("p"); p.className="fav-empty"; p.textContent="まだ保存されたお気に入りはありません。";
+    const p=document.createElement("p"); p.className="fav-empty"; p.textContent=t("まだ保存されたお気に入りはありません。");
     box.appendChild(p);
     return;
   }
@@ -3214,11 +3224,11 @@ function renderFavList(){
     const nameBtn=document.createElement("button"); nameBtn.className="favName"; nameBtn.textContent=f.name;
     nameBtn.addEventListener("click",()=>{
       try{ applyState(f.json); commitState(); }
-      catch(e){ alert("この設定を読み込めませんでした"); }
+      catch(e){ alert(t("この設定を読み込めませんでした")); }
     });
     const delBtn=document.createElement("button"); delBtn.className="favDel"; delBtn.textContent="×";
     delBtn.addEventListener("click",()=>{
-      if(!confirm(`「${f.name}」を削除しますか？`)) return;
+      if(!confirm(tf("「{0}」を削除しますか？", f.name))) return;
       saveFavorites(loadFavorites().filter(x=>x.id!==f.id));
       renderFavList();
     });
@@ -3226,6 +3236,407 @@ function renderFavList(){
     box.appendChild(chip);
   });
 }
+
+/* ================================================================
+   §17 国際化（日本語/英語）・フォントカテゴリ
+   ------------------------------------------------------------
+   ヘッダーのボタンで UI 全体を日英切替する。翻訳は「元の日本語文字列 →
+   英語」の辞書方式で、applyLang() が #app 内のテキストノードを走査して
+   置換する（初回に元の日本語を保存し、日本語へ戻すときはそれを復元）。
+   動的に書き換わる要素（data-i18n-skip 付き）は各コードが t()/tf() で
+   直接言語対応する。フォントは「日本語/欧文」の2カテゴリに分かれ、
+   欧文側にはかわいい極太ディスプレイフォントを揃えた。
+================================================================ */
+
+let LANG="ja";
+const LANG_KEY="pachimoji_lang";
+
+const I18N={
+  "パチ文字ジェネレーター": "Pachinko-style text generator",
+  "フォント読込中…": "Loading fonts…",
+  "リセット": "Reset",
+  "透過PNGを保存": "Save transparent PNG",
+  "背景を含める": "Include background",
+  "倍率": "Scale",
+  "テキスト・フォント": "Text & Font",
+  "改行で複数行に（最大10行）。": "Line breaks make multiple lines (max 10).",
+  "➕ 色わけを追加": "➕ Add color split",
+  "カーソル位置で文字の色を分けられる": "Split the text color at the cursor position",
+  "フォント": "Font",
+  "サイズ": "Size",
+  "字間": "Letter spacing",
+  "行間": "Line height",
+  "プリセット": "Presets",
+  "構成ごと一括適用。ここから始めて下のセクションで微調整するのがおすすめ。": "Applies a whole style at once. Start here, then fine-tune in the sections below.",
+  "塗り（面）": "Fill (Face)",
+  "文字の表面。PSのグラデーションオーバーレイ＋テクスチャに相当。「輝きの暴れ」は文字ごとにグラデ位相を乱す。「色相/彩度/明るさ」はどのグラデにも後から掛けられる調整＝プリセットの色が強すぎる時などに。": "The text surface — like PS gradient overlay + texture. \"Shimmer scatter\" randomizes the gradient phase per character. Hue / Saturation / Brightness re-tint any gradient afterwards, e.g. when a preset's color is too strong.",
+  "上の": "Press",
+  "➕色わけを追加": "➕ Add color split",
+  "を押すと、その位置で文字の色を分けられる。例:「激｜アツ」で〔激〕〔アツ〕を別の色に。下の「編集中の色わけ」で対象を選んでから色を設定する。": "above to split the text color at that position. Example: \"GO｜LD\" colors GO and LD separately. Pick the target under \"Editing part\" below, then set its colors.",
+  "編集中の色わけ": "Editing part",
+  "色わけ1（先頭）": "Part 1 (first)",
+  "この色わけの大きさ": "This part: size",
+  "この色わけの角度": "This part: angle",
+  "塗り方": "Fill type",
+  "単色（ベタ塗り）": "Solid color",
+  "リアルメタル金": "Real metal gold",
+  "リアルメタル銀": "Real metal silver",
+  "リアルメタル銅": "Real metal copper",
+  "ゴールド": "Gold",
+  "シルバー": "Silver",
+  "炎": "Fire",
+  "溶岩レッド": "Lava red",
+  "激アツ赤": "Fever red",
+  "虹": "Rainbow",
+  "激烈虹（原色バキバキ）": "Vivid rainbow (raw primaries)",
+  "虹ストライプ（縞）": "Rainbow stripes",
+  "クロームピンク": "Chrome pink",
+  "クロームブルー": "Chrome blue",
+  "ダイヤ（白銀）": "Diamond (silver white)",
+  "カスタム2色": "Custom 2 colors",
+  "カスタム色": "Custom colors",
+  "角度": "Angle",
+  "→ 横": "→ Horiz.",
+  "↓ 縦": "↓ Vert.",
+  "↘ 斜め": "↘ Diag.",
+  "繰り返し": "Repeat",
+  "色相": "Hue",
+  "彩度": "Saturation",
+  "明るさ": "Brightness",
+  "色味リセット": "Reset color adj.",
+  "テクスチャ": "Texture",
+  "なし": "None",
+  "炎ノイズ": "Fire noise",
+  "溶岩（ひび割れ）": "Lava (cracks)",
+  "プラズマ雲": "Plasma clouds",
+  "ラメ（グリッター）": "Glitter",
+  "ダイヤカット（多面体）": "Diamond cut (facets)",
+  "強さ": "Strength",
+  "細かさ": "Detail",
+  "輝きの暴れ": "Shimmer scatter",
+  "メタルツヤ": "Metal sheen",
+  "映り込み色": "Reflection color",
+  "シード": "Seed",
+  "ぷくぷく": "Puffy",
+  "※ぷくぷくは色わけに関係なく文字全体にかかります": "* Puffy applies to the whole text regardless of color parts",
+  "フチ影": "Edge shadow",
+  "ソフト影": "Soft shadow",
+  "白ツヤ": "Highlight",
+  "ツヤの硬さ": "Highlight hardness",
+  "ツヤ広がり": "Highlight spread",
+  "光の向き": "Light direction",
+  "縁取り（外側から）": "Outlines (outer first)",
+  "多重の境界線。PSの境界線（ストローク）を外側から4本まで。": "Multiple strokes — like PS \"Stroke\", up to 4 from the outside in.",
+  "太さ・ON/OFFは全体共通／色は色わけごと": "Width & on/off are shared globally / colors can be set",
+  "に設定できる。": "per color part.",
+  "の縁色（外→内）": "— outline colors (outer→inner)",
+  "立体押し出し": "3D extrude",
+  "文字の厚み（側面）。ずらしコピーの積層＝パチ文字職人の力技をコード化。「側面ツヤ」が金属光沢の本体。": "Letter thickness (the sides). Stacked offset copies — the classic pachi-moji craftsman trick, in code. \"Side sheen\" is the heart of the metallic look.",
+  "深さ・方向などの形は全体共通／色は色わけごと": "Depth & direction are shared / colors can be set per color part",
+  "深さ": "Depth",
+  "方向": "Direction",
+  "色（手前）": "Color (front)",
+  "奥": "Back",
+  "の側面色": "— side colors",
+  "ベベル": "Bevel",
+  "側面バンド": "Side bands",
+  "側面ツヤ": "Side sheen",
+  "側面メタル縞（映り込み風バンディング）": "Side metal bands (reflection-style)",
+  "ランダム閃き": "Random glints",
+  "照り返し": "Bounce light",
+  "照り返し色": "Bounce color",
+  "光源角度": "Light angle",
+  "ツヤ幅": "Sheen width",
+  "✏️ ブラシで直描き": "✏️ Brush (direct paint)",
+  "スライダーの自動処理じゃなく、プレビュー上を直接なぞって狙った場所に効果を置ける。金属反射は「基準点」をタップして押し出し方向へドラッグ＝角度が今の押し出し角度にスナップして伸びる。角度スライダーを後で変えても追従する。": "Instead of automatic sliders, draw right on the preview to place effects exactly where you want. Metal reflections: tap an anchor point and drag along the extrude direction — the angle snaps to the current extrude angle and keeps following if you change the slider later.",
+  "ブラシモードON（プレビューに直接描く）": "Brush mode ON (paint on the preview)",
+  "ブラシ系統": "Brush family",
+  "金属反射（角度追従）": "Metal reflection (angle-following)",
+  "光り物（スパークル・稲妻）": "Glow (sparkle & bolt)",
+  "消しゴム": "Eraser",
+  "種類": "Type",
+  "形状": "Shape",
+  "十字（4条＋斜め）": "Cross (4 rays + diag.)",
+  "6条スター": "6-ray star",
+  "8条スター": "8-ray star",
+  "ダイヤ（鋭い2条）": "Diamond (sharp 2-ray)",
+  "玉ボケ（光条なし）": "Bokeh (no rays)",
+  "ハート": "Heart",
+  "花びら（散らし）": "Petals (scatter)",
+  "ミックス": "Mix",
+  "間隔": "Spacing",
+  "散布": "Scatter",
+  "角度ジッター": "Angle jitter",
+  "流量": "Flow",
+  "色": "Color",
+  "レイヤー（クリックで選択・チェックで表示切替）": "Layers (click to select / checkbox to show-hide)",
+  "＋追加": "+ Add",
+  "複製": "Duplicate",
+  "削除": "Delete",
+  "描画範囲": "Paint mask",
+  "文字のメインカラーのみ": "Text face only",
+  "縁まで描画": "Face + outlines",
+  "文字以外に描画（背景側）": "Outside the text (background)",
+  "マスクOFF（はみ出し放題）": "Mask OFF (paint anywhere)",
+  "「描画範囲」は": "\"Paint mask\" is a",
+  "選択中レイヤーごと": "per-layer",
+  "の設定。レイヤーを分ければ「文字の中に収まるスパークル」と「文字以外（背景側）だけに散らすスパークル」を別々に持てる。": "setting. With separate layers you can keep sparkles inside the text on one layer and scatter them only outside the text on another.",
+  "選択中レイヤーを全消去": "Clear current layer",
+  "光り物エフェクト": "Glow effects",
+  "グロー・光沢・稲妻・スパークル。PSの光彩（外側）＋自作ブラシに相当。": "Glow, gloss sweep, lightning, sparkles — like PS outer glow + custom brushes.",
+  "外側グロー": "Outer glow",
+  "グロー色": "Glow color",
+  "光沢スイープ（斜め帯）": "Gloss sweep (diagonal band)",
+  "位置": "Position",
+  "幅": "Width",
+  "不透明度": "Opacity",
+  "稲妻": "Lightning",
+  "稲妻色": "Bolt color",
+  "太さ": "Thickness",
+  "枝分かれ": "Branches",
+  "乱れ": "Roughness",
+  "文字からはみ出す（最前面に走らせる）": "Overflow the text (run on top)",
+  "スパークル": "Sparkles",
+  "大きさ": "Size",
+  "光条の長さ": "Ray length",
+  "ばらつき": "Variation",
+  "エッジ配置": "Edge placement",
+  "スパーク色": "Spark color",
+  "配置": "Arrangement",
+  "変形": "Transform",
+  "文字ごとの配置を連続的に変化させる。パチ文字らしい躍動はここ。「アーチ」は今までどおりの放物線、「扇形」は真円弧、「パース」は片側から迫り出してくる遠近感。": "Continuously varies each character's placement — the pachi-moji energy lives here. \"Arch\" is the familiar parabola, \"Fan\" a true circular arc, \"Perspective\" looms in from one side.",
+  "モード": "Mode",
+  "アーチ（放物線）": "Arch (parabola)",
+  "扇形（真円弧）": "Fan (circular arc)",
+  "パース（迫り出し）": "Perspective (looming)",
+  "アーチ": "Arch",
+  "半径": "Radius",
+  "正＝ドーム状（中央が上がる）、負＝谷状（中央が下がる）。絶対値が小さいほどきつく曲がる。": "Positive = dome (center rises), negative = valley (center dips). A smaller absolute value bends harder.",
+  "方向角度": "Direction angle",
+  "開始サイズ": "Start size",
+  "終了サイズ": "End size",
+  "迫り出し量": "Looming amount",
+  "方向角度0＝右へ、90＝下へ。「45」で左上始点→右下へ迫り出す見た目になる。": "Direction 0 = rightward, 90 = downward. \"45\" looms from top-left toward bottom-right.",
+  "傾き": "Skew",
+  "全体回転": "Rotate all",
+  "「傾き」は平行四辺形に歪む効果（イタリック体的）。「全体回転」は文字全部をそのまま剛体として回す（勢いのある斜め配置はこちら）。": "\"Skew\" shears into a parallelogram (italic-like). \"Rotate all\" spins the whole text as one rigid body (use this for punchy tilted layouts).",
+  "台形・上幅": "Trapezoid: top width",
+  "台形・下幅": "Trapezoid: bottom width",
+  "上下の幅を別々に変えて台形（遠近感のある看板文字風）にする。上100/下60なら下すぼまり、上60/下100なら末広がり。": "Change top/bottom widths separately for a trapezoid (billboard-style depth). 100/60 narrows the bottom, 60/100 flares outward.",
+  "暴れ・回転": "Jitter: rotation",
+  "暴れ・上下": "Jitter: vertical",
+  "暴れシード": "Jitter seed",
+  "背景（プレビュー・書き出しオプション）": "Background (preview & export option)",
+  "タイプ": "Type",
+  "なし（透過）": "None (transparent)",
+  "単色ベタ塗り": "Solid fill",
+  "グラデ": "Gradient",
+  "ウニフラ（リング状のトゲ）": "Uni-flash (spike ring)",
+  "ベタフラ（芯ありのトゲ）": "Beta-flash (solid spikes)",
+  "バースト（放射光線の爆発）": "Burst (radial ray explosion)",
+  "稲妻（電撃＋集中線）": "Lightning (bolts + speed lines)",
+  "グラデ形状": "Gradient shape",
+  "放射": "Radial",
+  "直線": "Linear",
+  "背景色を敷く": "Lay background color",
+  "本数": "Count",
+  "長さ": "Length",
+  "横半径": "H radius",
+  "縦半径": "V radius",
+  "ウニフラ＝トゲの形を色で塗る（中心は空洞のリング状）。ベタフラ＝画面のフチから中心へ刺さるトゲを描く（フチ側は自然にベタ塗りになり、中央は透明が残る。「横半径・縦半径」で中央の透明領域の大きさを調整）。": "Uni-flash = spikes painted in color (hollow ring center). Beta-flash = spikes stabbing from the frame edge toward the center (edges fill solid, center stays clear; adjust the clear area with H/V radius).",
+  "⭐ お気に入り": "⭐ Favorites",
+  "気に入った状態に名前をつけてこの端末に保存。次に開いた時もここに残ってる（JSONやURLと違って、文字列を自分で管理する必要がない）。": "Save named states on this device. They'll still be here next time — unlike JSON or URLs, nothing to manage yourself.",
+  "＋ 現在の状態を保存": "+ Save current state",
+  "表示・設定の保存": "View & saving",
+  "レイヤー確認は調整用（書き出しにも反映）。設定はJSONやURLでも保存・共有できる（他人に渡す・別端末に移す用途はこちら）。": "Layer view is for checking (it also affects export). Settings can also be saved / shared as JSON or a URL (use those to hand off to someone else or move to another device).",
+  "レイヤー表示": "Layer view",
+  "すべて": "All",
+  "面のみ": "Face only",
+  "立体のみ": "Extrude only",
+  "縁のみ": "Outline only",
+  "光り物オフ": "Glow off",
+  "設定を書き出し": "Export settings",
+  "読み込み": "Load",
+  "URLをコピー": "Copy URL",
+  "元に戻す": "Undo",
+  "やり直す": "Redo",
+  "使い方": "How to use",
+  "Webフォント {0}/{1} 読込済": "Web fonts {0}/{1} loaded",
+  "Webフォント読込失敗（システムフォントで動作）": "Web font load failed (using system fonts)",
+  "まだ保存されたお気に入りはありません。": "No favorites saved yet.",
+  "この設定を読み込めませんでした": "Couldn't load this saved state",
+  "「{0}」を削除しますか？": "Delete \"{0}\"?",
+  "この状態の名前を入力してください（例: 俺ゴールド）": "Name this state (e.g. \"My Gold\")",
+  "保存に失敗しました（保存容量の上限に達している可能性があります）": "Save failed (device storage may be full)",
+  "コピーした！": "Copied!",
+  "このURLをコピーしてください": "Copy this URL",
+  "設定ファイルを読み込めませんでした": "Couldn't load the settings file",
+  "反射・明": "Bright reflection",
+  "反射・中間": "Mid reflection",
+  "反射・暗": "Dark reflection",
+  "トゲの色": "Spike color",
+  "芯/グロー色": "Core/glow color",
+  "芯/中間色": "Core/mid color",
+  "塗り色": "Fill color",
+  "日本語": "Japanese",
+  "欧文": "Latin",
+  "金BONUS": "Gold BONUS",
+  "夜職ゴールド": "Night Gold",
+  "激アツ炎": "Fever Flame",
+  "溶岩": "Lava",
+  "ピンクグロス": "Pink Gloss",
+  "氷結": "Frozen",
+  "雷撃": "Thunder",
+  "レインボー": "Rainbow",
+};
+
+/* 数字入りの動的ラベル（色わけN・レイヤーN 等）はパターンで翻訳する */
+const I18N_PATTERNS=[
+  [/^色わけ(\d+)$/, m=>"Part "+m[1]],
+  // レイヤー名は「レイヤー1」「レイヤー1のコピー」「レイヤー1 (3)」(ストローク数付き表示)に対応
+  [/^レイヤー(\d+)((?:のコピー)*)( \(\d+\))?$/, m=>"Layer "+m[1]+" copy".repeat((m[2]||"").length/4)+(m[3]||"")],
+];
+function enPattern(s){
+  for(const [re,fn] of I18N_PATTERNS){ const m=s.match(re); if(m) return fn(m); }
+  return null;
+}
+function t(s){ return LANG==="en" ? (I18N[s]!==undefined ? I18N[s] : (enPattern(s)||s)) : s; }
+function tf(s,...a){ let r=t(s); a.forEach((v,i)=>{ r=r.split("{"+i+"}").join(v); }); return r; }
+
+/* 現在の言語での「色わけN」表示名（セレクタと縁色/側面色ラベルで共用） */
+function segDisplayName(i){
+  if(i===0) return t("色わけ1（先頭）");
+  return LANG==="en" ? "Part "+(i+1) : "色わけ"+(i+1);
+}
+
+/* #app内のテキストノードとtitle属性を現在の言語に合わせて書き換える。
+   初回に元の日本語をi18nStoreへ保存 → EN時は辞書/パターンで置換、JA時は復元。
+   textarea(ユーザー入力)と data-i18n-skip 配下(JSが直接管理)は触らない。 */
+const i18nStore=new WeakMap(); // WeakMap: UI再構築で捨てられたノードはGCに回収させる
+function applyLang(){
+  document.documentElement.lang = LANG==="en" ? "en" : "ja";
+  const tgl=$("langToggle"); if(tgl) tgl.textContent = LANG==="en" ? "日本語" : "EN";
+  const root=$("app"); if(!root) return;
+  const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let n;
+  while(n=walker.nextNode()){
+    const p=n.parentElement;
+    if(!p) continue;
+    const tag=p.tagName;
+    if(tag==="TEXTAREA"||tag==="SCRIPT"||tag==="STYLE") continue;
+    if(p.closest("[data-i18n-skip]")) continue;
+    const key=n.textContent.trim();
+    if(!key) continue;
+    if(!i18nStore.has(n)){
+      // 翻訳対象（日本語を含む or 辞書にある）だけ記録
+      if(!/[ぁ-んァ-ヶ一-龠｜]/.test(key) && I18N[key]===undefined) continue;
+      i18nStore.set(n, n.textContent);
+    }
+    const orig=i18nStore.get(n);
+    const okey=orig.trim();
+    if(LANG==="en"){
+      const en=I18N[okey]!==undefined ? I18N[okey] : enPattern(okey);
+      n.textContent = en!==null && en!==undefined ? orig.replace(okey, en) : orig;
+    }else{
+      n.textContent = orig;
+    }
+  }
+  root.querySelectorAll("[title]").forEach(el=>{
+    if(el.dataset.i18nTitle===undefined) el.dataset.i18nTitle=el.getAttribute("title");
+    const o=el.dataset.i18nTitle;
+    el.setAttribute("title", LANG==="en" ? (I18N[o]||o) : o);
+  });
+}
+
+/* ---------- フォントDB（日本語/欧文の2カテゴリ） ----------
+   欧文はかわいい極太ディスプレイ系を厳選。w はcanvas描画時のウェイト接頭辞
+   （fontWeight()が参照。未指定は"400 "）。 */
+const FONTS=[
+  {v:"system-heavy",       cat:"ja", ja:"システム極太ゴシック",                en:"System heavy gothic (JP)"},
+  {v:"Reggae One",         cat:"ja", ja:"Reggae One（勘亭流風）",             en:"Reggae One (kabuki style)"},
+  {v:"RocknRoll One",      cat:"ja", ja:"RocknRoll One（丸ゴ極太）",          en:"RocknRoll One (round heavy)"},
+  {v:"M PLUS Rounded 1c",  cat:"ja", ja:"M PLUS 丸ゴシック 極太",             en:"M PLUS Rounded heavy", w:"800 "},
+  {v:"Zen Maru Gothic",    cat:"ja", ja:"Zen 丸ゴシック 極太",                en:"Zen Maru Gothic black", w:"900 "},
+  {v:"Hachi Maru Pop",     cat:"ja", ja:"はちまるポップ（ぷにぷに丸文字）",    en:"Hachi Maru Pop (squishy)"},
+  {v:"Potta One",          cat:"ja", ja:"ポッタ One（ぽってり丸）",           en:"Potta One (plump round)"},
+  {v:"Mochiy Pop One",     cat:"ja", ja:"モッチーポップ（もちもち）",          en:"Mochiy Pop (mochi-mochi)"},
+  {v:"Rampart One",        cat:"ja", ja:"Rampart One（立体袋文字）",          en:"Rampart One (3D outline)"},
+  {v:"Shippori Mincho B1", cat:"ja", ja:"しっぽり明朝B1 極太",                en:"Shippori Mincho B1 heavy", w:"800 "},
+  {v:"Kaisei Tokumin",     cat:"ja", ja:"解星 特ミン 極太",                   en:"Kaisei Tokumin heavy", w:"800 "},
+  {v:"DotGothic16",        cat:"ja", ja:"ドットゴシック16",                   en:"DotGothic16 (pixel)"},
+  {v:"Titan One",          cat:"latin", ja:"Titan One（まんまる極太）",       en:"Titan One (round & bold)"},
+  {v:"Luckiest Guy",       cat:"latin", ja:"Luckiest Guy（コミック極太）",    en:"Luckiest Guy (comic bold)"},
+  {v:"Lilita One",         cat:"latin", ja:"Lilita One（ぽってり丸）",        en:"Lilita One (plump round)"},
+  {v:"Modak",              cat:"latin", ja:"Modak（もちもち超極太）",         en:"Modak (super squishy)"},
+  {v:"Baloo 2",            cat:"latin", ja:"Baloo 2（丸ゴ極太）",             en:"Baloo 2 (rounded heavy)", w:"800 "},
+  {v:"Alfa Slab One",      cat:"latin", ja:"Alfa Slab One（超極太スラブ）",   en:"Alfa Slab One (ultra slab)"},
+  {v:"Shrikhand",          cat:"latin", ja:"Shrikhand（レトロぽってり）",     en:"Shrikhand (retro chunky)"},
+  {v:"Bungee",             cat:"latin", ja:"Bungee（サインボード）",          en:"Bungee (signboard)"},
+  {v:"Bangers",            cat:"latin", ja:"Bangers（アメコミ）",             en:"Bangers (comic shout)"},
+  {v:"Chewy",              cat:"latin", ja:"Chewy（手書きポップ）",           en:"Chewy (handwritten pop)"},
+  {v:"Passion One",        cat:"latin", ja:"Passion One（圧縮極太）",         en:"Passion One (condensed black)", w:"900 "},
+  // 筆記体（スクリプト）系。縁取り・立体に耐える太めを厳選
+  {v:"Pacifico",           cat:"latin", ja:"Pacifico（サーフ筆記体）",        en:"Pacifico (surf script)"},
+  {v:"Lobster",            cat:"latin", ja:"Lobster（レトロ極太筆記体）",     en:"Lobster (retro bold script)"},
+  {v:"Leckerli One",       cat:"latin", ja:"Leckerli One（ぽってり筆記体）",  en:"Leckerli One (chunky script)"},
+  {v:"Berkshire Swash",    cat:"latin", ja:"Berkshire Swash（飾り筆記体）",   en:"Berkshire Swash (swashy script)"},
+  {v:"Kaushan Script",     cat:"latin", ja:"Kaushan Script（筆ブラシ）",      en:"Kaushan Script (brush)"},
+  {v:"Courgette",          cat:"latin", ja:"Courgette（丸み筆記体）",         en:"Courgette (rounded script)"},
+  {v:"Yellowtail",         cat:"latin", ja:"Yellowtail（流れる筆記体）",      en:"Yellowtail (flowing script)"},
+];
+
+let fontCat="ja";
+
+/* 現在のカテゴリのフォントで pFont の選択肢を作り直す（選択は可能なら維持） */
+function buildFontOptions(){
+  const sel=$("pFont"); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML="";
+  FONTS.filter(f=>f.cat===fontCat).forEach(f=>{
+    const o=document.createElement("option");
+    o.value=f.v; o.textContent = LANG==="en" ? f.en : f.ja;
+    sel.appendChild(o);
+  });
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  document.querySelectorAll("#fontCatSeg .catbtn").forEach(b=>b.classList.toggle("active", b.dataset.cat===fontCat));
+}
+
+/* カテゴリ切替。今のフォントが新カテゴリに無ければ先頭フォントへ切り替えて再描画 */
+function setFontCat(cat){
+  if(cat===fontCat) return;
+  const before=$("pFont").value;
+  fontCat=cat;
+  buildFontOptions();
+  if($("pFont").value!==before){
+    warmupFont($("pFont").value);
+    onInput();
+    commitState();
+  }
+}
+
+/* 復元(applyState/applyPreset)されたフォントに合わせてカテゴリと選択肢を同期する。
+   カテゴリをまたぐ復元（欧文フォント保存→日本語表示中に読込 等）でも正しく戻る。 */
+function syncFontToValue(v){
+  const rec=FONTS.find(f=>f.v===v);
+  if(rec && rec.cat!==fontCat){ fontCat=rec.cat; buildFontOptions(); }
+  const sel=$("pFont");
+  if(sel && [...sel.options].some(o=>o.value===v)) sel.value=v;
+}
+
+/* フォント読込ステータス（言語切替時に再描画できるよう状態を持つ） */
+let fontStatusInfo=null;
+function renderFontStatus(){
+  const el=$("fontStatus"); if(!el) return;
+  if(fontStatusInfo===null){ el.textContent=t("フォント読込中…"); }
+  else if(fontStatusInfo==="fail"){ el.textContent=t("Webフォント読込失敗（システムフォントで動作）"); }
+  else{ el.textContent=tf("Webフォント {0}/{1} 読込済", fontStatusInfo.ok, fontStatusInfo.total); }
+}
+
+/* 英語モードでプリセットを押したときの見本テキスト（日本語モードでは従来どおり） */
+const PRESET_TEXT_EN={
+  "金BONUS":"BONUS!","夜職ゴールド":"GOLD","激アツ炎":"FEVER!","溶岩":"MAGMA",
+  "ピンクグロス":"CUTE!!","氷結":"FREEZE","雷撃":"THUNDER","レインボー":"RAINBOW",
+};
 
 /* ================================================================
    §16 イベント配線・初期化
@@ -3530,7 +3941,7 @@ $("fileJson").addEventListener("change",e=>{
   const rd=new FileReader();
   rd.onload=()=>{
     try{ applyState(rd.result); commitState(); }
-    catch(err){ alert("設定ファイルを読み込めませんでした"); }
+    catch(err){ alert(t("設定ファイルを読み込めませんでした")); }
   };
   rd.readAsText(f);
   e.target.value="";
@@ -3539,9 +3950,9 @@ $("fileJson").addEventListener("change",e=>{
 $("btnShareUrl").addEventListener("click",async()=>{
   const enc=btoa(unescape(encodeURIComponent(snapshot())));
   const url=location.origin+location.pathname+"#p="+enc;
-  try{ await navigator.clipboard.writeText(url); $("btnShareUrl").textContent="コピーした！";
-    setTimeout(()=>$("btnShareUrl").textContent="URLをコピー",1500); }
-  catch(err){ prompt("このURLをコピーしてください", url); }
+  try{ await navigator.clipboard.writeText(url); $("btnShareUrl").textContent=t("コピーした！");
+    setTimeout(()=>$("btnShareUrl").textContent=t("URLをコピー"),1500); }
+  catch(err){ prompt(t("このURLをコピーしてください"), url); }
 });
 
 /* ── 初期化シーケンス（順序に意味あり: 縁UI生成 → URL復元 → 初期状態適用 → 配線 → フォント読込） ── */
@@ -3551,6 +3962,12 @@ $("btnShareUrl").addEventListener("click",async()=>{
 // 以前はこれが「初期化」セクション（このIIFEより後）にしかなく、共有URL経由で
 // 開いた場合に縁取りの色・太さがDOM要素未生成のため復元されない潜在バグがあった。
 buildOutlineUI();
+
+/* ── フォントカテゴリUI初期化（applyStateがpFontを触る前に選択肢を用意する） ── */
+
+try{ const sv=localStorage.getItem(LANG_KEY); if(sv==="en"||sv==="ja") LANG=sv; }catch(e){}
+buildFontOptions();
+document.querySelectorAll("#fontCatSeg .catbtn").forEach(b=>b.addEventListener("click",()=>setFontCat(b.dataset.cat)));
 
 let restoredFromUrl=false;
 
@@ -3563,7 +3980,7 @@ let restoredFromUrl=false;
 /* ── お気に入りの配線 ── */
 
 $("btnFavSave").addEventListener("click",()=>{
-  const name=prompt("この状態の名前を入力してください（例: 俺ゴールド）");
+  const name=prompt(t("この状態の名前を入力してください（例: 俺ゴールド）"));
   if(!name || !name.trim()) return;
   const favs=loadFavorites();
   favs.push({id:Date.now(), name:name.trim().slice(0,20), json:snapshot()});
@@ -3598,7 +4015,15 @@ $("expScale").addEventListener("input",requestDraw);
 const FONT_LIST=['400 40px "Reggae One"','400 40px "RocknRoll One"','400 40px "Rampart One"',
   '800 40px "Shippori Mincho B1"','800 40px "Kaisei Tokumin"','400 40px "DotGothic16"',
   '800 40px "M PLUS Rounded 1c"','900 40px "Zen Maru Gothic"',
-  '400 40px "Hachi Maru Pop"','400 40px "Potta One"','400 40px "Mochiy Pop One"'];
+  '400 40px "Hachi Maru Pop"','400 40px "Potta One"','400 40px "Mochiy Pop One"',
+  // 欧文（かわいい極太ディスプレイ系）
+  '400 40px "Titan One"','400 40px "Luckiest Guy"','400 40px "Lilita One"',
+  '400 40px "Modak"','800 40px "Baloo 2"','400 40px "Alfa Slab One"',
+  '400 40px "Shrikhand"','400 40px "Bungee"','400 40px "Bangers"',
+  '400 40px "Chewy"','900 40px "Passion One"',
+  '400 40px "Pacifico"','400 40px "Lobster"','400 40px "Leckerli One"',
+  '400 40px "Berkshire Swash"','400 40px "Kaushan Script"','400 40px "Courgette"',
+  '400 40px "Yellowtail"'];
 
 /* 各セクションのヒント文(説明書き)はデフォルト非表示にし、「使い方」ボタンで
    そのセクションだけ表示を切り替える。説明はUIを圧迫する一方で初見には必要なので、
@@ -3608,15 +4033,31 @@ document.querySelectorAll(".sec").forEach(sec=>{
   const btn=document.createElement("button");
   btn.type="button";
   btn.className="usage-toggle";
-  btn.textContent="使い方";
+  btn.textContent=t("使い方");
   btn.addEventListener("click",()=>sec.classList.toggle("show-hints"));
   sec.insertBefore(btn, sec.firstChild);
 });
 
+/* ── 言語切替 ── */
+
+$("langToggle").addEventListener("click",()=>{
+  LANG = LANG==="en" ? "ja" : "en";
+  try{ localStorage.setItem(LANG_KEY, LANG); }catch(e){}
+  applyLang();
+  buildFontOptions();   // フォント名の表示言語を差し替え（選択は維持）
+  rebuildSegSelector(); // 色わけセレクタの表示言語を差し替え（選択は維持）
+  renderFontStatus();
+  requestDraw("high");  // readParamsが管理する動的ラベル（色わけN等）を更新
+});
+applyLang();
+buildFontOptions();     // 英語保存済みならフォント名も英語で出し直す
+renderFontStatus();
+
 Promise.all(FONT_LIST.map(f=>document.fonts.load(f).catch(()=>[])))
   .then(rs=>{
     const ok=rs.filter(r=>r.length).length;
-    $("fontStatus").textContent = ok>0 ? `Webフォント ${ok}/${FONT_LIST.length} 読込済` : "Webフォント読込失敗（システムフォントで動作）";
+    fontStatusInfo = ok>0 ? {ok, total:FONT_LIST.length} : "fail";
+    renderFontStatus();
     requestDraw();
   });
 
