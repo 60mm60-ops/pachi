@@ -478,6 +478,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <div class="row"><label>タイプ</label>
         <select id="pBg">
           <option value="none">なし（透過）</option>
+          <option value="image">画像（カメラロール等から）</option>
           <option value="solid">単色ベタ塗り</option>
           <option value="gradient">グラデ</option>
           <option value="uni">ウニフラ（リング状のトゲ）</option>
@@ -485,6 +486,29 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="burst">バースト（放射光線の爆発）</option>
           <option value="bolt">稲妻（電撃＋集中線）</option>
         </select>
+      </div>
+      <div class="row" id="bgImageRow" style="display:none">
+        <label>画像</label>
+        <button type="button" class="ghost" id="btnBgImage" style="flex:1;padding:6px 0">画像を選ぶ</button>
+        <button type="button" class="ghost" id="btnBgImageClear" style="padding:6px 10px">クリア</button>
+        <span id="bgImageStatus" data-i18n-skip style="font-size:11px;opacity:.7;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">未選択</span>
+      </div>
+      <div class="row" id="bgImageFitRow" style="display:none"><label>フィット</label>
+        <select id="pBgImageFit">
+          <option value="cover">カバー（切り抜き）</option>
+          <option value="contain">全体を表示</option>
+          <option value="stretch">引き伸ばし</option>
+        </select>
+      </div>
+      <div class="row" id="bgImageDarkRow" style="display:none"><label>暗くする</label>
+        <input type="range" id="pBgImageDark" min="0" max="80" value="0" step="1"><span class="val" data-val="pBgImageDark">0</span>
+      </div>
+      <p class="hint" id="bgImageHint">画像は書き出しPNGには含まれるが、JSON保存・URL共有・お気に入りには保存されない。「背景色を敷く」は全体表示の余白色になる。</p>
+      <div class="row" id="textPosXRow" style="display:none"><label>文字位置 横</label>
+        <input type="range" id="pTextX" min="-100" max="100" value="0" step="1"><span class="val" data-val="pTextX">0</span>
+      </div>
+      <div class="row" id="textPosYRow" style="display:none"><label>文字位置 縦</label>
+        <input type="range" id="pTextY" min="-100" max="100" value="0" step="1"><span class="val" data-val="pTextY">0</span>
       </div>
       <div class="row" id="bgGradShapeRow"><label>グラデ形状</label>
         <select id="pBgGradShape">
@@ -537,6 +561,17 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 </div>
 
 <script>
+/* 起動失敗の可視化: JSエラーで真っ白になる代わりに内容を画面に出す */
+window.addEventListener("error",function(e){
+  try{
+    var b=document.createElement("div");
+    b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;font:12px/1.5 monospace;padding:8px;white-space:pre-wrap;word-break:break-all";
+    b.textContent="⚠ エラー: "+(e.message||e.type)+(e.filename?"\n"+e.filename+":"+e.lineno:"");
+    (document.body||document.documentElement).appendChild(b);
+  }catch(_){}
+});
+</script>
+<script>
 "use strict";
 
 /* ================================================================
@@ -585,11 +620,12 @@ const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillH
   "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
   "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed",
-  "pBgAngle","pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY","pBgSpikeJitter"];
+  "pBgAngle","pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY","pBgSpikeJitter",
+  "pTextX","pTextY","pBgImageDark"];
 
 const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC",
   "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgGradShape","pBgC1","pBgC2","pTransformMode",
-  "pBgSpikeBgOn","pBgSpikeBgC"];
+  "pBgSpikeBgOn","pBgSpikeBgC","pBgImageFit"];
 
 /* 縁取りスロット（外→内）4本 */
 const OUTLINE_DEFAULTS = [
@@ -771,12 +807,21 @@ function readParams(){
   const bg=P.pBg;
   const isGrad=bg==="gradient", isSpike=(bg==="uni"||bg==="beta");
   const isBurst=bg==="burst", isBolt=bg==="bolt", isFx=(isBurst||isBolt);
+  const isImage=bg==="image";
+  // 背景画像の行（画像選択・フィット・暗くする）は画像タイプのときだけ表示
+  ["bgImageRow","bgImageFitRow","bgImageDarkRow"].forEach(id=>{
+    const el=$(id); if(el) el.style.display = isImage ? "flex":"none";
+  });
+  // 文字位置スライダーは背景があるとき（＝背景に対して文字を動かす意味があるとき）だけ表示
+  ["textPosXRow","textPosYRow"].forEach(id=>{
+    const el=$(id); if(el) el.style.display = (bg!=="none") ? "flex":"none";
+  });
   $("bgGradShapeRow").style.display = isGrad ? "flex":"none";
   $("bgGradAngleRow").style.display = (isGrad && P.pBgGradShape==="linear") ? "flex":"none";
   $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike||isFx) ? "flex":"none";
   $("pBgC2").style.display = (isGrad||isFx) ? "inline-block":"none"; // バースト/稲妻は2色使う
   $("bgColor1Label").textContent = t(isGrad ? "色" : (isSpike ? "トゲの色" : (isBolt ? "芯/グロー色" : (isBurst ? "芯/中間色" : "色"))));
-  $("bgSpikeBgRow").style.display = (isSpike||isFx) ? "flex":"none"; // 背景色を敷くはFxでも使える
+  $("bgSpikeBgRow").style.display = (isSpike||isFx||isImage) ? "flex":"none"; // 背景色を敷くはFx・画像(全体表示の余白色)でも使える
   $("pBgSpikeBgC").style.display = P.pBgSpikeBgOn ? "inline-block":"none";
   // ベタフラは「フチから中心へ刺さるトゲを直接描く」方式のため、長さ・太さは
   // 自動で決まる（本数・中央領域サイズ・乱れだけが効く）。効かないスライダーは隠す。
@@ -1286,20 +1331,42 @@ function pukuBoxBlur(src,w,h,r,passes){
 /* ぷくぷき陰影を「既に面が描かれたキャンバスc」の上に乗せる。
    cのアルファからシルエットを取り距離変換→高さ場→フチ影/ソフト影/頂点ハイライトを
    source-atopで面内だけに合成する。faceScaleは表示スケール(高さ量の基準)。 */
+/* ぷくぷく幾何場キャッシュ: 距離変換(chamfer)とブラーは「文字の形」だけで決まり、
+   色相・彩度・ツヤ等のスライダーでは変わらない。アルファ面のFNVハッシュを鍵に
+   最後の1件をキャッシュし、色系スライダーのドラッグ中は幾何計算を丸ごと飛ばす。 */
+let puffGeomCache=null;
 function applyPuff(c, faceScale, glyphSize){
   const g=c.getContext("2d");
   const W=c.width, H=c.height, N=W*H;
   const src=g.getImageData(0,0,W,H);
   const sd=src.data;
   const bin=new Uint8Array(N), alpha=new Float32Array(N);
-  for(let i=0;i<N;i++){ const a=sd[i*4+3]/255; alpha[i]=a; bin[i]=a>0.5?1:0; }
-  const din=pukuChamfer(bin,W,H);
-  let maxDin=1; for(let i=0;i<N;i++) if(din[i]>maxDin)maxDin=din[i];
+  let hsh=2166136261;
+  for(let i=0;i<N;i++){
+    const a8=sd[i*4+3];
+    const a=a8/255; alpha[i]=a; bin[i]=a>0.5?1:0;
+    hsh=((hsh^a8)*16777619)>>>0; // FNV-1a: アルファ面＝形状のハッシュ
+  }
+  const gkey=W+"x"+H+"|"+hsh;
+  let din, maxDin;
+  if(puffGeomCache && puffGeomCache.gkey===gkey){
+    din=puffGeomCache.din; maxDin=puffGeomCache.maxDin;
+  }else{
+    din=pukuChamfer(bin,W,H);
+    maxDin=1; for(let i=0;i<N;i++) if(din[i]>maxDin)maxDin=din[i];
+    puffGeomCache={gkey, din, maxDin, effPuff:null, hgt:null, hs:null};
+  }
   // 膨らみ幅: サイズ比(pPuff%)。ただしストローク半幅で自動キャップ(塊化防止)
   const effPuff=Math.max(3, Math.min(glyphSize*faceScale*P.pPuff/100, maxDin*0.98));
-  const hgt=new Float32Array(N);
-  for(let i=0;i<N;i++){ if(!din[i])continue; const t=Math.min(1,din[i]/effPuff); hgt[i]=Math.sqrt(1-(1-t)*(1-t)); }
-  const hs=pukuBoxBlur(hgt,W,H,2,2);
+  let hgt, hs;
+  if(puffGeomCache.effPuff===effPuff && puffGeomCache.hgt){
+    hgt=puffGeomCache.hgt; hs=puffGeomCache.hs;
+  }else{
+    hgt=new Float32Array(N);
+    for(let i=0;i<N;i++){ if(!din[i])continue; const t=Math.min(1,din[i]/effPuff); hgt[i]=Math.sqrt(1-(1-t)*(1-t)); }
+    hs=pukuBoxBlur(hgt,W,H,2,2);
+    puffGeomCache.effPuff=effPuff; puffGeomCache.hgt=hgt; puffGeomCache.hs=hs;
+  }
   const amp=effPuff*1.15;
   // 光: 上方向。角度スライダpPuffLightで仰角
   let ly=-(0.30+ (P.pPuffLight/100)*0.85), lz=0.85; const ln=Math.hypot(ly,lz); ly/=ln; lz/=ln;
@@ -1455,8 +1522,10 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   drawChars(g,L,"fill",0,0,styleFn);
 
   // 2) 擬似ベベル: 下ずらし影→上ずらしハイライト→中央を縮小本体で塗り戻し
+  // ドラッグ中(low)はスキップ（グロー・ぷくぷく・スパークルと同じ「骨組み」方針。
+  // 全文字を3〜4回描き直すため、面系スライダー操作時のカクつき要因だった）
   const bv=P.pBevel;
-  if(bv>0){
+  if(bv>0 && quality==="high"){
     const bla=P.pExLight*Math.PI/180;
     const blx=Math.cos(bla), bly=Math.sin(bla);
     g.globalCompositeOperation="source-atop";
@@ -1478,8 +1547,8 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   }
 
 
-  // 3) テクスチャ（面内のみ）
-  if(P.pTex!=="none" && P.pTexInt>0){
+  // 3) テクスチャ（面内のみ）。ドラッグ中(low)はスキップ（ベベルと同じ方針）
+  if(P.pTex!=="none" && P.pTexInt>0 && quality==="high"){
     const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed);
     g.globalCompositeOperation="source-atop";
     g.globalAlpha=P.pTexInt/100;
@@ -2069,25 +2138,63 @@ function scatterSparkles(mg, face, cw, ch, scale){
    プレビューも書き出しも同じ draw() を通る（scale を変えるだけ）。
 ================================================================ */
 
-function draw(targetCtx, scale, withBg, quality){
-  quality = quality || "high";
-  readParams();
-  const mg=targetCtx;
-  // 計測用
-  const meas=document.createElement("canvas").getContext("2d");
-  meas.font=fontStr(P.pSize);
-  const L=layoutText(meas);
-  const {W,H,pad}=computeCanvasSize(L);
-  const cw=Math.round(W*scale), ch=Math.round(H*scale);
-  mg.canvas.width=cw; mg.canvas.height=ch;
-  mg.clearRect(0,0,cw,ch);
+/* ---------- レイヤーキャッシュ ----------
+   スライダー1本の操作で毎フレーム全パイプライン（ぷくぷく距離変換・稲妻生成・
+   テクスチャ合成…）を作り直していたのがカクつきの主因。背景と文字を別々の
+   オフスクリーンにレンダリングし、それぞれ「影響するパラメータのキー」で
+   キャッシュする。文字位置ドラッグ→文字キャッシュ命中、塗り色ドラッグ→
+   背景キャッシュ命中、となり再計算が大幅に減る。 */
+let textLayerCache=null, bgLayerCache=null, bgImageRev=0;
 
-  const offX=cw/2, offY=(pad+L.size/2)*scale;
+// 背景にしか影響しないパラメータ（文字レイヤーのキーから除外する）
+const BG_ONLY_KEYS=new Set(["pBg","pBgC1","pBgC2","pBgGradShape","pBgAngle",
+  "pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY",
+  "pBgSpikeJitter","pBgSpikeBgOn","pBgSpikeBgC","pBgImageFit","pBgImageDark",
+  "pTextX","pTextY"]);
 
-  // 背景（グラデの中心/基準は文字の縦中心に合わせる）
-  const bgCy = offY + ((L.lines-1)*L.lineH/2)*scale;
-  if(withBg && P.pBg!=="none"){
-    if(P.pBg==="solid"){
+function textCacheKey(scale,quality){
+  let k="";
+  for(const key of Object.keys(P)){
+    if(BG_ONLY_KEYS.has(key)) continue;
+    k+=key+":"+JSON.stringify(P[key])+";";
+  }
+  // ブラシ内容・描画中ストローク・アクティブレイヤーも文字レイヤーの見た目に影響する
+  return k+"|"+scale+"|"+quality+"|"+JSON.stringify(brushLayers)+"|"+activeLayerId+"|"+
+    (typeof currentStroke!=="undefined"&&currentStroke?JSON.stringify(currentStroke):"")+
+    "|"+(typeof brushDrawing!=="undefined"?brushDrawing:"");
+}
+function bgCacheKey(cw,ch){
+  let k="";
+  for(const key of BG_ONLY_KEYS) k+=key+":"+JSON.stringify(P[key])+";";
+  return k+"|"+cw+"x"+ch+"|"+P.pSeed+"|"+bgImageRev;
+}
+
+/* 背景レイヤーを描く（従来drawの背景ブロックそのまま。mgはオフスクリーン） */
+const _bgCanvas=document.createElement("canvas");
+function renderBgLayer(cw,ch){
+  const c=_bgCanvas;
+  if(c.width!==cw||c.height!==ch){ c.width=cw; c.height=ch; }
+  else{ c.getContext("2d").clearRect(0,0,cw,ch); }
+  const mg=c.getContext("2d");
+  const bgCy = ch/2;
+  {
+    if(P.pBg==="image"){
+      // 背景画像: 「背景色を敷く」ONなら余白色(全体表示のレターボックス等)を先に敷く。
+      // 画像はスナップショット(JSON/URL/お気に入り)には含まれない＝この場での合成用。
+      if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
+      if(bgImage){
+        const iw=bgImage.naturalWidth||1, ih=bgImage.naturalHeight||1;
+        const fit=P.pBgImageFit||"cover";
+        let dw=cw, dh=ch, dx=0, dy=0;
+        if(fit!=="stretch"){
+          const s=(fit==="contain") ? Math.min(cw/iw,ch/ih) : Math.max(cw/iw,ch/ih);
+          dw=iw*s; dh=ih*s; dx=(cw-dw)/2; dy=(ch-dh)/2;
+        }
+        mg.drawImage(bgImage,dx,dy,dw,dh);
+        // 文字を読みやすくする暗幕（サムネ定番の黒オーバーレイ）
+        if(P.pBgImageDark>0){ mg.fillStyle="rgba(0,0,0,"+(P.pBgImageDark/100)+")"; mg.fillRect(0,0,cw,ch); }
+      }
+    }else if(P.pBg==="solid"){
       mg.fillStyle=P.pBgC1; mg.fillRect(0,0,cw,ch);
     }else if(P.pBg==="gradient"){
       if(P.pBgGradShape==="linear"){
@@ -2138,6 +2245,20 @@ function draw(targetCtx, scale, withBg, quality){
         P.pBgSpikeJitter/100, P.pSeed);
     }
   }
+  return c;
+}
+
+/* 文字レイヤーを描く（従来drawの文字パイプラインそのまま）。
+   位置オフセット(pTextX/Y)はここには入らず、合成時の平行移動で表現される。 */
+const _textCanvas=document.createElement("canvas");
+function renderTextLayer(L,W,H,pad,scale,quality){
+  const c=_textCanvas;
+  const cw=Math.round(W*scale), ch=Math.round(H*scale);
+  if(c.width!==cw||c.height!==ch){ c.width=cw; c.height=ch; }
+  else{ const g0=c.getContext("2d"); g0.setTransform(1,0,0,1,0,0); g0.clearRect(0,0,cw,ch); }
+  const mg=c.getContext("2d");
+  const offX=cw/2;
+  const offY=ch/2 - ((L.lines-1)*L.lineH/2)*scale;
 
   mg.save();
   mg.translate(offX,offY); mg.scale(scale,scale);
@@ -2199,7 +2320,8 @@ function draw(targetCtx, scale, withBg, quality){
     // ピクセル単位の連続グラデーションとして描く。
     // ドラッグ中(low)は深さが大きいほど重くなる(1層=全文字1回描画)ため間引く。
     // 手を離した本描画(high)では全層を正確に描く。
-    const exStep = (quality==="low" && d>10) ? Math.ceil(d/10) : 1;
+    // ドラッグ中(low)の押し出し間引きを強化(手を離すと完全な積層で描き直される)
+    const exStep = (quality==="low" && d>6) ? Math.ceil(d/6) : 1;
     // 深さ層ごとの色を計算するヘルパー(色わけの基準色c1/c2から、その層tの側面色を出す)
     const layerColor=(c1,c2,t)=>{
       let r=lerp(c1[0],c2[0],t), gc=lerp(c1[1],c2[1],t), b=lerp(c1[2],c2[2],t);
@@ -2356,27 +2478,69 @@ function draw(targetCtx, scale, withBg, quality){
     renderBrushStrokes(mg, liveLayers, offX, offY, scale, sideMask, face, frontMask, quality);
   }
 
-  // ライブプレビュー描画時のみ、ブラシのポインタ座標変換用にレイアウトを記録
-  // (rot/pivotYは全体回転の逆変換、trapTop/trapBottom/trapContentHalfWは台形の逆変換にscreenToLocalで使う)
+  // 台形（キーストーン）: 文字レイヤーに対する最終ポスト処理。
+  // 【変更】以前は背景ごと変形していたが、レイヤー分離により文字だけが
+  // 台形になる（写真背景が歪まなくなった＝本来あるべき挙動）。
+  applyTrapezoid(mg, cw, ch, quality, (L.maxW/2+40)*scale, offX);
+
+  return c;
+}
+
+/* ---------- draw本体: レイヤーのキャッシュ解決と合成 ---------- */
+function draw(targetCtx, scale, withBg, quality){
+  quality = quality || "high";
+  readParams();
+  const meas=document.createElement("canvas").getContext("2d");
+  meas.font=fontStr(P.pSize);
+  const L=layoutText(meas);
+  const {W,H,pad}=computeCanvasSize(L);
+  // 文字位置オフセット: ±100でキャンバス半分ぶん移動。文字が切れないよう
+  // キャンバスを移動量ぶん両側に拡張し、背景はキャンバス中心に据え置く。
+  const txDx = W*((P.pTextX||0)/100)*0.5;
+  const txDy = H*((P.pTextY||0)/100)*0.5;
+  const W2 = W + Math.abs(txDx)*2, H2 = H + Math.abs(txDy)*2;
+  const cw=Math.round(W2*scale), ch=Math.round(H2*scale);
+
+  // 文字レイヤー（キャッシュ）
+  const tKey=textCacheKey(scale,quality);
+  if(!textLayerCache || textLayerCache.key!==tKey){
+    textLayerCache={key:tKey, canvas:renderTextLayer(L,W,H,pad,scale,quality)};
+  }
+  const tl=textLayerCache.canvas;
+
+  const mg=targetCtx;
+  mg.canvas.width=cw; mg.canvas.height=ch;
+  mg.clearRect(0,0,cw,ch);
+
+  // 背景レイヤー（キャッシュ）
+  if(withBg && P.pBg!=="none"){
+    const bKey=bgCacheKey(cw,ch);
+    if(!bgLayerCache || bgLayerCache.key!==bKey){
+      bgLayerCache={key:bKey, canvas:renderBgLayer(cw,ch)};
+    }
+    mg.drawImage(bgLayerCache.canvas,0,0);
+  }
+
+  // 文字レイヤーを位置オフセット付きで合成（純粋な平行移動）
+  // 丸めない: 整数化すると位置オフセット時に最大0.5pxずれて従来描画と差が出るため
+  const blitX=cw/2 + txDx*scale - tl.width/2;
+  const blitY=ch/2 + txDy*scale - tl.height/2;
+  mg.drawImage(tl, blitX, blitY);
+
+  // ブラシのポインタ座標変換用レイアウト（合成後の実座標で記録する）
+  const offX=cw/2 + txDx*scale;
+  const offY=ch/2 + txDy*scale - ((L.lines-1)*L.lineH/2)*scale;
   if(mg.canvas===cv) lastLayout={offX,offY,scale,cw,ch,rot:(P.pRotate||0)*Math.PI/180,pivotY:(L.lines-1)*L.lineH/2,
     trapTop:(P.pTrapTop!==undefined?P.pTrapTop:100)/100, trapBottom:(P.pTrapBottom!==undefined?P.pTrapBottom:100)/100,
     trapContentHalfW:(L.maxW/2+40)*scale};
 
-  // 台形（キーストーン）: 完成した絵全体に対する最終ポスト処理。
-  // 拡縮対象は「文字の実寸＋グロー等の縁が収まる程度のバッファ」に限定し、
-  // それより外側の余白は拡縮せず平行移動のみに留める(のっぺり化・過剰な肥大化を防ぐ)
-  applyTrapezoid(mg, cw, ch, quality, (L.maxW/2+40)*scale, offX);
-
-  // 書き出し範囲(＝キャンバス外周)を薄いグレー枠で可視化する。
-  // これは画面プレビュー(cv)専用で、書き出し用の別キャンバス(off)には描かない
-  // ＝透過PNGには一切写り込まない。透明背景だと「どこまで描けるか」が分からず
-  // タップ位置を掴みづらいため、有効エリアの境界を示す。
+  // 書き出し範囲(＝キャンバス外周)の薄いグレー枠。プレビュー(cv)専用で書き出しには写らない。
   if(mg.canvas===cv){
     mg.save();
     mg.setTransform(1,0,0,1,0,0);
     mg.strokeStyle="rgba(160,160,160,0.5)";
     mg.lineWidth=1;
-    mg.strokeRect(0.5,0.5,cw-1,ch-1); // 0.5オフセットで1pxをくっきり見せる
+    mg.strokeRect(0.5,0.5,cw-1,ch-1);
     mg.restore();
   }
 
@@ -2455,6 +2619,9 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
 }
 
 function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, quality){
+  // ストロークが1本もなく描画中でもなければ何もしない
+  //（従来は空でもマスク合成が走り、無関係なスライダー操作を毎フレーム遅くしていた）
+  if(!brushDrawing && layers.every(l=>!l.visible || !l.strokes.length)) return;
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
   // outside(文字以外に描画)のくり抜き基準は「文字の完全シルエット」＝面＋前面縁(frontMask)＋側面(sideMask)。
   // frontMaskだけだと側面(押し出し部分)が抜けず、そこにブラシが乗ってしまうため、front∪sideを一度だけ合成しておく。
@@ -2981,7 +3148,8 @@ const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",p
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
   pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,
   pBg:"none",pBgGradShape:"radial",pBgAngle:90,pBgSpikeCount:60,pBgSpikeLen:45,pBgSpikeWidth:6,pBgSpikeInnerX:26,pBgSpikeInnerY:30,pBgSpikeJitter:20,
-  pBgSpikeBgOn:false,pBgSpikeBgC:"#1a0e00"};
+  pBgSpikeBgOn:false,pBgSpikeBgC:"#1a0e00",
+  pTextX:0,pTextY:0,pBgImageFit:"cover",pBgImageDark:0};
 
 const PRESETS = {
   "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
@@ -3153,6 +3321,7 @@ function applyState(json){
       continue;
     }
     const el=$(id); if(!el) continue;
+    if(el.type==="file") continue; // file inputに値は復元できない(非空だとSecurityErrorになり得る)
     if(el.type==="checkbox") el.checked=v; else el.value=v;
   }
   if(s.pFont) syncFontToValue(s.pFont); // 別カテゴリのフォントでも正しく復元する
@@ -3488,6 +3657,17 @@ const I18N={
   "氷結": "Frozen",
   "雷撃": "Thunder",
   "レインボー": "Rainbow",
+  "画像（カメラロール等から）": "Image (from camera roll etc.)",
+  "画像を選ぶ": "Choose image",
+  "未選択": "No image",
+  "フィット": "Fit",
+  "カバー（切り抜き）": "Cover (crop)",
+  "全体を表示": "Contain (show all)",
+  "引き伸ばし": "Stretch",
+  "暗くする": "Darken",
+  "文字位置 横": "Text position X",
+  "文字位置 縦": "Text position Y",
+  "画像は書き出しPNGには含まれるが、JSON保存・URL共有・お気に入りには保存されない。「背景色を敷く」は全体表示の余白色になる。": "The image appears in exported PNGs but is NOT saved to JSON / share URLs / favorites. \"Lay background color\" fills the letterbox in Contain mode.",
 };
 
 /* 数字入りの動的ラベル（色わけN・レイヤーN 等）はパターンで翻訳する */
@@ -3809,6 +3989,39 @@ $("btnClearBrush").addEventListener("click",()=>{
   const layer=activeLayer();
   if(!layer.strokes.length) return;
   layer.strokes=[]; buildLayerUI(); commitState(); requestDraw();
+});
+
+/* ── 背景画像の読み込み（カメラロール等から） ── */
+
+// 画像はデータ量が大きいためスナップショット(JSON/URL/お気に入り)には含めない。
+// 書き出しPNGには当然含まれる。ページを閉じると消える「この場での合成用」。
+let bgImage=null;
+// file inputは#panelの外に動的生成する（snapshotの対象に入れないため）
+const bgImageFile=document.createElement("input");
+bgImageFile.type="file"; bgImageFile.accept="image/*"; bgImageFile.id="bgImageFile";
+bgImageFile.style.display="none"; document.body.appendChild(bgImageFile);
+$("btnBgImage").addEventListener("click",()=>bgImageFile.click());
+bgImageFile.addEventListener("change",e=>{
+  const f=e.target.files && e.target.files[0];
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      bgImage=img; bgImageRev++;
+      $("bgImageStatus").textContent=f.name.length>18 ? f.name.slice(0,17)+"…" : f.name;
+      $("pBg").value="image"; // 画像を選んだら背景タイプも画像に
+      requestDraw("high"); commitState();
+    };
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+  e.target.value=""; // 同じファイルを選び直しても changeが発火するように
+});
+$("btnBgImageClear").addEventListener("click",()=>{
+  bgImage=null; bgImageRev++;
+  $("bgImageStatus").textContent=t("未選択");
+  requestDraw("high");
 });
 
 /* ── ズーム ── */
