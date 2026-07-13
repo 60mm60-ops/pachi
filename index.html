@@ -543,23 +543,54 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
 
 <script>
 "use strict";
-/* ============================================================
-   激アツ文字工房 — pipeline:
+
+/* ================================================================
+   激アツ文字工房 — パチ文字ジェネレーター
+   ----------------------------------------------------------------
+   単一ファイル構成。コードは以下のセクションに分かれている:
+
+     §1  基盤（DOM取得・パラメータ定義・塗りデータ）
+     §2  汎用ユーティリティ（乱数・色変換・補間）
+     §3  パラメータ入出力（UI ⇄ P）
+     §4  塗りの生成（グラデーション・テクスチャ・金属）
+     §5  フォント・テキストレイアウト・変形
+     §6  ぷくぷく（面の膨らみ）
+     §7  文字描画・面レイヤ・側面
+     §8  背景エフェクト（ウニフラ・ベタフラ・バースト・稲妻）
+     §9  オーバーレイ（稲妻・キラキラ）
+     §10 描画パイプライン本体 draw()
+     §11 ブラシシステム（レイヤー・ストローク）
+     §12 色わけ（セグメント）
+     §13 プレビュー制御（ズーム・再描画スケジューリング）
+     §14 プリセット
+     §15 状態管理（undo/redo・保存・共有・お気に入り）
+     §16 イベント配線・初期化（このセクションのみ実行順に意味がある）
+
+   描画パイプライン:
    glow → extrude → outlines → face(fill→bevel→texture→bolt→gloss)
    全描画は draw(ctx, scale) に集約 → 書き出しも同関数で高解像度に。
    アニメ拡張: draw に time 引数を足せばフレーム描画に転用可能。
-============================================================ */
+================================================================ */
+
+/* ================================================================
+   §1 基盤（DOM取得・パラメータ定義・塗りデータ）
+   ------------------------------------------------------------
+   全コントロールのID一覧（rangeIds/otherIds）と、塗りグラデ定義・キャッシュ。
+================================================================ */
 
 const $ = id => document.getElementById(id);
+
 const cv = $("cv"), ctx = cv.getContext("2d");
 
 /* ---------- パラメータ収集 ---------- */
 const P = {};
+
 const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillHue","pFillSat","pFillLight","pTexInt","pTexScale","pSeed","pMetal","pVary","pPuff","pPuffEdge","pPuffSoft","pPuffSpec","pPuffHard","pPuffGlow","pPuffLight",
   "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
   "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed",
   "pBgAngle","pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY","pBgSpikeJitter"];
+
 const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC",
   "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgGradShape","pBgC1","pBgC2","pTransformMode",
   "pBgSpikeBgOn","pBgSpikeBgC"];
@@ -571,6 +602,102 @@ const OUTLINE_DEFAULTS = [
   {on:true,  color:"#ffd76a", w:10},
   {on:true,  color:"#5a2d00", w:4},
 ];
+
+/* ---------- value noise テクスチャ ---------- */
+const texCache = {key:"", canvas:null};
+
+const sideCache = {key:"", canvas:null};
+
+const RAINBOW_VIVID_COLORS=["#ff0000","#ff8800","#ffee00","#00e64d","#0091ff","#7000ff","#ff00c8"];
+
+const GRADS = {
+  gold:   [[0,"#fffbe0"],[.22,"#ffd76a"],[.45,"#a06a00"],[.52,"#fff3b8"],[.72,"#e8a817"],[1,"#6b3d00"]],
+  silver: [[0,"#ffffff"],[.25,"#cfd6e0"],[.48,"#6c7686"],[.55,"#f4f7fb"],[.78,"#9aa5b5"],[1,"#454e5c"]],
+  fire:   [[0,"#fff9b0"],[.35,"#ffb32e"],[.65,"#ff4d00"],[1,"#7a0f00"]],
+  lava:   [[0,"#ffd23e"],[.4,"#ff6a00"],[.75,"#b31200"],[1,"#3d0500"]],
+  crimson:[[0,"#ff8a6a"],[.45,"#e01515"],[1,"#5e0000"]],
+  rainbow:[[0,"#ff3b3b"],[.17,"#ff9d2e"],[.34,"#ffe23e"],[.5,"#3ddc55"],[.67,"#3aa9ff"],[.84,"#7a5cff"],[1,"#ff4ddb"]],
+  rainbowVivid:[[0,"#ff0000"],[.17,"#ff8800"],[.34,"#ffee00"],[.5,"#00e64d"],[.67,"#0091ff"],[.84,"#7000ff"],[1,"#ff00c8"]],
+  rainbowStripe: makeHardBands(RAINBOW_VIVID_COLORS),
+  chromePink:[[0,"#ffe9f6"],[.18,"#ff8fd0"],[.38,"#c4177e"],[.5,"#fff0fa"],[.62,"#a80f68"],[.85,"#ff7cc8"],[1,"#7c0a4d"]],
+  chromeBlue:[[0,"#eef6ff"],[.2,"#9cc8f0"],[.4,"#1e3a5f"],[.5,"#ffffff"],[.65,"#16304f"],[.85,"#7fb2e8"],[1,"#0a1c33"]],
+  diamond:[[0,"#ffffff"],[.15,"#dfe9f5"],[.3,"#ffffff"],[.45,"#b9c9dd"],[.55,"#ffffff"],[.7,"#cdd9e8"],[.85,"#ffffff"],[1,"#aebfd6"]],
+};
+
+const METAL_PAL={
+  metalGold:  [[58,32,0],  [255,248,216]],
+  metalSilver:[[38,42,52], [255,255,255]],
+  metalCopper:[[72,30,10], [255,224,200]],
+};
+
+/* ================================================================
+   §2 汎用ユーティリティ（乱数・色変換・補間）
+   ------------------------------------------------------------
+   汎用の小道具。乱数はシード付き（mulberry32）で、同じシードなら常に同じ結果になる。
+================================================================ */
+
+/* ---------- 乱数（シード付き） ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+
+function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+
+function lerp(a,b,t){return a+(b-a)*t;}
+
+/* ---------- 色味調整（色相・彩度・明るさ） ----------
+   どのグラデ（内蔵・プロシージャル金属・カスタム）にも後掛けできる汎用調整。
+   「プリセットの色が強すぎる／好みの色相に寄せたい」をUIから直接いじれるように。 */
+function parseColorToRgb(c){
+  if(c[0]==="#") return hex(c);
+  const m=c.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+  return m ? [+m[1],+m[2],+m[3]] : [0,0,0];
+}
+
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0,s=0; const l=(max+min)/2;
+  const d=max-min;
+  if(d>0){
+    s=l>.5 ? d/(2-max-min) : d/(max+min);
+    if(max===r) h=((g-b)/d+(g<b?6:0));
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h/=6;
+  }
+  return [h,s,l];
+}
+
+function hslToRgb(h,s,l){
+  if(s===0){const v=l*255; return [v,v,v];}
+  const q=l<.5 ? l*(1+s) : l+s-l*s, p=2*l-q;
+  const hue=t=>{
+    t=((t%1)+1)%1;
+    if(t<1/6) return p+(q-p)*6*t;
+    if(t<1/2) return q;
+    if(t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  };
+  return [hue(h+1/3)*255, hue(h)*255, hue(h-1/3)*255];
+}
+
+function adjustColor(c, hueDeg, satPct, lightPct){
+  if(hueDeg===0 && satPct===100 && lightPct===0) return c; // 無調整なら素通し
+  const [r,g,b]=parseColorToRgb(c);
+  let [h,s,l]=rgbToHsl(r,g,b);
+  h=((h+hueDeg/360)%1+1)%1;
+  s=Math.max(0,Math.min(1,s*(satPct/100)));
+  l=Math.max(0,Math.min(1,l+lightPct/100));
+  const [nr,ng,nb]=hslToRgb(h,s,l);
+  return `rgb(${nr|0},${ng|0},${nb|0})`;
+}
+
+/* ================================================================
+   §3 パラメータ入出力（UI ⇄ P）
+   ------------------------------------------------------------
+   全コントロールの値をグローバル P に吸い上げる readParams と、縁取りスロットUIの生成。
+   readParams は値の収集に加えて「どの行を表示するか」のUI出し分けも担う。
+================================================================ */
+
 function buildOutlineUI(){
   const sec = $("outlineSec");
   sec.innerHTML = "";
@@ -675,12 +802,12 @@ function readParams(){
   $("perspHint").style.display = isPersp ? "block":"none";
 }
 
-/* ---------- 乱数（シード付き） ---------- */
-function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+/* ================================================================
+   §4 塗りの生成（グラデーション・テクスチャ・金属）
+   ------------------------------------------------------------
+   面の塗りに使うグラデ定義・value noiseテクスチャ・プロシージャル金属ストップの生成。
+================================================================ */
 
-/* ---------- value noise テクスチャ ---------- */
-const texCache = {key:"", canvas:null};
-const sideCache = {key:"", canvas:null};
 function makeTexture(type, scale, seed){
   const key = type+"_"+scale+"_"+seed;
   if(texCache.key===key) return texCache.canvas;
@@ -797,20 +924,7 @@ function makeHardBands(colors){
   }
   return st;
 }
-const RAINBOW_VIVID_COLORS=["#ff0000","#ff8800","#ffee00","#00e64d","#0091ff","#7000ff","#ff00c8"];
-const GRADS = {
-  gold:   [[0,"#fffbe0"],[.22,"#ffd76a"],[.45,"#a06a00"],[.52,"#fff3b8"],[.72,"#e8a817"],[1,"#6b3d00"]],
-  silver: [[0,"#ffffff"],[.25,"#cfd6e0"],[.48,"#6c7686"],[.55,"#f4f7fb"],[.78,"#9aa5b5"],[1,"#454e5c"]],
-  fire:   [[0,"#fff9b0"],[.35,"#ffb32e"],[.65,"#ff4d00"],[1,"#7a0f00"]],
-  lava:   [[0,"#ffd23e"],[.4,"#ff6a00"],[.75,"#b31200"],[1,"#3d0500"]],
-  crimson:[[0,"#ff8a6a"],[.45,"#e01515"],[1,"#5e0000"]],
-  rainbow:[[0,"#ff3b3b"],[.17,"#ff9d2e"],[.34,"#ffe23e"],[.5,"#3ddc55"],[.67,"#3aa9ff"],[.84,"#7a5cff"],[1,"#ff4ddb"]],
-  rainbowVivid:[[0,"#ff0000"],[.17,"#ff8800"],[.34,"#ffee00"],[.5,"#00e64d"],[.67,"#0091ff"],[.84,"#7000ff"],[1,"#ff00c8"]],
-  rainbowStripe: makeHardBands(RAINBOW_VIVID_COLORS),
-  chromePink:[[0,"#ffe9f6"],[.18,"#ff8fd0"],[.38,"#c4177e"],[.5,"#fff0fa"],[.62,"#a80f68"],[.85,"#ff7cc8"],[1,"#7c0a4d"]],
-  chromeBlue:[[0,"#eef6ff"],[.2,"#9cc8f0"],[.4,"#1e3a5f"],[.5,"#ffffff"],[.65,"#16304f"],[.85,"#7fb2e8"],[1,"#0a1c33"]],
-  diamond:[[0,"#ffffff"],[.15,"#dfe9f5"],[.3,"#ffffff"],[.45,"#b9c9dd"],[.55,"#ffffff"],[.7,"#cdd9e8"],[.85,"#ffffff"],[1,"#aebfd6"]],
-};
+
 function makeGradient(g, x0,y0,x1,y1, repeat, stops){
   const grad=g.createLinearGradient(x0,y0,x1,y1);
   for(let r=0;r<repeat;r++){
@@ -857,6 +971,7 @@ function makeMetalStops(seed,dark,light,horizon,coarse,raw){
   push(1,.45+r()*.35);
   return st;
 }
+
 function sampleStops(st,t){
   if(t<=st[0][0]) return st[0][1];
   for(let i=1;i<st.length;i++){
@@ -868,55 +983,7 @@ function sampleStops(st,t){
   }
   return st[st.length-1][1];
 }
-const METAL_PAL={
-  metalGold:  [[58,32,0],  [255,248,216]],
-  metalSilver:[[38,42,52], [255,255,255]],
-  metalCopper:[[72,30,10], [255,224,200]],
-};
-/* ---------- 色味調整（色相・彩度・明るさ） ----------
-   どのグラデ（内蔵・プロシージャル金属・カスタム）にも後掛けできる汎用調整。
-   「プリセットの色が強すぎる／好みの色相に寄せたい」をUIから直接いじれるように。 */
-function parseColorToRgb(c){
-  if(c[0]==="#") return hex(c);
-  const m=c.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
-  return m ? [+m[1],+m[2],+m[3]] : [0,0,0];
-}
-function rgbToHsl(r,g,b){
-  r/=255; g/=255; b/=255;
-  const max=Math.max(r,g,b), min=Math.min(r,g,b);
-  let h=0,s=0; const l=(max+min)/2;
-  const d=max-min;
-  if(d>0){
-    s=l>.5 ? d/(2-max-min) : d/(max+min);
-    if(max===r) h=((g-b)/d+(g<b?6:0));
-    else if(max===g) h=(b-r)/d+2;
-    else h=(r-g)/d+4;
-    h/=6;
-  }
-  return [h,s,l];
-}
-function hslToRgb(h,s,l){
-  if(s===0){const v=l*255; return [v,v,v];}
-  const q=l<.5 ? l*(1+s) : l+s-l*s, p=2*l-q;
-  const hue=t=>{
-    t=((t%1)+1)%1;
-    if(t<1/6) return p+(q-p)*6*t;
-    if(t<1/2) return q;
-    if(t<2/3) return p+(q-p)*(2/3-t)*6;
-    return p;
-  };
-  return [hue(h+1/3)*255, hue(h)*255, hue(h-1/3)*255];
-}
-function adjustColor(c, hueDeg, satPct, lightPct){
-  if(hueDeg===0 && satPct===100 && lightPct===0) return c; // 無調整なら素通し
-  const [r,g,b]=parseColorToRgb(c);
-  let [h,s,l]=rgbToHsl(r,g,b);
-  h=((h+hueDeg/360)%1+1)%1;
-  s=Math.max(0,Math.min(1,s*(satPct/100)));
-  l=Math.max(0,Math.min(1,l+lightPct/100));
-  const [nr,ng,nb]=hslToRgb(h,s,l);
-  return `rgb(${nr|0},${ng|0},${nb|0})`;
-}
+
 function getFillStops(seg){
   // 各セグメントの色はP.segFills[seg]に保存されている(seg0=全体も含む)。
   // 無ければグローバル(P.pFill等)にフォールバック＝区切り未使用や旧データと完全一致。
@@ -937,6 +1004,13 @@ function getFillStops(seg){
   return stops.map(([p,c])=>[p, adjustColor(c,hue,sat,light)]);
 }
 
+/* ================================================================
+   §5 フォント・テキストレイアウト・変形
+   ------------------------------------------------------------
+   文字の配置計算（layoutText）と、アーチ/扇形/パースなどの変形（applyTransformWarp）、
+   キャンバスサイズ算出、全体回転、台形変形。
+================================================================ */
+
 /* ---------- レイアウト（文字ごと配置） ---------- */
 // フォントごとの太さ。太ウェイトを積んでいるものは重い数値を指定する。
 function fontWeight(f){
@@ -944,11 +1018,13 @@ function fontWeight(f){
   if(f==="Zen Maru Gothic") return "900 ";
   return "400 ";
 }
+
 function fontStr(size){
   const f=P.pFont;
   if(f==="system-heavy") return `900 ${size}px "Hiragino Sans","Yu Gothic",sans-serif`;
   return `${fontWeight(f)}${size}px "${f}"`;
 }
+
 /* Canvas+Webフォントの既知の癖対策: プリセット適用など「スクリプトから一気にフォントを
    差し替えて即描画」すると、ブラウザのフォントシェイピングが追いつかず前のフォントの
    まま描かれることがある（手動でもう一度選び直すと直るのはこの遅延が解消されるため）。
@@ -959,6 +1035,7 @@ function warmupFont(fontName){
   g.font=`${fontWeight(fontName)}150px "${fontName}"`;
   g.fillText("激アツ",0,50);
 }
+
 function layoutText(g){
   const size=P.pSize;
   // 行数は最大10。縦長すぎる文字は実用的でないため、11行目以降は切り捨てる。
@@ -1095,26 +1172,93 @@ function applyTransformWarp(chars, size){
   }
 }
 
-/* 全文字を指定スタイルで描画（mode: "fill"|"stroke"、styleFnで文字ごとに色変更可）。
-   styleFnはfill時はfillStyle、stroke時はstrokeStyleに適用される。
-   segOnlyを渡すと、そのセグメントの文字だけを描く（側面の色わけ塗り分け用）。 */
-function drawChars(g, L, mode, dx=0, dy=0, styleFn=null, segOnly=null){
-  const tilt=P.pTilt*Math.PI/180;
-  let i=0;
+/* ---------- メイン描画 ---------- */
+function computeCanvasSize(L){
+  const maxStroke=Math.max(...P.outlines.filter(o=>o.on).map(o=>o.w),0);
+  const glowPad=P.pGlowOn?P.pGlowBlur*2:0;
+  const exPad=P.pExDepth+4;
+  // 変形(アーチ/扇形/パース)による実際のはみ出し量を文字ごとの計算結果から動的に算出。
+  // モードごとに個別の余白式を持たせず、実測ベースにすることで新モード追加時も自動対応する。
+  let warpPad=0;
   for(const c of L.chars){
-    if(segOnly!==null && (c.seg||0)!==segOnly){ i++; continue; }
-    if(styleFn){ const st=styleFn(c,i); if(mode==="fill") g.fillStyle=st; else g.strokeStyle=st; }
-    i++;
-    g.save();
-    g.translate(c.cx+c.warpDx+dx, c.cy+c.jitY+c.warpDy+dy);
-    g.rotate(c.jitR+c.warpRot);
-    if(c.warpScale!==1) g.scale(c.warpScale,c.warpScale);
-    g.transform(1,0,Math.tan(-tilt),1,0,0);
-    if(mode==="fill") g.fillText(c.ch,0,0);
-    else g.strokeText(c.ch,0,0);
-    g.restore();
+    const disp=Math.hypot(c.warpDx,c.warpDy) + L.size*Math.max(0,c.warpScale-1)*0.6;
+    if(disp>warpPad) warpPad=disp;
+  }
+  const pad0=maxStroke+glowPad+exPad+warpPad+P.pJitY+30;
+  const tiltPad=Math.abs(Math.tan(P.pTilt*Math.PI/180))*L.size;
+  // 全体回転ぶんの余白: 回転で四隅がキャンバス外にはみ出さないよう保守的に確保
+  const rotRad=Math.abs(P.pRotate||0)*Math.PI/180;
+  const rotPad = rotRad>0.001 ? Math.max(L.maxW,L.totalH)*0.5*Math.sin(rotRad) : 0;
+  const pad=pad0+rotPad;
+  // 台形(キーストーン)ぶんの横幅余白: パディング(グロー・押し出し用)は膨らませず、
+  // 文字の実寸ぶんだけ広げる。パディングごと拡大すると全体がドカンと肥大化してしまうため。
+  const trapScale=Math.max(1,(P.pTrapTop||100)/100,(P.pTrapBottom||100)/100);
+  const trapExtra=(trapScale-1)*L.maxW;
+  return {
+    W:Math.ceil(L.maxW+trapExtra+pad*2+tiltPad*2),
+    H:Math.ceil(L.totalH+pad*2),
+    pad
+  };
+}
+
+/* 全体回転（剛体）: 文字ブロックの縦中心を軸に、translate(offX,offY)+scale直後に呼ぶ想定。
+   個々の文字を歪める「傾き」(シアー)とは別物＝ここでは文字配置ごとそのまま回す。
+   7箇所の「文字空間に入る」変換すべてで同じ軸を使うことで面・立体・マスクのズレを防ぐ。 */
+function applyWholeRotation(g, L){
+  const rot=(P.pRotate||0)*Math.PI/180;
+  if(Math.abs(rot)<0.0001) return;
+  const pivotY=(L.lines-1)*L.lineH/2;
+  g.translate(0,pivotY);
+  g.rotate(rot);
+  g.translate(0,-pivotY);
+}
+
+/* 台形（キーストーン）: 個々の文字ではなく完成済みの絵(グロー・立体・面・ブラシ全部込み)を
+   横方向の細い帯にスライスし、上端→下端で帯ごとに横幅を変えながら再配置する。
+   canvas 2Dは真の射影変換を持たないため、この「帯分割」が実用上いちばん確実に
+   台形の見た目を作れる方法（帯を細くするほど滑らかな斜辺になる）。
+   グロー・押し出しなど「固定ピクセル量であるべき効果」まで一緒に引き伸ばすと、
+   ボケ幅や厚みが間延びして「のっぺり」した見た目になる。それを避けるため、
+   文字の実寸＋ごく一部の縁だけを拡縮対象にし、外側の余白は拡縮せず平行移動のみに留める。 */
+function applyTrapezoid(mg, cw, ch, quality, contentHalfW, offX){
+  const top=(P.pTrapTop!==undefined?P.pTrapTop:100)/100;
+  const bottom=(P.pTrapBottom!==undefined?P.pTrapBottom:100)/100;
+  if(Math.abs(top-1)<0.005 && Math.abs(bottom-1)<0.005) return; // 無変形なら何もしない
+  // ドラッグ中(low)は完全にスキップ。帯分割は最大で数百回のdrawImageを伴うため、
+  // 台形が有効な状態で「関係ない別のスライダー」を動かしただけでも毎フレーム重くなり、
+  // カクつきの主因になっていた。手を離した本描画(high)でのみ正確に適用する。
+  if(quality!=="high") return;
+  const snapshot=document.createElement("canvas");
+  snapshot.width=cw; snapshot.height=ch;
+  snapshot.getContext("2d").drawImage(mg.canvas,0,0);
+  mg.setTransform(1,0,0,1,0,0);
+  mg.clearRect(0,0,cw,ch);
+  // 帯の太さはキャンバス高さに応じて自動調整（呼び出し回数をおよそ一定に保つ）。
+  // 固定2pxのままだと書き出し倍率3倍・大きめフォント時に数千回のdrawImage呼び出しになり、
+  // 書き出しボタンを押した瞬間に一瞬フリーズしたようになってしまうため。
+  const STRIP=Math.max(2, Math.round(ch/300));
+  const srcL=Math.max(0,offX-contentHalfW), srcR=Math.min(cw,offX+contentHalfW);
+  const leftPadW=srcL, rightPadW=cw-srcR;
+  for(let y=0;y<ch;y+=STRIP){
+    const t=Math.min(1,y/Math.max(1,ch-1));
+    const s=top+(bottom-top)*t;
+    const stripH=Math.min(STRIP,ch-y);
+    const dstHalf=contentHalfW*s;
+    const dstL=offX-dstHalf, dstR=offX+dstHalf;
+    // 左パディング（グロー等の余白）: 拡縮せずそのまま、境界だけ追従させて平行移動
+    if(leftPadW>0.5) mg.drawImage(snapshot, 0,y,leftPadW,stripH, dstL-leftPadW,y,leftPadW,stripH);
+    // 中央: 文字の実寸部分だけを台形に拡縮
+    mg.drawImage(snapshot, srcL,y,srcR-srcL,stripH, dstL,y,dstHalf*2,stripH);
+    // 右パディング: 同様に平行移動のみ
+    if(rightPadW>0.5) mg.drawImage(snapshot, srcR,y,rightPadW,stripH, dstR,y,rightPadW,stripH);
   }
 }
+
+/* ================================================================
+   §6 ぷくぷく（面の膨らみ）
+   ------------------------------------------------------------
+   チャンファー距離変換＋ボックスブラーで擬似法線マップを作り、面をぷっくり見せる。
+================================================================ */
 
 /* ---------- 面レイヤー生成（fill→bevel→texture→bolt→gloss） ---------- */
 /* ぷくぷく用: チャンファー距離変換(2パス, 重み1/√2)。region[i]=1の画素について
@@ -1132,6 +1276,7 @@ function pukuChamfer(region, w, h){
     if(x<w-1&&y<h-1&&d[i+w+1]+D<v)v=d[i+w+1]+D; if(x>0&&y<h-1&&d[i+w-1]+D<v)v=d[i+w-1]+D; d[i]=v;}
   return d;
 }
+
 function pukuBoxBlur(src,w,h,r,passes){
   if(r<1)return src.slice(); let a=src.slice(),b=new Float32Array(w*h);const n=2*r+1;
   for(let p=0;p<passes;p++){
@@ -1142,6 +1287,7 @@ function pukuBoxBlur(src,w,h,r,passes){
       for(let y=0;y<h;y++){a[y*w+x]=acc/n;acc+=b[Math.min(h-1,y+r+1)*w+x]-b[Math.max(0,y-r)*w+x];}}}
   return a;
 }
+
 /* ぷくぷき陰影を「既に面が描かれたキャンバスc」の上に乗せる。
    cのアルファからシルエットを取り距離変換→高さ場→フチ影/ソフト影/頂点ハイライトを
    source-atopで面内だけに合成する。faceScaleは表示スケール(高さ量の基準)。 */
@@ -1208,6 +1354,65 @@ function applyPuff(c, faceScale, glyphSize){
     od[o+3]=sd[o+3]; // 元のアルファを保持(AAエッジもそのまま)
   }
   g.putImageData(out,0,0);
+}
+
+/* ================================================================
+   §7 文字描画・面レイヤ・側面
+   ------------------------------------------------------------
+   文字パスの描画プリミティブと、面レイヤ（塗り→ベベル→テクスチャ→ツヤ）、
+   立体（extrude）側面のシーン生成。
+================================================================ */
+
+/* 全文字を指定スタイルで描画（mode: "fill"|"stroke"、styleFnで文字ごとに色変更可）。
+   styleFnはfill時はfillStyle、stroke時はstrokeStyleに適用される。
+   segOnlyを渡すと、そのセグメントの文字だけを描く（側面の色わけ塗り分け用）。 */
+function drawChars(g, L, mode, dx=0, dy=0, styleFn=null, segOnly=null){
+  const tilt=P.pTilt*Math.PI/180;
+  let i=0;
+  for(const c of L.chars){
+    if(segOnly!==null && (c.seg||0)!==segOnly){ i++; continue; }
+    if(styleFn){ const st=styleFn(c,i); if(mode==="fill") g.fillStyle=st; else g.strokeStyle=st; }
+    i++;
+    g.save();
+    g.translate(c.cx+c.warpDx+dx, c.cy+c.jitY+c.warpDy+dy);
+    g.rotate(c.jitR+c.warpRot);
+    if(c.warpScale!==1) g.scale(c.warpScale,c.warpScale);
+    g.transform(1,0,Math.tan(-tilt),1,0,0);
+    if(mode==="fill") g.fillText(c.ch,0,0);
+    else g.strokeText(c.ch,0,0);
+    g.restore();
+  }
+}
+
+/* 画面外shadowテク: 実体を遠くに描き、ぼけた影だけを正位置に落とす（iOS対応の古典ぼかし） */
+function softChars(g,L,color,blur,dx,dy,scale){
+  const OFF=20000;
+  g.save();
+  g.shadowColor=color; g.shadowBlur=blur*scale;
+  g.shadowOffsetX=OFF; g.shadowOffsetY=0;
+  g.fillStyle="#000";
+  g.translate(-OFF/scale,0);
+  drawChars(g,L,"fill",dx,dy);
+  g.restore();
+}
+
+/* 同・stroke版（ぼけた輪郭線） */
+
+/* ベベル用: わずかに縮小した本体（中央塗り戻し） */
+function drawCharsInset(g,L,bv,styleFn=null){
+  let i=0;
+  for(const c of L.chars){
+    if(styleFn) g.fillStyle=styleFn(c,i);
+    i++;
+    g.save();
+    g.translate(c.cx+c.warpDx, c.cy+c.jitY+c.warpDy);
+    g.rotate(c.jitR+c.warpRot);
+    g.transform(1,0,Math.tan(-P.pTilt*Math.PI/180),1,0,0);
+    const k=(1-(bv*2)/L.size)*c.warpScale;
+    g.scale(k,k);
+    g.fillText(c.ch,0,0);
+    g.restore();
+  }
 }
 
 function buildFaceLayer(W,H,offX,offY,L,scale,quality){
@@ -1344,115 +1549,521 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   }
   return c;
 }
-/* 画面外shadowテク: 実体を遠くに描き、ぼけた影だけを正位置に落とす（iOS対応の古典ぼかし） */
-function softChars(g,L,color,blur,dx,dy,scale){
+
+/* ---------- 側面レイヤー（マスク切り出し＋環境映り込み） ----------
+   側面領域＝押し出しスタンプの和集合−本体シルエット。その中に
+   「空→地平線（シャープな暗線）→照り返し」の水平環境グラデを押し出し色から
+   自動生成して描き込み、法線ハイライト帯（ずらし差分）を重ねる。 */
+function buildSideSheen(cw,ch,offX,offY,L,scale,maxOW,ux,uy,d){
+  const la=P.pExLight*Math.PI/180;
+  const w=P.pExSpecW;
+  const mkC=()=>{const c=document.createElement("canvas");c.width=cw;c.height=ch;return c;};
+  const setupText=g=>{
+    g.setTransform(1,0,0,1,0,0);
+    g.clearRect(0,0,cw,ch);
+    g.translate(offX,offY); g.scale(scale,scale);
+    applyWholeRotation(g,L);
+    g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
+    g.lineJoin="round"; g.miterLimit=2;
+  };
+  /* 使い回しバッファ3枚（12方向ぶん毎回作るとメモリを食うため） */
+  const eC=mkC(), eg=eC.getContext("2d");
+  const sC=mkC(), sg=sC.getContext("2d");
+  const bC=mkC(), bg2=bC.getContext("2d");
   const OFF=20000;
+  const drawSil=(g,color,dx=0,dy=0)=>{
+    g.fillStyle=color; g.strokeStyle=color;
+    if(maxOW>0){g.lineWidth=maxOW; drawChars(g,L,"stroke",dx,dy);}
+    drawChars(g,L,"fill",dx,dy);
+  };
+  const makeEdge=(dirx,diry,color,s)=>{
+    setupText(eg);
+    drawSil(eg,color);
+    eg.globalCompositeOperation="destination-out";
+    drawSil(eg,color,-dirx*s,-diry*s);
+    eg.globalCompositeOperation="source-over";
+    return eC;
+  };
+  const sweepInto=src=>{
+    sg.setTransform(1,0,0,1,0,0); sg.clearRect(0,0,cw,ch);
+    for(let i=1;i<=d;i++) sg.drawImage(src,ux*i*scale,uy*i*scale);
+    return sC;
+  };
+  const blurInto=(src,color,blur)=>{
+    bg2.setTransform(1,0,0,1,0,0); bg2.clearRect(0,0,cw,ch);
+    bg2.shadowColor=color; bg2.shadowBlur=blur*scale;
+    bg2.shadowOffsetX=OFF; bg2.shadowOffsetY=0;
+    bg2.drawImage(src,-OFF,0);
+    bg2.shadowColor="transparent";
+    return bC;
+  };
+
+  // A) 側面マスク＝スタンプ和集合−本体
+  setupText(eg); drawSil(eg,"#ffffff");
+  const mask=mkC();
+  {const g=mask.getContext("2d");
+   for(let i=1;i<=d;i++) g.drawImage(eC,ux*i*scale,uy*i*scale);
+   g.globalCompositeOperation="destination-out"; g.drawImage(eC,0,0);}
+
+  const refl=mkC(); const rg=refl.getContext("2d");
+  const c1=hex(P.pExC1), c2=hex(P.pExC2);
+  const mix=(a,b,t)=>[lerp(a[0],b[0],t)|0,lerp(a[1],b[1],t)|0,lerp(a[2],b[2],t)|0];
+  const Wt=[255,255,255], Bk=[0,0,0];
+
+  // B) 法線マップ: 12方向のエッジ帯を「光源との角度差」でクローム着色し、
+  //    遠い方向から積む。輪郭のカーブに沿って 純白→明→急落→暗黒→リム光 が回り込む。
+  const NDIR=12;
+  const dirs=[];
+  for(let k=0;k<NDIR;k++){
+    const a=k/NDIR*Math.PI*2;
+    let dd=((a-la)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    if(dd>Math.PI) dd=Math.PI*2-dd;
+    dirs.push({a,dd});
+  }
+  dirs.sort((p2,q)=>q.dd-p2.dd);
+  for(const {a,dd} of dirs){
+    const t=(Math.cos(dd)+1)/2;   // 1=光源正面, 0=真裏
+    let col;
+    if(t>.93)      col=Wt;                          // スペキュラ＝純白
+    else if(t>.7)  col=mix(c1,Wt,.35+(t-.7)*2.4);   // 明るい地色
+    else if(t>.42) col=mix(c1,Bk,(.7-t)*1.5);       // 急落
+    else if(t>.15) col=mix(c2,Bk,.5);               // 暗部＝ほぼ黒
+    else           col=mix(c1,Wt,.3);               // 真裏のリム＝環境の拾い光
+    const cs=`rgb(${col[0]},${col[1]},${col[2]})`;
+    rg.drawImage(blurInto(sweepInto(makeEdge(Math.cos(a),Math.sin(a),cs,w)),cs,Math.max(1,w*.3)),0,0);
+  }
+
+  // 側面の実在Y範囲（上向き押し出しにも対応）
+  const fromY=offY-(L.size/2)*scale-Math.max(0,-uy)*d*scale;
+  const spanY=((L.lines-1)*L.lineH+L.size)*scale+Math.abs(uy)*d*scale+2;
+
+  // D) ランダム閃き（法線追従・局所化）: ランダム方向のエッジ帯を
+  //    楕円フェードマスクで局所的に抜く＝カーブに沿った柔らかい端の白閃き
+  if(P.pExFlash>0){
+    const gr=mulberry32(P.pSeed*29+7);
+    for(let i=0;i<P.pExFlash;i++){
+      const a=la+(gr()*2-1)*1.0;             // 光源寄り±57°
+      const ew=w*(.6+gr()*.7);
+      const band=sweepInto(makeEdge(Math.cos(a),Math.sin(a),"rgba(255,255,255,.85)",ew));
+      // 楕円フェードでband断片を抜く（bCバッファ流用）
+      bg2.setTransform(1,0,0,1,0,0);
+      bg2.shadowColor="transparent"; bg2.shadowOffsetX=0; bg2.shadowBlur=0;
+      bg2.clearRect(0,0,cw,ch);
+      bg2.drawImage(band,0,0);
+      bg2.globalCompositeOperation="destination-in";
+      const x0=gr()*cw, y0=fromY+gr()*spanY;
+      const rx=cw*(.07+gr()*.14), ry=(8+gr()*18)*scale;
+      bg2.save(); bg2.translate(x0,y0); bg2.scale(rx,ry);
+      const fal=bg2.createRadialGradient(0,0,0,0,0,1);
+      fal.addColorStop(0,"rgba(255,255,255,1)");
+      fal.addColorStop(.55,"rgba(255,255,255,.85)");
+      fal.addColorStop(1,"rgba(255,255,255,0)");
+      bg2.fillStyle=fal; bg2.fillRect(-1,-1,2,2);
+      bg2.restore();
+      bg2.globalCompositeOperation="source-over";
+      rg.drawImage(bC,0,0);
+    }
+  }
+
+  // E) 側面マスクで切り出し
+  rg.globalCompositeOperation="destination-in";
+  rg.drawImage(mask,0,0);
+  return refl;
+}
+
+/* ================================================================
+   §8 背景エフェクト（ウニフラ・ベタフラ・バースト・稲妻）
+   ------------------------------------------------------------
+   背景に敷く集中線・爆発系のエフェクト群。
+================================================================ */
+
+/* ウニフラ用の形状パス（放射状のトゲのみ）を現在のcontextに構築して塗る。
+   中心の芯を塗る仕組みは撤去済み（ウニフラの中心は常に空洞）。
+   ベタフラは別方式（drawBetaflash、フチから中心へ刺さるトゲを直接描く）のため
+   この関数を使わない。 */
+function buildSpikeBurstPath(g, cx, cy, count, len, width, innerRX, innerRY, jitter, seed){
+  const rnd=mulberry32((seed||1)*677+11);
+  g.beginPath();
+  for(let i=0;i<count;i++){
+    // 角度・長さ・太さ・膨らみ位置、それぞれ別々にばらつかせる（乱れ量に応じて全部連動）。
+    // 長さだけ揺らしても放射状の規則正しさが目立ってしまうため、他の要素も揺らして
+    // 手描きのウニ／花火のような有機的な不揃いさにする。
+    // 角度のばらつきは「隣のトゲの持ち場を追い越さない」範囲に抑える。
+    // ここが広すぎると隣同士の並び順が入れ替わってしまい、トゲの輪郭が
+    // 互いに交差して見た目が崩れる（線がクロスして見える）ため、上限を0.45に固定。
+    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*(0.15+jitter*0.3);
+    const spikeLen=len*(1+(rnd()*2-1)*jitter);
+    if(spikeLen<=0) continue;
+    const halfW=Math.max(0.5,(width/2)*(1+(rnd()*2-1)*jitter*.8));
+    const cosA=Math.cos(a), sinA=Math.sin(a);
+    const ix=cx+cosA*innerRX, iy=cy+sinA*innerRY;
+    const ox=cx+cosA*(innerRX+spikeLen), oy=cy+sinA*(innerRY+spikeLen);
+    const perpX=-sinA, perpY=cosA;
+    // 紡錘形（根元・先端どちらも点に収束、中間だけ膨らむ）を二次ベジェ曲線2本で滑らかに描く。
+    // 直線でつなぐと角ばった凧形になってしまうため、制御点をふくらみの位置より少し
+    // 外側に置くことで、根元→ふくらみ→先端がなだらかな曲線でつながるようにしている。
+    const midT=0.28+rnd()*0.16; // 膨らみの位置も個体差を出す
+    const midX=ix+(ox-ix)*midT, midY=iy+(oy-iy)*midT;
+    const bulge=halfW*1.6;
+    g.moveTo(ix,iy);
+    g.quadraticCurveTo(midX+perpX*bulge, midY+perpY*bulge, ox, oy);
+    g.quadraticCurveTo(midX-perpX*bulge, midY-perpY*bulge, ix, iy);
+    g.closePath();
+  }
+  g.fill();
+}
+
+/* ウニフラ: トゲの形そのものを色で塗る。芯は常に空洞（中心をくり抜かない設定は撤去済み）。 */
+function drawSpikeRing(g, cx, cy, color, count, len, width, innerRX, innerRY, jitter, seed){
+  if(len<=0 || count<=0) return;
   g.save();
-  g.shadowColor=color; g.shadowBlur=blur*scale;
-  g.shadowOffsetX=OFF; g.shadowOffsetY=0;
-  g.fillStyle="#000";
-  g.translate(-OFF/scale,0);
-  drawChars(g,L,"fill",dx,dy);
+  g.fillStyle=color;
+  buildSpikeBurstPath(g, cx, cy, count, len, width, innerRX, innerRY, jitter, seed);
   g.restore();
 }
-/* 同・stroke版（ぼけた輪郭線） */
 
-/* ベベル用: わずかに縮小した本体（中央塗り戻し） */
-function drawCharsInset(g,L,bv,styleFn=null){
-  let i=0;
-  for(const c of L.chars){
-    if(styleFn) g.fillStyle=styleFn(c,i);
-    i++;
-    g.save();
-    g.translate(c.cx+c.warpDx, c.cy+c.jitY+c.warpDy);
-    g.rotate(c.jitR+c.warpRot);
-    g.transform(1,0,Math.tan(-P.pTilt*Math.PI/180),1,0,0);
-    const k=(1-(bv*2)/L.size)*c.warpScale;
-    g.scale(k,k);
-    g.fillText(c.ch,0,0);
-    g.restore();
+/* ベタフラ: 画面のフチから中心へ向かって刺さる、細長い楔形のトゲを大量に直接描く。
+   フチ側はトゲが太く隣同士が重なるため自然にベタ塗りになり、中心へ向かうほど
+   細く尖って、先端の届かない中央は透明のまま残る（参考画像の構造そのまま）。
+   以前の「全面を塗ってから形をくり抜く」方式は、くり抜く形の設計そのものが
+   イメージと合わず迷走したため、トゲを直接描く方式に全面変更した。
+   coreRX/coreRY=中央の透明領域の目安半径（トゲの先端がこの縁あたりで止まる）。 */
+function drawBetaflash(g, cx, cy, cw, ch, color, count, coreRX, coreRY, jitter, seed){
+  const rnd=mulberry32((seed||1)*677+11);
+  g.save();
+  g.fillStyle=color;
+  const edgeR=Math.hypot(cw,ch)/2; // キャンバス対角の半分=フチまで確実に届く長さ
+  g.beginPath();
+  for(let i=0;i<count;i++){
+    // 角度のばらつきは「隣のトゲの持ち場を追い越さない」範囲に抑える（ウニフラと同じ式）。
+    // ベタフラは根元が太いぶん、角度がばらつくと根元同士が重なって交差して見えるため、
+    // 乱れを上げても角度の揺れ幅だけは最大0.45に制限する（見た目の乱れは先端位置で出す）。
+    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*(0.15+jitter*0.3);
+    const cosA=Math.cos(a), sinA=Math.sin(a);
+    // トゲの先端: 中央の透明領域の縁を基準に、乱れに応じて内外へゆらぐ
+    const tipR=1+(rnd()*2-1)*jitter*.5;
+    const tipX=cx+cosA*coreRX*tipR, tipY=cy+sinA*coreRY*tipR;
+    // トゲの根元: フチの外側（確実に画面外）
+    const baseX=cx+cosA*edgeR*1.1, baseY=cy+sinA*edgeR*1.1;
+    // 根元の幅: 隣同士が重なる程度に太く（重なり具合にも個体差）
+    const baseHalfW=(Math.PI*2/count)*edgeR*0.75*(0.8+rnd()*0.5);
+    const perpX=-sinA, perpY=cosA;
+    g.moveTo(tipX,tipY);
+    g.lineTo(baseX+perpX*baseHalfW, baseY+perpY*baseHalfW);
+    g.lineTo(baseX-perpX*baseHalfW, baseY-perpY*baseHalfW);
+    g.closePath();
+  }
+  g.fill();
+  g.restore();
+}
+
+/* 楕円コア: 中心の白熱フラッシュ。translate→scale(rx,ry)で単位円グラデを楕円化。
+   ウニフラと同じく横半径・縦半径で形を、sizeで大きさを制御する。
+   coreCol=芯色(中心寄り)、edgeCol=外周へ向かう色。芯色を効かせるため中間に挟む。 */
+function drawEllipseCore(g, cx, cy, rx, ry, coreCol, edgeCol){
+  g.save();
+  g.translate(cx,cy); g.scale(Math.max(1,rx), Math.max(1,ry));
+  const core=g.createRadialGradient(0,0,0,0,0,1);
+  core.addColorStop(0,"rgba(255,255,255,1)");   // 中心は白熱
+  core.addColorStop(0.22, coreCol);              // すぐ芯色に(青などがここで出る)
+  core.addColorStop(0.55, edgeCol||coreCol);     // 外周へ向かって中間色
+  core.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=core;
+  g.beginPath(); g.arc(0,0,1,0,7); g.fill();
+  g.restore();
+}
+
+/* バースト: 中心から放射する三角光線(加算)＋楕円コア。col1=芯側/col2=中間色。 */
+function drawBurstBg(g, cx, cy, cw, ch, col1, col2, count, lenPct, coreRX, coreRY, jitter, seed){
+  const rnd=mulberry32((seed||1)*97+1);
+  const maxR=Math.hypot(cw,ch)*0.6;
+  g.save();
+  g.globalCompositeOperation="lighter";
+  for(let i=0;i<count;i++){
+    const a=(i/count)*Math.PI*2 + (rnd()-0.5)*jitter*0.3;
+    const len=maxR*lenPct*(0.5+rnd()*0.6);
+    const halfW=(Math.PI*2/count)*(0.18+rnd()*0.5); // 光線の角度半幅
+    const a1=a-halfW*0.5, a2=a+halfW*0.5;
+    g.beginPath();
+    g.moveTo(cx,cy);
+    g.lineTo(cx+Math.cos(a1)*len, cy+Math.sin(a1)*len);
+    g.lineTo(cx+Math.cos(a2)*len, cy+Math.sin(a2)*len);
+    g.closePath();
+    const grad=g.createLinearGradient(cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len);
+    grad.addColorStop(0,col1);
+    grad.addColorStop(0.3,col2);
+    grad.addColorStop(1,"rgba(0,0,0,0)");
+    g.fillStyle=grad; g.fill();
+  }
+  drawEllipseCore(g,cx,cy,coreRX,coreRY,col1,col2); // 芯=col1, 外周=col2
+  g.restore();
+}
+
+/* 稲妻: 集中線＋枝分かれする太い電撃(3層グロー)＋キラキラ＋楕円コア。
+   col=芯(白)/glowCol=グロー色。太さwidthPx、本数mainCount。 */
+function drawBoltBg(g, cx, cy, cw, ch, col, glowCol, mainCount, widthPx, coreRX, coreRY, jitter, seed){
+  const rnd=mulberry32((seed||1)*131+7);
+  const maxR=Math.hypot(cw,ch)*0.62;
+  g.save();
+  g.globalCompositeOperation="lighter";
+  // ① 集中線(スピードライン)
+  const lineN=90;
+  for(let i=0;i<lineN;i++){
+    const a=(i/lineN)*Math.PI*2+(rnd()-0.5)*0.05;
+    const r0=maxR*(0.12+rnd()*0.1), r1=maxR*(0.7+rnd()*0.5);
+    g.strokeStyle=glowCol; g.globalAlpha=0.10+rnd()*0.13; g.lineWidth=0.4+rnd()*1.4;
+    g.beginPath(); g.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
+    g.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); g.stroke();
+  }
+  g.globalAlpha=1;
+  // ② 稲妻本体(枝分かれ再帰、3層描画)
+  function bolt(x,y,ang,len,wid,depth){
+    const segs=Math.max(4,(len/26)|0); const pts=[[x,y]];
+    for(let s=0;s<segs;s++){
+      const t=(s+1)/segs;
+      const jit=(rnd()-0.5)*len*0.20*(1-t*0.2)*(0.5+jitter);
+      const perp=ang+Math.PI/2;
+      const px=x+Math.cos(ang)*len*t+Math.cos(perp)*jit;
+      const py=y+Math.sin(ang)*len*t+Math.sin(perp)*jit;
+      pts.push([px,py]);
+      if(depth>0&&rnd()<0.32&&s>0&&s<segs-1) bolt(px,py,ang+(rnd()-0.5)*1.1,len*(0.4+rnd()*0.35),wid*0.55,depth-1);
+    }
+    const stroke=(w,color,al)=>{ g.strokeStyle=color; g.lineWidth=w; g.globalAlpha=al;
+      g.lineCap="round"; g.lineJoin="round"; g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
+      for(const p of pts)g.lineTo(p[0],p[1]); g.stroke(); };
+    stroke(wid*6,glowCol,0.22); stroke(wid*2.6,glowCol,0.55); stroke(wid*1.15,col,1);
+  }
+  for(let i=0;i<mainCount;i++){
+    const a=(i/mainCount)*Math.PI*2+(rnd()-0.5)*0.35;
+    bolt(cx,cy,a,maxR*(0.6+rnd()*0.4),widthPx,2);
+  }
+  g.globalAlpha=1;
+  // ③ キラキラ粒
+  for(let i=0;i<40;i++){
+    const a=rnd()*Math.PI*2, r=maxR*(0.15+rnd()*0.8);
+    const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r, sz=0.5+rnd()*2.5;
+    g.globalAlpha=0.5+rnd()*0.5;
+    const sg=g.createRadialGradient(sx,sy,0,sx,sy,sz*2);
+    sg.addColorStop(0,"#ffffff"); sg.addColorStop(1,"rgba(255,255,255,0)");
+    g.fillStyle=sg; g.beginPath(); g.arc(sx,sy,sz*2,0,7); g.fill();
+  }
+  g.globalAlpha=1;
+  // ④ 中心フラッシュ(楕円コア)。芯色を中心、グロー色を外周に。
+  drawEllipseCore(g,cx,cy,coreRX,coreRY,col,glowCol);
+  g.restore();
+}
+
+/* ================================================================
+   §9 オーバーレイ（稲妻・キラキラ）
+   ------------------------------------------------------------
+   文字の上に重ねる稲妻とスパークル（十字・星・ハート・花びら等）の描画。
+================================================================ */
+
+/* ---------- 稲妻（枝分かれ・太さ・乱れ対応） ---------- */
+function strokeBolt(g,pts,w,color,glowR){
+  g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]);
+  g.lineJoin="round"; g.lineCap="round";
+  g.strokeStyle=color; g.lineWidth=w*2.2;
+  g.shadowColor=color; g.shadowBlur=glowR;
+  g.stroke(); g.stroke(); // 2度でグロー濃く
+  g.shadowBlur=0;
+  g.strokeStyle="rgba(255,255,255,.95)"; g.lineWidth=Math.max(.8,w*.8); g.stroke();
+}
+
+function drawBolts(g,L,over){
+  const br=mulberry32(P.pSeed*31+P.pBolt*7);
+  const ext=over?L.size*.45:0;
+  const top=-L.size/2-ext, bot=(L.lines-1)*L.lineH+L.size/2+ext;
+  const wBase=L.size*.011*P.pBoltW;
+  const rough=P.pBoltRough/100;
+  const glowR=L.size*.12;
+  for(let b=0;b<P.pBolt;b++){
+    let bx=(br()*2-1)*L.maxW/2, by=top;
+    const pts=[[bx,by]];
+    while(by<bot){
+      bx+=(br()*2-1)*L.size*.5*rough;
+      by+=L.size*(.05+br()*.13);
+      pts.push([bx,by]);
+    }
+    strokeBolt(g,pts,wBase,P.pBoltC,glowR);
+    // 枝分かれ: 幹の途中から細い枝を斜めに
+    for(let k=0;k<P.pBoltBranch;k++){
+      const pi=1+Math.floor(br()*Math.max(1,pts.length-2));
+      let [x,y]=pts[Math.min(pi,pts.length-1)];
+      const dir=br()<.5?-1:1;
+      const bp=[[x,y]];
+      const n=2+Math.floor(br()*3);
+      for(let s=0;s<n;s++){
+        x+=dir*L.size*(.08+br()*.22)*(.5+rough);
+        y+=L.size*(.02+br()*.1);
+        bp.push([x,y]);
+      }
+      strokeBolt(g,bp,wBase*.45,P.pBoltC,glowR*.7);
+    }
   }
 }
 
-/* ---------- メイン描画 ---------- */
-function computeCanvasSize(L){
-  const maxStroke=Math.max(...P.outlines.filter(o=>o.on).map(o=>o.w),0);
-  const glowPad=P.pGlowOn?P.pGlowBlur*2:0;
-  const exPad=P.pExDepth+4;
-  // 変形(アーチ/扇形/パース)による実際のはみ出し量を文字ごとの計算結果から動的に算出。
-  // モードごとに個別の余白式を持たせず、実測ベースにすることで新モード追加時も自動対応する。
-  let warpPad=0;
-  for(const c of L.chars){
-    const disp=Math.hypot(c.warpDx,c.warpDy) + L.size*Math.max(0,c.warpScale-1)*0.6;
-    if(disp>warpPad) warpPad=disp;
-  }
-  const pad0=maxStroke+glowPad+exPad+warpPad+P.pJitY+30;
-  const tiltPad=Math.abs(Math.tan(P.pTilt*Math.PI/180))*L.size;
-  // 全体回転ぶんの余白: 回転で四隅がキャンバス外にはみ出さないよう保守的に確保
-  const rotRad=Math.abs(P.pRotate||0)*Math.PI/180;
-  const rotPad = rotRad>0.001 ? Math.max(L.maxW,L.totalH)*0.5*Math.sin(rotRad) : 0;
-  const pad=pad0+rotPad;
-  // 台形(キーストーン)ぶんの横幅余白: パディング(グロー・押し出し用)は膨らませず、
-  // 文字の実寸ぶんだけ広げる。パディングごと拡大すると全体がドカンと肥大化してしまうため。
-  const trapScale=Math.max(1,(P.pTrapTop||100)/100,(P.pTrapBottom||100)/100);
-  const trapExtra=(trapScale-1)*L.maxW;
-  return {
-    W:Math.ceil(L.maxW+trapExtra+pad*2+tiltPad*2),
-    H:Math.ceil(L.totalH+pad*2),
-    pad
+/* ---------- 十字スパークル ---------- */
+// 加算合成(lighter)で描く前提。呼び出し側でcomposite="lighter"にしてある。
+// 暗い下敷きは加算では効かない（暗色を足しても明るくなるだけ）ので置かない。
+// 光は「重なった芯が自然に白飛びする」加算本来の挙動で立たせる。
+function drawSparkle(g,x,y,r,color,rot,shape){
+  g.save(); g.translate(x,y); g.rotate(rot);
+  const [cr,cg,cb]=hex(color);
+  const lenK=P.pSparkLen/100;
+  const litFill=(cx,cy,rad)=>{ // シェイプ全体を光らせる用のグラデ（中心白→縁で色）
+    const gd=g.createRadialGradient(cx,cy,0,cx,cy,rad);
+    gd.addColorStop(0,"rgba(255,255,255,.95)");
+    gd.addColorStop(.5,`rgba(${Math.min(255,cr+90)},${Math.min(255,cg+90)},${Math.min(255,cb+90)},.95)`);
+    gd.addColorStop(1,`rgba(${cr},${cg},${cb},.8)`);
+    return gd;
   };
-}
-/* 全体回転（剛体）: 文字ブロックの縦中心を軸に、translate(offX,offY)+scale直後に呼ぶ想定。
-   個々の文字を歪める「傾き」(シアー)とは別物＝ここでは文字配置ごとそのまま回す。
-   7箇所の「文字空間に入る」変換すべてで同じ軸を使うことで面・立体・マスクのズレを防ぐ。 */
-function applyWholeRotation(g, L){
-  const rot=(P.pRotate||0)*Math.PI/180;
-  if(Math.abs(rot)<0.0001) return;
-  const pivotY=(L.lines-1)*L.lineH/2;
-  g.translate(0,pivotY);
-  g.rotate(rot);
-  g.translate(0,-pivotY);
-}
-/* 台形（キーストーン）: 個々の文字ではなく完成済みの絵(グロー・立体・面・ブラシ全部込み)を
-   横方向の細い帯にスライスし、上端→下端で帯ごとに横幅を変えながら再配置する。
-   canvas 2Dは真の射影変換を持たないため、この「帯分割」が実用上いちばん確実に
-   台形の見た目を作れる方法（帯を細くするほど滑らかな斜辺になる）。
-   グロー・押し出しなど「固定ピクセル量であるべき効果」まで一緒に引き伸ばすと、
-   ボケ幅や厚みが間延びして「のっぺり」した見た目になる。それを避けるため、
-   文字の実寸＋ごく一部の縁だけを拡縮対象にし、外側の余白は拡縮せず平行移動のみに留める。 */
-function applyTrapezoid(mg, cw, ch, quality, contentHalfW, offX){
-  const top=(P.pTrapTop!==undefined?P.pTrapTop:100)/100;
-  const bottom=(P.pTrapBottom!==undefined?P.pTrapBottom:100)/100;
-  if(Math.abs(top-1)<0.005 && Math.abs(bottom-1)<0.005) return; // 無変形なら何もしない
-  // ドラッグ中(low)は完全にスキップ。帯分割は最大で数百回のdrawImageを伴うため、
-  // 台形が有効な状態で「関係ない別のスライダー」を動かしただけでも毎フレーム重くなり、
-  // カクつきの主因になっていた。手を離した本描画(high)でのみ正確に適用する。
-  if(quality!=="high") return;
-  const snapshot=document.createElement("canvas");
-  snapshot.width=cw; snapshot.height=ch;
-  snapshot.getContext("2d").drawImage(mg.canvas,0,0);
-  mg.setTransform(1,0,0,1,0,0);
-  mg.clearRect(0,0,cw,ch);
-  // 帯の太さはキャンバス高さに応じて自動調整（呼び出し回数をおよそ一定に保つ）。
-  // 固定2pxのままだと書き出し倍率3倍・大きめフォント時に数千回のdrawImage呼び出しになり、
-  // 書き出しボタンを押した瞬間に一瞬フリーズしたようになってしまうため。
-  const STRIP=Math.max(2, Math.round(ch/300));
-  const srcL=Math.max(0,offX-contentHalfW), srcR=Math.min(cw,offX+contentHalfW);
-  const leftPadW=srcL, rightPadW=cw-srcR;
-  for(let y=0;y<ch;y+=STRIP){
-    const t=Math.min(1,y/Math.max(1,ch-1));
-    const s=top+(bottom-top)*t;
-    const stripH=Math.min(STRIP,ch-y);
-    const dstHalf=contentHalfW*s;
-    const dstL=offX-dstHalf, dstR=offX+dstHalf;
-    // 左パディング（グロー等の余白）: 拡縮せずそのまま、境界だけ追従させて平行移動
-    if(leftPadW>0.5) mg.drawImage(snapshot, 0,y,leftPadW,stripH, dstL-leftPadW,y,leftPadW,stripH);
-    // 中央: 文字の実寸部分だけを台形に拡縮
-    mg.drawImage(snapshot, srcL,y,srcR-srcL,stripH, dstL,y,dstHalf*2,stripH);
-    // 右パディング: 同様に平行移動のみ
-    if(rightPadW>0.5) mg.drawImage(snapshot, srcR,y,rightPadW,stripH, dstR,y,rightPadW,stripH);
+  // ハート・花びらは「丸いコア/ハローが形を殺す」ため、それらを一切使わず
+  // シェイプ全体を発光させる。中心の丸に視線が引っ張られる問題を避ける。
+  if(shape==="heart"){
+    // 外周のソフトなグロー（ハート型に沿う。丸ではない）を先に薄く重ねてから本体
+    g.save(); g.scale(1.15,1.15); drawHeartPath(g, r*1.1);
+    g.fillStyle=`rgba(${cr},${cg},${cb},.4)`; g.fill(); g.restore();
+    drawHeartPath(g, r*1.1);
+    g.fillStyle=litFill(0,-r*.1,r*.9); g.fill();
+    g.restore(); return;
   }
+  if(shape==="petal"){
+    // 花びらは1スタンプにつき複数枚（3〜5枚）を、各自バラバラの角度・距離・形・サイズで散らす。
+    // スタンプ位置(x,y)から乱数シードを作るので、置くたびに違う散らばり方になる。
+    const pr=mulberry32(((x*131+y*57)|0)>>>0 || 1);
+    const n=1+Math.floor(pr()*2); // 1〜2枚（ブラシで多数置くと増えるので1スタンプは控えめに）
+    for(let k=0;k<n;k++){
+      const ang=pr()*Math.PI*2;               // 各花びらの向きは完全ランダム（斜め横もOK）
+      const dist=r*(0.15+pr()*0.55);           // 中心からの散らし距離
+      const psize=r*(0.45+pr()*0.5);           // 花びらごとにサイズを変える
+      const skew=0.55+pr()*0.9;                // 左右の膨らみ比＝形の歪みをランダム化
+      const bend=(pr()*2-1)*0.5;               // 反り（左右どちらかへ湾曲）
+      const px=Math.cos(ang)*dist, py=Math.sin(ang)*dist;
+      g.save();
+      g.translate(px,py);
+      g.rotate(ang+Math.PI/2+(pr()*2-1)*0.6);  // 向き＋さらに微ランダム
+      drawPetalPath(g, psize, skew, bend);
+      g.fillStyle=litFill(0,0,psize*1.1); g.fill();
+      g.restore();
+    }
+    g.restore(); return;
+  }
+  // ③ 色つきハロー: 芯の白→スパーク色→透明。以前より広げて(0.6→1.0)柔らかい光の滲みを出す。
+  const halo=g.createRadialGradient(0,0,0,0,0,r);
+  halo.addColorStop(0,"rgba(255,255,255,.95)");
+  halo.addColorStop(.28,`rgba(${cr},${cg},${cb},.6)`);
+  halo.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
+  g.fillStyle=halo;
+  g.beginPath(); g.arc(0,0,r,0,7); g.fill();
+  // ② 光条は「根元が白、先へ向かってスパーク色」のグラデで塗る。
+  // 以前は純白固定だったため、加算合成で白飛びして色がほぼ乗らなかった。
+  // 白飛びする芯は別途コアで作るので、光条自体に色を持たせて色を効かせる。
+  const spike=(len,w,fill)=>{
+    g.beginPath();
+    g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
+    g.quadraticCurveTo(-w,0,0,-len); g.closePath();
+    g.fillStyle=fill; g.fill();
+  };
+  const sp=(len,w)=>{
+    const grad=g.createLinearGradient(0,0,0,-len);
+    grad.addColorStop(0,"rgba(255,255,255,.95)");
+    grad.addColorStop(.4,`rgba(${Math.min(255,cr+80)},${Math.min(255,cg+80)},${Math.min(255,cb+80)},.9)`);
+    grad.addColorStop(1,`rgba(${cr},${cg},${cb},.35)`);
+    // 上下対称の光条なので、上半分用グラデで両方向まとめて塗る（回転で向きを変える）
+    g.beginPath();
+    g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
+    g.quadraticCurveTo(-w,0,0,-len); g.closePath();
+    g.fillStyle=grad; g.fill();
+  };
+  if(shape==="dot"){
+    // ハローとコアのみ（玉ボケ）
+  }else if(shape==="star6"){
+    for(let k=0;k<3;k++){ sp(r*lenK,r*.075); g.rotate(Math.PI/3); }
+  }else if(shape==="star8"){
+    for(let k=0;k<4;k++){ sp((k%2?r*.6:r)*lenK,r*.07); g.rotate(Math.PI/4); }
+  }else if(shape==="diamond"){
+    sp(r*1.35*lenK,r*.05);
+    g.rotate(Math.PI/2); sp(r*1.35*lenK,r*.05);
+  }else{ // cross: 縦横長＋斜め45°短
+    sp(r*lenK,r*.085);
+    g.rotate(Math.PI/2); sp(r*lenK,r*.085);
+    g.rotate(Math.PI/4); sp(r*.45*lenK,r*.05);
+    g.rotate(Math.PI/2); sp(r*.45*lenK,r*.05);
+  }
+  // ③ 中心コア: 白飛びした芯＋その周りに強めのグロー（光条系のみ）。
+  const coreR = r*.2;
+  const coreGlow=g.createRadialGradient(0,0,0,0,0,coreR*2.2);
+  coreGlow.addColorStop(0,"rgba(255,255,255,1)");
+  coreGlow.addColorStop(.5,"rgba(255,255,255,.85)");
+  coreGlow.addColorStop(1,"rgba(255,255,255,0)");
+  g.fillStyle=coreGlow;
+  g.beginPath(); g.arc(0,0,coreR*2.2,0,7); g.fill();
+  g.restore();
 }
+
+/* ハート形パス（中心原点、高さ約size）。塗りは呼び出し側で行う。 */
+function drawHeartPath(g, size){
+  const s=size/32;
+  g.beginPath();
+  g.moveTo(0, 10*s);
+  g.bezierCurveTo(-16*s, -6*s, -14*s, -20*s, 0, -12*s);
+  g.bezierCurveTo(14*s, -20*s, 16*s, -6*s, 0, 10*s);
+  g.closePath();
+}
+
+/* 花びら（歪んだ紡錘形1枚）パス。中心原点、縦長。塗りは呼び出し側。
+   skew=左右の膨らみ比（1で対称、小さいほど左右非対称）、bend=全体の反り。
+   これらをランダムに変えることで、1枚ごとに違う自然な花弁形になる。 */
+function drawPetalPath(g, r, skew=0.8, bend=0){
+  const bx=bend*r; // 反りの制御点オフセット
+  g.beginPath();
+  g.moveTo(0,-r);                                                  // 先端（尖る）
+  g.bezierCurveTo(r*.7+bx, -r*.5, r*.55+bx, r*.6, bx*0.5, r);      // 右側：太めに膨らむ＋反り
+  g.bezierCurveTo(-r*.5*skew+bx, r*.6, -r*.6*skew+bx, -r*.5, 0,-r);// 左側：skewで細く＝歪み
+  g.closePath();
+}
+
+function scatterSparkles(mg, face, cw, ch, scale){
+  if(P.pSparkN<=0) return;
+  const fctx=face.getContext("2d");
+  const data=fctx.getImageData(0,0,cw,ch).data;
+  const A=(x,y)=> (x<0||y<0||x>=cw||y>=ch)?0:data[((y|0)*cw+(x|0))*4+3];
+  const rnd=mulberry32(P.pSparkSeed*13+P.pSparkN);
+  const step=7*scale;
+  const edgeRate=P.pSparkEdge/100;
+  const varK=P.pSparkVar/100;
+  let placed=0, tries=0;
+  mg.save();
+  mg.globalCompositeOperation="lighter"; // 光り物なので加算合成
+  while(placed<P.pSparkN && tries<P.pSparkN*80){
+    tries++;
+    const x=rnd()*cw, y=rnd()*ch;
+    const c=A(x,y);
+    const nb=[A(x+step,y),A(x-step,y),A(x,y+step),A(x,y-step)];
+    const hasIn = c>40||nb.some(v=>v>40);
+    const hasOut = c<40||nb.some(v=>v<40);
+    if(!hasIn) continue;
+    const isEdge = hasIn&&hasOut;
+    // 配置スライダー: 100=エッジのみ、0=面全体に均等
+    if(isEdge){ if(rnd()>.15+.85*edgeRate) continue; }
+    else      { if(rnd()>(1-edgeRate)*.75+.05) continue; }
+    const r=P.pSparkSize*(1-varK*.6+rnd()*varK*1.2)*scale;
+    const shape = P.pSparkShape==="mixed"
+      ? ["cross","dot","star6"][(rnd()*3)|0] : P.pSparkShape;
+    drawSparkle(mg,x,y,r,P.pSparkC,(rnd()-.5)*.5,shape);
+    placed++;
+  }
+  mg.restore();
+}
+
+/* ================================================================
+   §10 描画パイプライン本体
+   ------------------------------------------------------------
+   全レイヤを合成するメイン関数。glow → extrude → outlines → face → brush → overlay の順。
+   プレビューも書き出しも同じ draw() を通る（scale を変えるだけ）。
+================================================================ */
 
 function draw(targetCtx, scale, withBg, quality){
   quality = quality || "high";
@@ -1767,497 +2378,15 @@ function draw(targetCtx, scale, withBg, quality){
 
   return {W:cw,H:ch};
 }
-function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
-function lerp(a,b,t){return a+(b-a)*t;}
-/* ウニフラ用の形状パス（放射状のトゲのみ）を現在のcontextに構築して塗る。
-   中心の芯を塗る仕組みは撤去済み（ウニフラの中心は常に空洞）。
-   ベタフラは別方式（drawBetaflash、フチから中心へ刺さるトゲを直接描く）のため
-   この関数を使わない。 */
-function buildSpikeBurstPath(g, cx, cy, count, len, width, innerRX, innerRY, jitter, seed){
-  const rnd=mulberry32((seed||1)*677+11);
-  g.beginPath();
-  for(let i=0;i<count;i++){
-    // 角度・長さ・太さ・膨らみ位置、それぞれ別々にばらつかせる（乱れ量に応じて全部連動）。
-    // 長さだけ揺らしても放射状の規則正しさが目立ってしまうため、他の要素も揺らして
-    // 手描きのウニ／花火のような有機的な不揃いさにする。
-    // 角度のばらつきは「隣のトゲの持ち場を追い越さない」範囲に抑える。
-    // ここが広すぎると隣同士の並び順が入れ替わってしまい、トゲの輪郭が
-    // 互いに交差して見た目が崩れる（線がクロスして見える）ため、上限を0.45に固定。
-    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*(0.15+jitter*0.3);
-    const spikeLen=len*(1+(rnd()*2-1)*jitter);
-    if(spikeLen<=0) continue;
-    const halfW=Math.max(0.5,(width/2)*(1+(rnd()*2-1)*jitter*.8));
-    const cosA=Math.cos(a), sinA=Math.sin(a);
-    const ix=cx+cosA*innerRX, iy=cy+sinA*innerRY;
-    const ox=cx+cosA*(innerRX+spikeLen), oy=cy+sinA*(innerRY+spikeLen);
-    const perpX=-sinA, perpY=cosA;
-    // 紡錘形（根元・先端どちらも点に収束、中間だけ膨らむ）を二次ベジェ曲線2本で滑らかに描く。
-    // 直線でつなぐと角ばった凧形になってしまうため、制御点をふくらみの位置より少し
-    // 外側に置くことで、根元→ふくらみ→先端がなだらかな曲線でつながるようにしている。
-    const midT=0.28+rnd()*0.16; // 膨らみの位置も個体差を出す
-    const midX=ix+(ox-ix)*midT, midY=iy+(oy-iy)*midT;
-    const bulge=halfW*1.6;
-    g.moveTo(ix,iy);
-    g.quadraticCurveTo(midX+perpX*bulge, midY+perpY*bulge, ox, oy);
-    g.quadraticCurveTo(midX-perpX*bulge, midY-perpY*bulge, ix, iy);
-    g.closePath();
-  }
-  g.fill();
-}
-/* ウニフラ: トゲの形そのものを色で塗る。芯は常に空洞（中心をくり抜かない設定は撤去済み）。 */
-function drawSpikeRing(g, cx, cy, color, count, len, width, innerRX, innerRY, jitter, seed){
-  if(len<=0 || count<=0) return;
-  g.save();
-  g.fillStyle=color;
-  buildSpikeBurstPath(g, cx, cy, count, len, width, innerRX, innerRY, jitter, seed);
-  g.restore();
-}
-/* ベタフラ: 画面のフチから中心へ向かって刺さる、細長い楔形のトゲを大量に直接描く。
-   フチ側はトゲが太く隣同士が重なるため自然にベタ塗りになり、中心へ向かうほど
-   細く尖って、先端の届かない中央は透明のまま残る（参考画像の構造そのまま）。
-   以前の「全面を塗ってから形をくり抜く」方式は、くり抜く形の設計そのものが
-   イメージと合わず迷走したため、トゲを直接描く方式に全面変更した。
-   coreRX/coreRY=中央の透明領域の目安半径（トゲの先端がこの縁あたりで止まる）。 */
-function drawBetaflash(g, cx, cy, cw, ch, color, count, coreRX, coreRY, jitter, seed){
-  const rnd=mulberry32((seed||1)*677+11);
-  g.save();
-  g.fillStyle=color;
-  const edgeR=Math.hypot(cw,ch)/2; // キャンバス対角の半分=フチまで確実に届く長さ
-  g.beginPath();
-  for(let i=0;i<count;i++){
-    // 角度のばらつきは「隣のトゲの持ち場を追い越さない」範囲に抑える（ウニフラと同じ式）。
-    // ベタフラは根元が太いぶん、角度がばらつくと根元同士が重なって交差して見えるため、
-    // 乱れを上げても角度の揺れ幅だけは最大0.45に制限する（見た目の乱れは先端位置で出す）。
-    const a=(i/count)*Math.PI*2 + (rnd()-.5)*(Math.PI*2/count)*(0.15+jitter*0.3);
-    const cosA=Math.cos(a), sinA=Math.sin(a);
-    // トゲの先端: 中央の透明領域の縁を基準に、乱れに応じて内外へゆらぐ
-    const tipR=1+(rnd()*2-1)*jitter*.5;
-    const tipX=cx+cosA*coreRX*tipR, tipY=cy+sinA*coreRY*tipR;
-    // トゲの根元: フチの外側（確実に画面外）
-    const baseX=cx+cosA*edgeR*1.1, baseY=cy+sinA*edgeR*1.1;
-    // 根元の幅: 隣同士が重なる程度に太く（重なり具合にも個体差）
-    const baseHalfW=(Math.PI*2/count)*edgeR*0.75*(0.8+rnd()*0.5);
-    const perpX=-sinA, perpY=cosA;
-    g.moveTo(tipX,tipY);
-    g.lineTo(baseX+perpX*baseHalfW, baseY+perpY*baseHalfW);
-    g.lineTo(baseX-perpX*baseHalfW, baseY-perpY*baseHalfW);
-    g.closePath();
-  }
-  g.fill();
-  g.restore();
-}
 
-/* 楕円コア: 中心の白熱フラッシュ。translate→scale(rx,ry)で単位円グラデを楕円化。
-   ウニフラと同じく横半径・縦半径で形を、sizeで大きさを制御する。
-   coreCol=芯色(中心寄り)、edgeCol=外周へ向かう色。芯色を効かせるため中間に挟む。 */
-function drawEllipseCore(g, cx, cy, rx, ry, coreCol, edgeCol){
-  g.save();
-  g.translate(cx,cy); g.scale(Math.max(1,rx), Math.max(1,ry));
-  const core=g.createRadialGradient(0,0,0,0,0,1);
-  core.addColorStop(0,"rgba(255,255,255,1)");   // 中心は白熱
-  core.addColorStop(0.22, coreCol);              // すぐ芯色に(青などがここで出る)
-  core.addColorStop(0.55, edgeCol||coreCol);     // 外周へ向かって中間色
-  core.addColorStop(1,"rgba(0,0,0,0)");
-  g.fillStyle=core;
-  g.beginPath(); g.arc(0,0,1,0,7); g.fill();
-  g.restore();
-}
+/* ================================================================
+   §11 ブラシシステム（レイヤー・ストローク）
+   ------------------------------------------------------------
+   手描きブラシ（金属反射・スパークル・稲妻・消しゴム）。レイヤー管理、座標変換、
+   ストロークの再生描画、消しゴム処理。状態変数もここに集約。
+================================================================ */
 
-/* バースト: 中心から放射する三角光線(加算)＋楕円コア。col1=芯側/col2=中間色。 */
-function drawBurstBg(g, cx, cy, cw, ch, col1, col2, count, lenPct, coreRX, coreRY, jitter, seed){
-  const rnd=mulberry32((seed||1)*97+1);
-  const maxR=Math.hypot(cw,ch)*0.6;
-  g.save();
-  g.globalCompositeOperation="lighter";
-  for(let i=0;i<count;i++){
-    const a=(i/count)*Math.PI*2 + (rnd()-0.5)*jitter*0.3;
-    const len=maxR*lenPct*(0.5+rnd()*0.6);
-    const halfW=(Math.PI*2/count)*(0.18+rnd()*0.5); // 光線の角度半幅
-    const a1=a-halfW*0.5, a2=a+halfW*0.5;
-    g.beginPath();
-    g.moveTo(cx,cy);
-    g.lineTo(cx+Math.cos(a1)*len, cy+Math.sin(a1)*len);
-    g.lineTo(cx+Math.cos(a2)*len, cy+Math.sin(a2)*len);
-    g.closePath();
-    const grad=g.createLinearGradient(cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len);
-    grad.addColorStop(0,col1);
-    grad.addColorStop(0.3,col2);
-    grad.addColorStop(1,"rgba(0,0,0,0)");
-    g.fillStyle=grad; g.fill();
-  }
-  drawEllipseCore(g,cx,cy,coreRX,coreRY,col1,col2); // 芯=col1, 外周=col2
-  g.restore();
-}
-
-/* 稲妻: 集中線＋枝分かれする太い電撃(3層グロー)＋キラキラ＋楕円コア。
-   col=芯(白)/glowCol=グロー色。太さwidthPx、本数mainCount。 */
-function drawBoltBg(g, cx, cy, cw, ch, col, glowCol, mainCount, widthPx, coreRX, coreRY, jitter, seed){
-  const rnd=mulberry32((seed||1)*131+7);
-  const maxR=Math.hypot(cw,ch)*0.62;
-  g.save();
-  g.globalCompositeOperation="lighter";
-  // ① 集中線(スピードライン)
-  const lineN=90;
-  for(let i=0;i<lineN;i++){
-    const a=(i/lineN)*Math.PI*2+(rnd()-0.5)*0.05;
-    const r0=maxR*(0.12+rnd()*0.1), r1=maxR*(0.7+rnd()*0.5);
-    g.strokeStyle=glowCol; g.globalAlpha=0.10+rnd()*0.13; g.lineWidth=0.4+rnd()*1.4;
-    g.beginPath(); g.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
-    g.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); g.stroke();
-  }
-  g.globalAlpha=1;
-  // ② 稲妻本体(枝分かれ再帰、3層描画)
-  function bolt(x,y,ang,len,wid,depth){
-    const segs=Math.max(4,(len/26)|0); const pts=[[x,y]];
-    for(let s=0;s<segs;s++){
-      const t=(s+1)/segs;
-      const jit=(rnd()-0.5)*len*0.20*(1-t*0.2)*(0.5+jitter);
-      const perp=ang+Math.PI/2;
-      const px=x+Math.cos(ang)*len*t+Math.cos(perp)*jit;
-      const py=y+Math.sin(ang)*len*t+Math.sin(perp)*jit;
-      pts.push([px,py]);
-      if(depth>0&&rnd()<0.32&&s>0&&s<segs-1) bolt(px,py,ang+(rnd()-0.5)*1.1,len*(0.4+rnd()*0.35),wid*0.55,depth-1);
-    }
-    const stroke=(w,color,al)=>{ g.strokeStyle=color; g.lineWidth=w; g.globalAlpha=al;
-      g.lineCap="round"; g.lineJoin="round"; g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
-      for(const p of pts)g.lineTo(p[0],p[1]); g.stroke(); };
-    stroke(wid*6,glowCol,0.22); stroke(wid*2.6,glowCol,0.55); stroke(wid*1.15,col,1);
-  }
-  for(let i=0;i<mainCount;i++){
-    const a=(i/mainCount)*Math.PI*2+(rnd()-0.5)*0.35;
-    bolt(cx,cy,a,maxR*(0.6+rnd()*0.4),widthPx,2);
-  }
-  g.globalAlpha=1;
-  // ③ キラキラ粒
-  for(let i=0;i<40;i++){
-    const a=rnd()*Math.PI*2, r=maxR*(0.15+rnd()*0.8);
-    const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r, sz=0.5+rnd()*2.5;
-    g.globalAlpha=0.5+rnd()*0.5;
-    const sg=g.createRadialGradient(sx,sy,0,sx,sy,sz*2);
-    sg.addColorStop(0,"#ffffff"); sg.addColorStop(1,"rgba(255,255,255,0)");
-    g.fillStyle=sg; g.beginPath(); g.arc(sx,sy,sz*2,0,7); g.fill();
-  }
-  g.globalAlpha=1;
-  // ④ 中心フラッシュ(楕円コア)。芯色を中心、グロー色を外周に。
-  drawEllipseCore(g,cx,cy,coreRX,coreRY,col,glowCol);
-  g.restore();
-}
-
-/* ---------- 側面レイヤー（マスク切り出し＋環境映り込み） ----------
-   側面領域＝押し出しスタンプの和集合−本体シルエット。その中に
-   「空→地平線（シャープな暗線）→照り返し」の水平環境グラデを押し出し色から
-   自動生成して描き込み、法線ハイライト帯（ずらし差分）を重ねる。 */
-function buildSideSheen(cw,ch,offX,offY,L,scale,maxOW,ux,uy,d){
-  const la=P.pExLight*Math.PI/180;
-  const w=P.pExSpecW;
-  const mkC=()=>{const c=document.createElement("canvas");c.width=cw;c.height=ch;return c;};
-  const setupText=g=>{
-    g.setTransform(1,0,0,1,0,0);
-    g.clearRect(0,0,cw,ch);
-    g.translate(offX,offY); g.scale(scale,scale);
-    applyWholeRotation(g,L);
-    g.font=fontStr(L.size); g.textBaseline="middle"; g.textAlign="center";
-    g.lineJoin="round"; g.miterLimit=2;
-  };
-  /* 使い回しバッファ3枚（12方向ぶん毎回作るとメモリを食うため） */
-  const eC=mkC(), eg=eC.getContext("2d");
-  const sC=mkC(), sg=sC.getContext("2d");
-  const bC=mkC(), bg2=bC.getContext("2d");
-  const OFF=20000;
-  const drawSil=(g,color,dx=0,dy=0)=>{
-    g.fillStyle=color; g.strokeStyle=color;
-    if(maxOW>0){g.lineWidth=maxOW; drawChars(g,L,"stroke",dx,dy);}
-    drawChars(g,L,"fill",dx,dy);
-  };
-  const makeEdge=(dirx,diry,color,s)=>{
-    setupText(eg);
-    drawSil(eg,color);
-    eg.globalCompositeOperation="destination-out";
-    drawSil(eg,color,-dirx*s,-diry*s);
-    eg.globalCompositeOperation="source-over";
-    return eC;
-  };
-  const sweepInto=src=>{
-    sg.setTransform(1,0,0,1,0,0); sg.clearRect(0,0,cw,ch);
-    for(let i=1;i<=d;i++) sg.drawImage(src,ux*i*scale,uy*i*scale);
-    return sC;
-  };
-  const blurInto=(src,color,blur)=>{
-    bg2.setTransform(1,0,0,1,0,0); bg2.clearRect(0,0,cw,ch);
-    bg2.shadowColor=color; bg2.shadowBlur=blur*scale;
-    bg2.shadowOffsetX=OFF; bg2.shadowOffsetY=0;
-    bg2.drawImage(src,-OFF,0);
-    bg2.shadowColor="transparent";
-    return bC;
-  };
-
-  // A) 側面マスク＝スタンプ和集合−本体
-  setupText(eg); drawSil(eg,"#ffffff");
-  const mask=mkC();
-  {const g=mask.getContext("2d");
-   for(let i=1;i<=d;i++) g.drawImage(eC,ux*i*scale,uy*i*scale);
-   g.globalCompositeOperation="destination-out"; g.drawImage(eC,0,0);}
-
-  const refl=mkC(); const rg=refl.getContext("2d");
-  const c1=hex(P.pExC1), c2=hex(P.pExC2);
-  const mix=(a,b,t)=>[lerp(a[0],b[0],t)|0,lerp(a[1],b[1],t)|0,lerp(a[2],b[2],t)|0];
-  const Wt=[255,255,255], Bk=[0,0,0];
-
-  // B) 法線マップ: 12方向のエッジ帯を「光源との角度差」でクローム着色し、
-  //    遠い方向から積む。輪郭のカーブに沿って 純白→明→急落→暗黒→リム光 が回り込む。
-  const NDIR=12;
-  const dirs=[];
-  for(let k=0;k<NDIR;k++){
-    const a=k/NDIR*Math.PI*2;
-    let dd=((a-la)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-    if(dd>Math.PI) dd=Math.PI*2-dd;
-    dirs.push({a,dd});
-  }
-  dirs.sort((p2,q)=>q.dd-p2.dd);
-  for(const {a,dd} of dirs){
-    const t=(Math.cos(dd)+1)/2;   // 1=光源正面, 0=真裏
-    let col;
-    if(t>.93)      col=Wt;                          // スペキュラ＝純白
-    else if(t>.7)  col=mix(c1,Wt,.35+(t-.7)*2.4);   // 明るい地色
-    else if(t>.42) col=mix(c1,Bk,(.7-t)*1.5);       // 急落
-    else if(t>.15) col=mix(c2,Bk,.5);               // 暗部＝ほぼ黒
-    else           col=mix(c1,Wt,.3);               // 真裏のリム＝環境の拾い光
-    const cs=`rgb(${col[0]},${col[1]},${col[2]})`;
-    rg.drawImage(blurInto(sweepInto(makeEdge(Math.cos(a),Math.sin(a),cs,w)),cs,Math.max(1,w*.3)),0,0);
-  }
-
-  // 側面の実在Y範囲（上向き押し出しにも対応）
-  const fromY=offY-(L.size/2)*scale-Math.max(0,-uy)*d*scale;
-  const spanY=((L.lines-1)*L.lineH+L.size)*scale+Math.abs(uy)*d*scale+2;
-
-  // D) ランダム閃き（法線追従・局所化）: ランダム方向のエッジ帯を
-  //    楕円フェードマスクで局所的に抜く＝カーブに沿った柔らかい端の白閃き
-  if(P.pExFlash>0){
-    const gr=mulberry32(P.pSeed*29+7);
-    for(let i=0;i<P.pExFlash;i++){
-      const a=la+(gr()*2-1)*1.0;             // 光源寄り±57°
-      const ew=w*(.6+gr()*.7);
-      const band=sweepInto(makeEdge(Math.cos(a),Math.sin(a),"rgba(255,255,255,.85)",ew));
-      // 楕円フェードでband断片を抜く（bCバッファ流用）
-      bg2.setTransform(1,0,0,1,0,0);
-      bg2.shadowColor="transparent"; bg2.shadowOffsetX=0; bg2.shadowBlur=0;
-      bg2.clearRect(0,0,cw,ch);
-      bg2.drawImage(band,0,0);
-      bg2.globalCompositeOperation="destination-in";
-      const x0=gr()*cw, y0=fromY+gr()*spanY;
-      const rx=cw*(.07+gr()*.14), ry=(8+gr()*18)*scale;
-      bg2.save(); bg2.translate(x0,y0); bg2.scale(rx,ry);
-      const fal=bg2.createRadialGradient(0,0,0,0,0,1);
-      fal.addColorStop(0,"rgba(255,255,255,1)");
-      fal.addColorStop(.55,"rgba(255,255,255,.85)");
-      fal.addColorStop(1,"rgba(255,255,255,0)");
-      bg2.fillStyle=fal; bg2.fillRect(-1,-1,2,2);
-      bg2.restore();
-      bg2.globalCompositeOperation="source-over";
-      rg.drawImage(bC,0,0);
-    }
-  }
-
-  // E) 側面マスクで切り出し
-  rg.globalCompositeOperation="destination-in";
-  rg.drawImage(mask,0,0);
-  return refl;
-}
-
-/* ---------- 稲妻（枝分かれ・太さ・乱れ対応） ---------- */
-function strokeBolt(g,pts,w,color,glowR){
-  g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
-  for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]);
-  g.lineJoin="round"; g.lineCap="round";
-  g.strokeStyle=color; g.lineWidth=w*2.2;
-  g.shadowColor=color; g.shadowBlur=glowR;
-  g.stroke(); g.stroke(); // 2度でグロー濃く
-  g.shadowBlur=0;
-  g.strokeStyle="rgba(255,255,255,.95)"; g.lineWidth=Math.max(.8,w*.8); g.stroke();
-}
-function drawBolts(g,L,over){
-  const br=mulberry32(P.pSeed*31+P.pBolt*7);
-  const ext=over?L.size*.45:0;
-  const top=-L.size/2-ext, bot=(L.lines-1)*L.lineH+L.size/2+ext;
-  const wBase=L.size*.011*P.pBoltW;
-  const rough=P.pBoltRough/100;
-  const glowR=L.size*.12;
-  for(let b=0;b<P.pBolt;b++){
-    let bx=(br()*2-1)*L.maxW/2, by=top;
-    const pts=[[bx,by]];
-    while(by<bot){
-      bx+=(br()*2-1)*L.size*.5*rough;
-      by+=L.size*(.05+br()*.13);
-      pts.push([bx,by]);
-    }
-    strokeBolt(g,pts,wBase,P.pBoltC,glowR);
-    // 枝分かれ: 幹の途中から細い枝を斜めに
-    for(let k=0;k<P.pBoltBranch;k++){
-      const pi=1+Math.floor(br()*Math.max(1,pts.length-2));
-      let [x,y]=pts[Math.min(pi,pts.length-1)];
-      const dir=br()<.5?-1:1;
-      const bp=[[x,y]];
-      const n=2+Math.floor(br()*3);
-      for(let s=0;s<n;s++){
-        x+=dir*L.size*(.08+br()*.22)*(.5+rough);
-        y+=L.size*(.02+br()*.1);
-        bp.push([x,y]);
-      }
-      strokeBolt(g,bp,wBase*.45,P.pBoltC,glowR*.7);
-    }
-  }
-}
-
-/* ---------- 十字スパークル ---------- */
-// 加算合成(lighter)で描く前提。呼び出し側でcomposite="lighter"にしてある。
-// 暗い下敷きは加算では効かない（暗色を足しても明るくなるだけ）ので置かない。
-// 光は「重なった芯が自然に白飛びする」加算本来の挙動で立たせる。
-function drawSparkle(g,x,y,r,color,rot,shape){
-  g.save(); g.translate(x,y); g.rotate(rot);
-  const [cr,cg,cb]=hex(color);
-  const lenK=P.pSparkLen/100;
-  const litFill=(cx,cy,rad)=>{ // シェイプ全体を光らせる用のグラデ（中心白→縁で色）
-    const gd=g.createRadialGradient(cx,cy,0,cx,cy,rad);
-    gd.addColorStop(0,"rgba(255,255,255,.95)");
-    gd.addColorStop(.5,`rgba(${Math.min(255,cr+90)},${Math.min(255,cg+90)},${Math.min(255,cb+90)},.95)`);
-    gd.addColorStop(1,`rgba(${cr},${cg},${cb},.8)`);
-    return gd;
-  };
-  // ハート・花びらは「丸いコア/ハローが形を殺す」ため、それらを一切使わず
-  // シェイプ全体を発光させる。中心の丸に視線が引っ張られる問題を避ける。
-  if(shape==="heart"){
-    // 外周のソフトなグロー（ハート型に沿う。丸ではない）を先に薄く重ねてから本体
-    g.save(); g.scale(1.15,1.15); drawHeartPath(g, r*1.1);
-    g.fillStyle=`rgba(${cr},${cg},${cb},.4)`; g.fill(); g.restore();
-    drawHeartPath(g, r*1.1);
-    g.fillStyle=litFill(0,-r*.1,r*.9); g.fill();
-    g.restore(); return;
-  }
-  if(shape==="petal"){
-    // 花びらは1スタンプにつき複数枚（3〜5枚）を、各自バラバラの角度・距離・形・サイズで散らす。
-    // スタンプ位置(x,y)から乱数シードを作るので、置くたびに違う散らばり方になる。
-    const pr=mulberry32(((x*131+y*57)|0)>>>0 || 1);
-    const n=1+Math.floor(pr()*2); // 1〜2枚（ブラシで多数置くと増えるので1スタンプは控えめに）
-    for(let k=0;k<n;k++){
-      const ang=pr()*Math.PI*2;               // 各花びらの向きは完全ランダム（斜め横もOK）
-      const dist=r*(0.15+pr()*0.55);           // 中心からの散らし距離
-      const psize=r*(0.45+pr()*0.5);           // 花びらごとにサイズを変える
-      const skew=0.55+pr()*0.9;                // 左右の膨らみ比＝形の歪みをランダム化
-      const bend=(pr()*2-1)*0.5;               // 反り（左右どちらかへ湾曲）
-      const px=Math.cos(ang)*dist, py=Math.sin(ang)*dist;
-      g.save();
-      g.translate(px,py);
-      g.rotate(ang+Math.PI/2+(pr()*2-1)*0.6);  // 向き＋さらに微ランダム
-      drawPetalPath(g, psize, skew, bend);
-      g.fillStyle=litFill(0,0,psize*1.1); g.fill();
-      g.restore();
-    }
-    g.restore(); return;
-  }
-  // ③ 色つきハロー: 芯の白→スパーク色→透明。以前より広げて(0.6→1.0)柔らかい光の滲みを出す。
-  const halo=g.createRadialGradient(0,0,0,0,0,r);
-  halo.addColorStop(0,"rgba(255,255,255,.95)");
-  halo.addColorStop(.28,`rgba(${cr},${cg},${cb},.6)`);
-  halo.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
-  g.fillStyle=halo;
-  g.beginPath(); g.arc(0,0,r,0,7); g.fill();
-  // ② 光条は「根元が白、先へ向かってスパーク色」のグラデで塗る。
-  // 以前は純白固定だったため、加算合成で白飛びして色がほぼ乗らなかった。
-  // 白飛びする芯は別途コアで作るので、光条自体に色を持たせて色を効かせる。
-  const spike=(len,w,fill)=>{
-    g.beginPath();
-    g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
-    g.quadraticCurveTo(-w,0,0,-len); g.closePath();
-    g.fillStyle=fill; g.fill();
-  };
-  const sp=(len,w)=>{
-    const grad=g.createLinearGradient(0,0,0,-len);
-    grad.addColorStop(0,"rgba(255,255,255,.95)");
-    grad.addColorStop(.4,`rgba(${Math.min(255,cr+80)},${Math.min(255,cg+80)},${Math.min(255,cb+80)},.9)`);
-    grad.addColorStop(1,`rgba(${cr},${cg},${cb},.35)`);
-    // 上下対称の光条なので、上半分用グラデで両方向まとめて塗る（回転で向きを変える）
-    g.beginPath();
-    g.moveTo(0,-len); g.quadraticCurveTo(w,0,0,len);
-    g.quadraticCurveTo(-w,0,0,-len); g.closePath();
-    g.fillStyle=grad; g.fill();
-  };
-  if(shape==="dot"){
-    // ハローとコアのみ（玉ボケ）
-  }else if(shape==="star6"){
-    for(let k=0;k<3;k++){ sp(r*lenK,r*.075); g.rotate(Math.PI/3); }
-  }else if(shape==="star8"){
-    for(let k=0;k<4;k++){ sp((k%2?r*.6:r)*lenK,r*.07); g.rotate(Math.PI/4); }
-  }else if(shape==="diamond"){
-    sp(r*1.35*lenK,r*.05);
-    g.rotate(Math.PI/2); sp(r*1.35*lenK,r*.05);
-  }else{ // cross: 縦横長＋斜め45°短
-    sp(r*lenK,r*.085);
-    g.rotate(Math.PI/2); sp(r*lenK,r*.085);
-    g.rotate(Math.PI/4); sp(r*.45*lenK,r*.05);
-    g.rotate(Math.PI/2); sp(r*.45*lenK,r*.05);
-  }
-  // ③ 中心コア: 白飛びした芯＋その周りに強めのグロー（光条系のみ）。
-  const coreR = r*.2;
-  const coreGlow=g.createRadialGradient(0,0,0,0,0,coreR*2.2);
-  coreGlow.addColorStop(0,"rgba(255,255,255,1)");
-  coreGlow.addColorStop(.5,"rgba(255,255,255,.85)");
-  coreGlow.addColorStop(1,"rgba(255,255,255,0)");
-  g.fillStyle=coreGlow;
-  g.beginPath(); g.arc(0,0,coreR*2.2,0,7); g.fill();
-  g.restore();
-}
-/* ハート形パス（中心原点、高さ約size）。塗りは呼び出し側で行う。 */
-function drawHeartPath(g, size){
-  const s=size/32;
-  g.beginPath();
-  g.moveTo(0, 10*s);
-  g.bezierCurveTo(-16*s, -6*s, -14*s, -20*s, 0, -12*s);
-  g.bezierCurveTo(14*s, -20*s, 16*s, -6*s, 0, 10*s);
-  g.closePath();
-}
-/* 花びら（歪んだ紡錘形1枚）パス。中心原点、縦長。塗りは呼び出し側。
-   skew=左右の膨らみ比（1で対称、小さいほど左右非対称）、bend=全体の反り。
-   これらをランダムに変えることで、1枚ごとに違う自然な花弁形になる。 */
-function drawPetalPath(g, r, skew=0.8, bend=0){
-  const bx=bend*r; // 反りの制御点オフセット
-  g.beginPath();
-  g.moveTo(0,-r);                                                  // 先端（尖る）
-  g.bezierCurveTo(r*.7+bx, -r*.5, r*.55+bx, r*.6, bx*0.5, r);      // 右側：太めに膨らむ＋反り
-  g.bezierCurveTo(-r*.5*skew+bx, r*.6, -r*.6*skew+bx, -r*.5, 0,-r);// 左側：skewで細く＝歪み
-  g.closePath();
-}
-function scatterSparkles(mg, face, cw, ch, scale){
-  if(P.pSparkN<=0) return;
-  const fctx=face.getContext("2d");
-  const data=fctx.getImageData(0,0,cw,ch).data;
-  const A=(x,y)=> (x<0||y<0||x>=cw||y>=ch)?0:data[((y|0)*cw+(x|0))*4+3];
-  const rnd=mulberry32(P.pSparkSeed*13+P.pSparkN);
-  const step=7*scale;
-  const edgeRate=P.pSparkEdge/100;
-  const varK=P.pSparkVar/100;
-  let placed=0, tries=0;
-  mg.save();
-  mg.globalCompositeOperation="lighter"; // 光り物なので加算合成
-  while(placed<P.pSparkN && tries<P.pSparkN*80){
-    tries++;
-    const x=rnd()*cw, y=rnd()*ch;
-    const c=A(x,y);
-    const nb=[A(x+step,y),A(x-step,y),A(x,y+step),A(x,y-step)];
-    const hasIn = c>40||nb.some(v=>v>40);
-    const hasOut = c<40||nb.some(v=>v<40);
-    if(!hasIn) continue;
-    const isEdge = hasIn&&hasOut;
-    // 配置スライダー: 100=エッジのみ、0=面全体に均等
-    if(isEdge){ if(rnd()>.15+.85*edgeRate) continue; }
-    else      { if(rnd()>(1-edgeRate)*.75+.05) continue; }
-    const r=P.pSparkSize*(1-varK*.6+rnd()*varK*1.2)*scale;
-    const shape = P.pSparkShape==="mixed"
-      ? ["cross","dot","star6"][(rnd()*3)|0] : P.pSparkShape;
-    drawSparkle(mg,x,y,r,P.pSparkC,(rnd()-.5)*.5,shape);
-    placed++;
-  }
-  mg.restore();
-}
+/* ── ブラシの状態 ── */
 
 /* ---------- 手描きブラシ（金属反射・スパークルを狙った場所に置く） ----------
    金属反射（metal-hi/lo）は「基準点＋押し出し角度方向への伸び量(reach)」で保存する。
@@ -2267,10 +2396,43 @@ function scatterSparkles(mg, face, cw, ch, scale){
    スパークルは経路追従（points配列）のまま、流量=配置確率でランダム配置。
    レイヤー: brushLayers配列（下から順、各々{id,name,visible,strokes}）。 */
 let brushLayers = [{id:1, name:"レイヤー1", visible:true, strokes:[], maskMode:"face"}];
+
 let activeLayerId = 1;
+
 let nextLayerId = 2;
+
 let currentStroke = null;
+
 let lastLayout = {offX:0, offY:0, scale:1, cw:0, ch:0, rot:0, pivotY:0, trapTop:1, trapBottom:1, trapContentHalfW:0};
+
+/* ---------- 描画インタラクション ---------- */
+let brushDrawing=false;
+
+// ブラシ系統ごとの種類リスト。金属反射系と光り物系(スパークル・稲妻)を分離。
+const BRUSH_TYPES={
+  metal:[["metal-hi","反射・明"],["metal-mid","反射・中間"],["metal-lo","反射・暗"]],
+  glow:[["spark","スパークル"],["bolt","稲妻"]],
+  eraser:[["eraser","消しゴム"]],
+};
+
+const BRUSH_COLORS={ "metal-hi":"#ffffff","metal-mid":"#d9a441","metal-lo":"#140a04",
+  "spark":"#ffe9c0","bolt":"#9adfff" };
+
+// ユーザーが色を手動で選んだら、以後その系統では推奨色で上書きしない
+let brushColorTouched=false;
+
+// 文字を自分でカスタマイズしたら、プリセット適用時に見本文字(プリセット名など)で
+// 上書きされないようにするためのフラグ。プリセット側のプログラム的な変更では
+// 立てず、テキストエリアへの直接入力だけで立てる。
+let textCustomized=false;
+
+/* ---------- ブラシガイド円（サイズを触ってる間だけキャンバス中央に表示） ----------
+   スマホではホバーの概念がなく「カーソル追従」は分かりにくかったため、
+   もっと単純に「サイズスライダー（+/-ボタン含む）を操作してる間だけ、
+   キャンバス中央にその大きさの丸を出す」方式にした。指を離すと少し待って消える。
+   実際のdrawMetalDab等がr=size*scale*.5を半径として使っているため、
+   直径=brushSizeの値としてガイド円のサイズを合わせてある。 */
+let brushGuideHideTimer=null;
 
 function snapshotCanvas(src){
   const c=document.createElement("canvas"); c.width=src.width; c.height=src.height;
@@ -2287,7 +2449,6 @@ function drawMetalDab(tg, x, y, r, cr,cg,cb, a){
   tg.fillStyle=g2;
   tg.beginPath(); tg.arc(x,y,r,0,7); tg.fill();
 }
-
 
 function renderBrushStrokes(mg, layers, offX, offY, scale, sideMask, faceMask, frontMask, quality){
   const ang=P.pExAngle*Math.PI/180, ux=Math.cos(ang), uy=Math.sin(ang);
@@ -2505,6 +2666,7 @@ function screenToLocal(clientX, clientY){
   }
   return { x, y };
 }
+
 function activeLayer(){ return brushLayers.find(l=>l.id===activeLayerId) || brushLayers[0]; }
 
 /* ---------- レイヤーUI ---------- */
@@ -2527,147 +2689,13 @@ function buildLayerUI(){
   const active=activeLayer();
   if(active) $("brushMask").value=active.maskMode||"face";
 }
-$("btnLayerAdd").addEventListener("click",()=>{
-  const id=nextLayerId++;
-  brushLayers.push({id,name:"レイヤー"+id,visible:true,strokes:[],maskMode:"face"});
-  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
-});
-$("btnLayerDup").addEventListener("click",()=>{
-  const src=activeLayer(); const id=nextLayerId++;
-  brushLayers.push({id,name:src.name+"のコピー",visible:true,strokes:JSON.parse(JSON.stringify(src.strokes)),maskMode:src.maskMode||"face"});
-  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
-});
-$("btnLayerDel").addEventListener("click",()=>{
-  if(brushLayers.length<=1) return;
-  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
-  brushLayers.splice(idx,1);
-  activeLayerId=brushLayers[Math.max(0,idx-1)].id;
-  buildLayerUI(); commitState(); requestDraw();
-});
-$("btnLayerUp").addEventListener("click",()=>{
-  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
-  if(idx<brushLayers.length-1){ [brushLayers[idx],brushLayers[idx+1]]=[brushLayers[idx+1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
-});
-$("btnLayerDown").addEventListener("click",()=>{
-  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
-  if(idx>0){ [brushLayers[idx],brushLayers[idx-1]]=[brushLayers[idx-1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
-});
 
-/* ---------- 描画インタラクション ---------- */
-let brushDrawing=false;
-// ブラシ系統ごとの種類リスト。金属反射系と光り物系(スパークル・稲妻)を分離。
-const BRUSH_TYPES={
-  metal:[["metal-hi","反射・明"],["metal-mid","反射・中間"],["metal-lo","反射・暗"]],
-  glow:[["spark","スパークル"],["bolt","稲妻"]],
-  eraser:[["eraser","消しゴム"]],
-};
-const BRUSH_COLORS={ "metal-hi":"#ffffff","metal-mid":"#d9a441","metal-lo":"#140a04",
-  "spark":"#ffe9c0","bolt":"#9adfff" };
-// ユーザーが色を手動で選んだら、以後その系統では推奨色で上書きしない
-let brushColorTouched=false;
-// 文字を自分でカスタマイズしたら、プリセット適用時に見本文字(プリセット名など)で
-// 上書きされないようにするためのフラグ。プリセット側のプログラム的な変更では
-// 立てず、テキストエリアへの直接入力だけで立てる。
-let textCustomized=false;
-$("pText").addEventListener("input",()=>{ textCustomized=true; rebuildSegSelector(); });
-
-/* 「➕色わけを追加」: テキストのカーソル位置に区切り「｜」を挿入する。
-   手で縦棒を打たなくても色わけを増やせる。挿入後は新しくできた色わけを編集対象にする。 */
-$("btnAddSplit").addEventListener("click",()=>{
-  const ta=$("pText");
-  const start=ta.selectionStart!=null?ta.selectionStart:ta.value.length;
-  const end=ta.selectionEnd!=null?ta.selectionEnd:ta.value.length;
-  const before=ta.value.slice(0,start), after=ta.value.slice(end);
-  ta.value = before + "｜" + after;
-  textCustomized=true;
-  // カーソルを区切りの直後へ
-  const pos=start+1;
-  ta.focus(); ta.setSelectionRange(pos,pos);
-  rebuildSegSelector();
-  // 挿入位置より前にある区切りの数＝新しくできた右側パートのindex。そこを編集対象にする。
-  const segIdx=(before.match(/[|｜]/g)||[]).length+1;
-  const sel=$("segEdit");
-  if(sel && segIdx < sel.options.length){ sel.value=segIdx; loadSegToUI(segIdx); }
-  onInput();
-});
-
-/* テキスト中の「|」の数からセグメント数を数え、「編集中」セレクタを作り直す。
-   区切りが無ければセグメントは1つ＝セレクタは実質「全体」だけになり、従来UIと変わらない。 */
-function rebuildSegSelector(){
-  const sel=$("segEdit"); if(!sel) return;
-  const text=$("pText").value;
-  // 色わけは行をまたいで継続するため、テキスト全体の区切り数+1がセグメント数
-  let segCount=(text.match(/[|｜]/g)||[]).length+1;
-  const prev=+sel.value||0;
-  sel.innerHTML="";
-  for(let i=0;i<segCount;i++){
-    const o=document.createElement("option");
-    o.value=i;
-    o.textContent = i===0 ? "色わけ1（先頭）" : ("色わけ"+(i+1));
-    sel.appendChild(o);
-  }
-  // 以前選んでいた色わけが範囲内なら維持、外れたら0に戻す
-  sel.value = (prev<segCount) ? prev : 0;
-  // 色わけが1つ(区切り無し)のときはセレクタを出さない＝従来UIと同じ見た目でスッキリ
-  const segEditRow=$("segEditRow");
-  if(segEditRow) segEditRow.style.display = segCount>1 ? "flex" : "none";
-  // 色わけ数が減って消えた上書き設定は掃除
-  if(P.segFills){ Object.keys(P.segFills).forEach(k=>{ if(+k>=segCount) delete P.segFills[+k]; }); }
-  if(P.segShapes){ Object.keys(P.segShapes).forEach(k=>{ if(+k>=segCount) delete P.segShapes[+k]; }); }
-  if(P.segOutlineColors){ Object.keys(P.segOutlineColors).forEach(k=>{ if(+k>=segCount) delete P.segOutlineColors[+k]; }); }
-  if(P.segSideColors){ Object.keys(P.segSideColors).forEach(k=>{ if(+k>=segCount) delete P.segSideColors[+k]; }); }
-}
-
-/* 「編集中」セグメントを切り替えたとき、そのセグメントの保存済み色をUIに流し込む。
-   まだ設定が無いセグメントは、seg0(全体)の現在値をコピーして初期値にする＝
-   「追加したては先頭と同じ見た目」になり、そこから調整できる。 */
-function loadSegToUI(seg){
-  if(!P.segFills) P.segFills={};
-  let s=P.segFills[seg];
-  if(!s){
-    // 初期値は現在のメインUIの色をコピー
-    s={ fill:$("pFill").value, c1:$("pFillC1").value, c2:$("pFillC2").value,
-        hue:+$("pFillHue").value, sat:+$("pFillSat").value, light:+$("pFillLight").value };
-    P.segFills[seg]=s;
-  }
-  // 面グラデの復元は全seg共通(seg0含む)。以前はseg0を「メインUIそのまま」として
-  // early returnしていたが、それだと別の色わけを編集した後にseg0へ戻った瞬間、
-  // メインUIに残った前の色わけの色をreadParamsがsegFills[0]へ保存してしまい、
-  // 全体の色が汚染される(=色わけを切り替えると全部変わる)バグになっていた。
-  $("pFill").value=s.fill;
-  $("pFillC1").value=s.c1; $("pFillC2").value=s.c2;
-  $("pFillHue").value=s.hue; $("pFillSat").value=s.sat; $("pFillLight").value=s.light;
-  // 大きさ・角度・縁色・側面色は色わけ2以降だけが持つ(seg0は本体設定が担う)。
-  // seg0でsegOutlineColors[0]等を作ると、全体の縁色変更が効かなくなるため作らない。
-  if(seg>0){
-    if(!P.segShapes) P.segShapes={};
-    const sh=P.segShapes[seg]||{scale:100,rot:0};
-    $("segScale").value=sh.scale!==undefined?sh.scale:100;
-    $("segRot").value=sh.rot!==undefined?sh.rot:0;
-    if(!P.segOutlineColors) P.segOutlineColors={};
-    let oc=P.segOutlineColors[seg];
-    if(!oc){ oc=[0,1,2,3].map(i=>$("olC"+i).value); P.segOutlineColors[seg]=oc; }
-    for(let i=0;i<4;i++) $("segOlC"+i).value=oc[i];
-    if(!P.segSideColors) P.segSideColors={};
-    let sd=P.segSideColors[seg];
-    if(!sd){ sd={c1:$("pExC1").value, c2:$("pExC2").value}; P.segSideColors[seg]=sd; }
-    $("segExC1").value=sd.c1; $("segExC2").value=sd.c2;
-  }
-  // 数値表示(.val)も追従させる
-  document.querySelectorAll('.val[data-for="pFillHue"],.val[data-for="pFillSat"],.val[data-for="pFillLight"],.val[data-for="segScale"],.val[data-for="segRot"]')
-    .forEach(v=>{ v.value=$(v.dataset.for).value; });
-}
-
-$("segEdit").addEventListener("change",()=>{ loadSegToUI(+$("segEdit").value); onInput(); });
-// 色わけの大きさ・角度スライダー本体の操作でも再描画（rangeIds/otherIdsに無いため個別配線）
-["segScale","segRot"].forEach(id=>$(id).addEventListener("input",onInput));
-// 色わけの縁色・側面色ピッカーも同様に個別配線
-["segOlC0","segOlC1","segOlC2","segOlC3","segExC1","segExC2"].forEach(id=>$(id).addEventListener("input",onInput));
 function applyBrushTypeColor(){
   if(brushColorTouched) return; // 自分で選んだ色を尊重
   const c=BRUSH_COLORS[$("brushType").value];
   if(c) $("brushColor").value=c;
 }
+
 // 系統に応じて種類selectの中身を作り直す（元の選択はできれば維持）
 function fillBrushTypes(){
   const cat=$("brushCategory").value;
@@ -2681,6 +2709,7 @@ function fillBrushTypes(){
   applyBrushTypeColor();
   updateBrushRows();
 }
+
 // スパークルのときだけ形状・間隔・散布を表示（稲妻/金属/消しゴムでは隠す）
 function updateBrushRows(){
   const isSpark = ($("brushCategory").value==="glow" && $("brushType").value==="spark");
@@ -2688,41 +2717,12 @@ function updateBrushRows(){
     $(id).style.display = isSpark ? "flex" : "none";
   });
 }
-// 系統を変えたら推奨色から始める / 種類変更は同系統内なので色維持
-$("brushCategory").addEventListener("change",()=>{ brushColorTouched=false; fillBrushTypes(); onInput(); });
-// 種類(明/中間/暗など)を選び直すのは「この色にしたい」という明確な操作なので、
-// 以前どこかで色を触っていたとしても、ここでは必ずその種類の色を適用する。
-$("brushType").addEventListener("change",()=>{ brushColorTouched=false; applyBrushTypeColor(); updateBrushRows(); });
-// 色ピッカーを触ったら以後尊重。プレビューも即更新
-$("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDraw("low"); });
-$("brushMask").addEventListener("change",()=>{
-  const l=activeLayer();
-  if(l){ l.maskMode=$("brushMask").value; commitState(); }
-  requestDraw();
-});
-$("brushMode").addEventListener("change",()=>{
-  cv.classList.toggle("brush-active", $("brushMode").checked);
-  if(!$("brushMode").checked) $("brushCursor").style.display="none";
-});
+
 function updateBrushLabel(id){
   const el=document.querySelector(`.val[data-for="${id}"]`);
   if(document.activeElement!==el) el.value = $(id).value;
 }
-$("btnSizeDown").addEventListener("click",()=>{ $("brushSize").value=Math.max(4,+$("brushSize").value-4); updateBrushLabel("brushSize"); onInput(); });
-$("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(160,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
-// brushSize/brushFlowはP側のパラメータではない(=draw()を経由しない)ため、
-// 動かした瞬間にラベルが更新されない不具合があった。専用に直接更新する。
-["brushSize","brushFlow","brushSpacing","brushScatter","brushAngle","brushAngleJit"].forEach(id=>{
-  $(id).addEventListener("input",()=>updateBrushLabel(id));
-});
 
-/* ---------- ブラシガイド円（サイズを触ってる間だけキャンバス中央に表示） ----------
-   スマホではホバーの概念がなく「カーソル追従」は分かりにくかったため、
-   もっと単純に「サイズスライダー（+/-ボタン含む）を操作してる間だけ、
-   キャンバス中央にその大きさの丸を出す」方式にした。指を離すと少し待って消える。
-   実際のdrawMetalDab等がr=size*scale*.5を半径として使っているため、
-   直径=brushSizeの値としてガイド円のサイズを合わせてある。 */
-let brushGuideHideTimer=null;
 function showBrushSizeGuide(){
   const cursor=$("brushCursor");
   const rect=cv.getBoundingClientRect();
@@ -2738,55 +2738,7 @@ function showBrushSizeGuide(){
   clearTimeout(brushGuideHideTimer);
   brushGuideHideTimer=setTimeout(()=>{ cursor.style.display="none"; },700);
 }
-$("brushSize").addEventListener("input",showBrushSizeGuide);
-$("btnSizeDown").addEventListener("click",showBrushSizeGuide);
-$("btnSizeUp").addEventListener("click",showBrushSizeGuide);
 
-cv.addEventListener("pointerdown", e=>{
-  if(!$("brushMode").checked) return;
-  e.preventDefault();
-  try{ cv.setPointerCapture(e.pointerId); }catch(err){}
-  brushDrawing=true;
-  const p=screenToLocal(e.clientX,e.clientY);
-  const type=($("brushCategory").value==="eraser") ? "eraser" : $("brushType").value;
-  const base={ type, color:$("brushColor").value, size:+$("brushSize").value, flow:+$("brushFlow").value };
-  if(type==="metal-hi"||type==="metal-mid"||type==="metal-lo"){
-    currentStroke={...base, anchor:p, reach:0}; // 角度追従型: 基準点のみ記録、伸びはdragで決める
-  }else if(type==="spark"){
-    // スパークルはスタンプ配置: 形状・間隔・散布・角度・角度ジッターを保持
-    currentStroke={...base, points:[p],
-      shape:$("brushShape").value, spacing:+$("brushSpacing").value, scatter:+$("brushScatter").value,
-      angle:+$("brushAngle").value, angleJit:+$("brushAngleJit").value};
-  }else{
-    currentStroke={...base, points:[p]};
-  }
-  requestDraw("low");
-}, {passive:false});
-cv.addEventListener("pointermove", e=>{
-  if(!brushDrawing||!currentStroke) return;
-  e.preventDefault();
-  const p=screenToLocal(e.clientX,e.clientY);
-  if(currentStroke.anchor){
-    // 現在の押し出し角度方向へドラッグを投影＝フリーハンドの揺れを角度に沿わせる
-    const ang=+$("pExAngle").value*Math.PI/180;
-    const ux=Math.cos(ang), uy=Math.sin(ang);
-    const dx=p.x-currentStroke.anchor.x, dy=p.y-currentStroke.anchor.y;
-    currentStroke.reach=dx*ux+dy*uy;
-  }else{
-    const last=currentStroke.points[currentStroke.points.length-1];
-    const minDist=Math.max(1,currentStroke.size*.12);
-    if(Math.hypot(p.x-last.x,p.y-last.y)<minDist) return;
-    currentStroke.points.push(p);
-  }
-  requestDraw("low");
-}, {passive:false});
-// iOS Safariはpointer/touchのpreventDefaultがpassiveリスナーだと無効になるため、
-// ブラシモード中はtouchstart/touchmoveも明示的にブロックしてページのゴム跳ね・揺れを止める
-["touchstart","touchmove"].forEach(evt=>{
-  cv.addEventListener(evt, e=>{
-    if($("brushMode").checked) e.preventDefault();
-  }, {passive:false});
-});
 // 消しゴムの判定ロジック本体。endBrushStroke(確定時)とdraw()内のライブプレビューの
 // 両方から同じ関数を呼ぶことで、ドラッグ中に見えているプレビューと指を離した後の
 // 結果が食い違わないようにする。
@@ -2836,6 +2788,7 @@ function eraseFromStrokes(strokes, er){
   }
   return result;
 }
+
 function endBrushStroke(){
   if(!brushDrawing) return;
   brushDrawing=false;
@@ -2858,14 +2811,101 @@ function endBrushStroke(){
   currentStroke=null;
   requestDraw("high");
 }
-cv.addEventListener("pointerup", endBrushStroke);
-cv.addEventListener("pointerleave", endBrushStroke);
-cv.addEventListener("pointercancel", endBrushStroke);
-$("btnClearBrush").addEventListener("click",()=>{
-  const layer=activeLayer();
-  if(!layer.strokes.length) return;
-  layer.strokes=[]; buildLayerUI(); commitState(); requestDraw();
-});
+
+/* ================================================================
+   §12 色わけ（セグメント）
+   ------------------------------------------------------------
+   「｜」区切りで文字ごとに色を分ける機能のUI同期。セレクタ再構築と、
+   選択セグメントの保存値をUIへ書き戻す処理。
+================================================================ */
+
+/* テキスト中の「|」の数からセグメント数を数え、「編集中」セレクタを作り直す。
+   区切りが無ければセグメントは1つ＝セレクタは実質「全体」だけになり、従来UIと変わらない。 */
+function rebuildSegSelector(){
+  const sel=$("segEdit"); if(!sel) return;
+  const text=$("pText").value;
+  // 色わけは行をまたいで継続するため、テキスト全体の区切り数+1がセグメント数
+  let segCount=(text.match(/[|｜]/g)||[]).length+1;
+  const prev=+sel.value||0;
+  sel.innerHTML="";
+  for(let i=0;i<segCount;i++){
+    const o=document.createElement("option");
+    o.value=i;
+    o.textContent = i===0 ? "色わけ1（先頭）" : ("色わけ"+(i+1));
+    sel.appendChild(o);
+  }
+  // 以前選んでいた色わけが範囲内なら維持、外れたら0に戻す
+  sel.value = (prev<segCount) ? prev : 0;
+  // 色わけが1つ(区切り無し)のときはセレクタを出さない＝従来UIと同じ見た目でスッキリ
+  const segEditRow=$("segEditRow");
+  if(segEditRow) segEditRow.style.display = segCount>1 ? "flex" : "none";
+  // 色わけ数が減って消えた上書き設定は掃除
+  if(P.segFills){ Object.keys(P.segFills).forEach(k=>{ if(+k>=segCount) delete P.segFills[+k]; }); }
+  if(P.segShapes){ Object.keys(P.segShapes).forEach(k=>{ if(+k>=segCount) delete P.segShapes[+k]; }); }
+  if(P.segOutlineColors){ Object.keys(P.segOutlineColors).forEach(k=>{ if(+k>=segCount) delete P.segOutlineColors[+k]; }); }
+  if(P.segSideColors){ Object.keys(P.segSideColors).forEach(k=>{ if(+k>=segCount) delete P.segSideColors[+k]; }); }
+  // 【バグ修正】選択が強制的に変わった場合（編集中の色わけが「｜」削除で消えた等）、
+  // メインUIには消えた色わけの色が残っている。そのまま次のreadParamsが走ると
+  // 残った色がsegFills[新選択]へ保存され「全文字がその色に変わる」バグになるため、
+  // 新しく選択されたsegの保存値をUIへ書き戻して同期を取る。
+  if(+sel.value !== prev) loadSegToUI(+sel.value);
+}
+
+/* 「編集中」セグメントを切り替えたとき、そのセグメントの保存済み色をUIに流し込む。
+   まだ設定が無いセグメントは、seg0(全体)の現在値をコピーして初期値にする＝
+   「追加したては先頭と同じ見た目」になり、そこから調整できる。 */
+function loadSegToUI(seg){
+  if(!P.segFills) P.segFills={};
+  let s=P.segFills[seg];
+  if(!s){
+    // 初期値は現在のメインUIの色をコピー
+    s={ fill:$("pFill").value, c1:$("pFillC1").value, c2:$("pFillC2").value,
+        hue:+$("pFillHue").value, sat:+$("pFillSat").value, light:+$("pFillLight").value };
+    P.segFills[seg]=s;
+  }
+  // 面グラデの復元は全seg共通(seg0含む)。以前はseg0を「メインUIそのまま」として
+  // early returnしていたが、それだと別の色わけを編集した後にseg0へ戻った瞬間、
+  // メインUIに残った前の色わけの色をreadParamsがsegFills[0]へ保存してしまい、
+  // 全体の色が汚染される(=色わけを切り替えると全部変わる)バグになっていた。
+  $("pFill").value=s.fill;
+  $("pFillC1").value=s.c1; $("pFillC2").value=s.c2;
+  $("pFillHue").value=s.hue; $("pFillSat").value=s.sat; $("pFillLight").value=s.light;
+  // 大きさ・角度・縁色・側面色は色わけ2以降だけが持つ(seg0は本体設定が担う)。
+  // seg0でsegOutlineColors[0]等を作ると、全体の縁色変更が効かなくなるため作らない。
+  if(seg>0){
+    if(!P.segShapes) P.segShapes={};
+    const sh=P.segShapes[seg]||{scale:100,rot:0};
+    $("segScale").value=sh.scale!==undefined?sh.scale:100;
+    $("segRot").value=sh.rot!==undefined?sh.rot:0;
+    if(!P.segOutlineColors) P.segOutlineColors={};
+    let oc=P.segOutlineColors[seg];
+    if(!oc){ oc=[0,1,2,3].map(i=>$("olC"+i).value); P.segOutlineColors[seg]=oc; }
+    for(let i=0;i<4;i++) $("segOlC"+i).value=oc[i];
+    if(!P.segSideColors) P.segSideColors={};
+    let sd=P.segSideColors[seg];
+    if(!sd){ sd={c1:$("pExC1").value, c2:$("pExC2").value}; P.segSideColors[seg]=sd; }
+    $("segExC1").value=sd.c1; $("segExC2").value=sd.c2;
+  }
+  // 数値表示(.val)も追従させる
+  document.querySelectorAll('.val[data-for="pFillHue"],.val[data-for="pFillSat"],.val[data-for="pFillLight"],.val[data-for="segScale"],.val[data-for="segRot"]')
+    .forEach(v=>{ v.value=$(v.dataset.for).value; });
+}
+
+/* ================================================================
+   §13 プレビュー制御（ズーム・再描画スケジューリング）
+   ------------------------------------------------------------
+   requestAnimationFrameでの間引き再描画。操作中はlow品質、手が止まったらhigh品質で描き直す。
+================================================================ */
+
+/* ── 再描画の状態 ── */
+
+/* ---------- プレビュー更新（プログレッシブ描画） ----------
+   ドラッグ中は quality="low"（側面ツヤ・スパークル・稲妻を省いた骨組み）
+   ＋解像度0.6で即描画。操作が止まった瞬間に一度だけ quality="high" で
+   フル解像度の完成品に差し替える。「触ってる最中に完成品は要らない」設計。 */
+let rafPending=false, nextQuality="high", idleTimer=null;
+
+const PREVIEW_LOW_SCALE=0.6;
 
 /* ---------- ワークスペース拡大縮小 ---------- */
 function applyZoom(){
@@ -2877,10 +2917,6 @@ function applyZoom(){
   // （rAFベースの間引きが効くので、スライダーを素早く動かしても呼び過ぎにはならない）
   requestDraw("low");
 }
-$("viewZoom").addEventListener("input", applyZoom);
-$("zoomOut").addEventListener("click",()=>{ $("viewZoom").value=Math.max(25,+$("viewZoom").value-25); applyZoom(); });
-$("zoomIn").addEventListener("click",()=>{ $("viewZoom").value=Math.min(400,+$("viewZoom").value+25); applyZoom(); });
-$("zoomReset").addEventListener("click",()=>{ $("viewZoom").value=100; applyZoom(); });
 
 /* ---------- 塗りの角度ショートカット・色味リセット ---------- */
 function setFillAngle(deg){
@@ -2888,22 +2924,7 @@ function setFillAngle(deg){
   document.querySelectorAll('.val[data-for="pFillAngle"]').forEach(s=>s.value=deg);
   commitState(); requestDraw();
 }
-$("btnAngleH").addEventListener("click",()=>setFillAngle(0));   // 横=左→右
-$("btnAngleV").addEventListener("click",()=>setFillAngle(90));  // 縦=上→下
-$("btnAngleD").addEventListener("click",()=>setFillAngle(45));  // 斜め45°
-$("btnFillReset").addEventListener("click",()=>{
-  $("pFillHue").value=0; $("pFillSat").value=100; $("pFillLight").value=0;
-  document.querySelectorAll('.val[data-for="pFillHue"],.val[data-for="pFillSat"],.val[data-for="pFillLight"]')
-    .forEach(s=>{ s.value = $(s.dataset.for).value; });
-  commitState(); requestDraw();
-});
 
-/* ---------- プレビュー更新（プログレッシブ描画） ----------
-   ドラッグ中は quality="low"（側面ツヤ・スパークル・稲妻を省いた骨組み）
-   ＋解像度0.6で即描画。操作が止まった瞬間に一度だけ quality="high" で
-   フル解像度の完成品に差し替える。「触ってる最中に完成品は要らない」設計。 */
-let rafPending=false, nextQuality="high", idleTimer=null;
-const PREVIEW_LOW_SCALE=0.6;
 // ズーム倍率を反映した解像度。今までは#cvをCSS transform:scaleで見た目だけ拡大していたため、
 // 100%を超えるズームで元の解像度のままボケていた。高品質描画(quality="high")の時だけ、
 // ズームした分だけ実際のキャンバス解像度も上げる（100%表示時は今までと同じ負荷のまま＝
@@ -2912,6 +2933,7 @@ function currentPreviewScale(){
   const zoomFrac=Math.max(1,(+$("viewZoom").value/100));
   return Math.min(4, zoomFrac);
 }
+
 function requestDraw(quality){
   if(quality==="low"||quality==="high") nextQuality=quality;
   if(!rafPending){
@@ -2935,40 +2957,16 @@ function requestDraw(quality){
     idleTimer=setTimeout(()=>requestDraw("high"), 180);
   }
 }
+
 function onInput(){requestDraw("low");}
 
-/* ---------- 書き出し ---------- */
-$("btnExport").addEventListener("click",async()=>{
-  const scale=+$("expScale").value;
-  const off=document.createElement("canvas").getContext("2d");
-  draw(off,scale,$("expBg").checked);
-  // toBlob()は非同期(コールバックが1テック遅れて発火する)ため、その中でnavigator.share()を
-  // 呼ぶと「ユーザー操作の直接の結果ではない」と判定され、Safariがエラーも出さず
-  // 共有シートを出さないことがある。toDataURL()は同期処理なので、そこからBlobへの変換も
-  // 手動デコードで同期的に行い、クリック操作からshare()までの連鎖を途切れさせない。
-  const dataUrl=off.canvas.toDataURL("image/png");
-  const bin=atob(dataUrl.split(",")[1]);
-  const bytes=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-  const blob=new Blob([bytes],{type:"image/png"});
-  const file=new File([blob],"pachimoji.png",{type:"image/png"});
-  // Web Share API対応環境(主にスマホのSafari/Chrome)では共有シートを開く。
-  // そこから「画像を保存」を選ぶとカメラロールに直接入る＝ダウンロードフォルダ経由にならない。
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({files:[file], title:"pachimoji.png"});
-      return;
-    }catch(err){
-      if(err && err.name==="AbortError") return; // ユーザーが共有をキャンセルしただけ
-      // 共有に失敗した場合は下のダウンロード方式にフォールバック
-    }
-  }
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="pachimoji.png";
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-});
+/* ================================================================
+   §14 プリセット
+   ------------------------------------------------------------
+   構成一式（塗り・縁・立体・ブラシまで）を一括適用するプリセット定義と適用処理。
+================================================================ */
+
+/* ── 既定値・プリセット定義 ── */
 
 /* ---------- プリセット ---------- */
 /* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
@@ -2978,6 +2976,7 @@ const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",p
   pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,
   pBg:"none",pBgGradShape:"radial",pBgAngle:90,pBgSpikeCount:60,pBgSpikeLen:45,pBgSpikeWidth:6,pBgSpikeInnerX:26,pBgSpikeInnerY:30,pBgSpikeJitter:20,
   pBgSpikeBgOn:false,pBgSpikeBgC:"#1a0e00"};
+
 const PRESETS = {
   "金BONUS":{pText:"金BONUS",pFont:"Reggae One",pSpacing:-14,
     pFill:"gold",pFillAngle:90,pFillRepeat:2,pVary:35,pMetal:0,
@@ -3051,6 +3050,7 @@ const PRESETS = {
     pSparkN:18,pSparkShape:"mixed",pSparkSize:19,pSparkC:"#b51a00",pSparkSeed:99,
     pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:3},
 };
+
 function applyPreset(name){
   const p={...DEFAULTS, ...PRESETS[name]};
   for(const [k,v] of Object.entries(p)){
@@ -3068,6 +3068,14 @@ function applyPreset(name){
     }
   }
   if(!("brush" in p)) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:[],maskMode:"face"}]; // ブラシ無指定なら初期化
+  // 【バグ修正】プリセットは「構成一式の置き換え」なので、前の状態のセグメント別上書き
+  // （色わけごとの色・大きさ・縁色・側面色）は全てリセットする。残したままだと、
+  // 色わけ2以降を編集中(segEdit>0)にプリセットを押した際、プリセットの色が
+  // その色わけにだけ保存されて先頭と食い違う／古い色わけ色が残って
+  // プリセットの色が全文字に反映されない、という不整合が起きていた。
+  P.segFills={}; P.segShapes={}; P.segOutlineColors={}; P.segSideColors={};
+  const segSel=$("segEdit"); if(segSel) segSel.value=0;
+  rebuildSegSelector();
   brushColorTouched=true; // プリセットの色を推奨色で上書きさせない
   fillBrushTypes();
   buildLayerUI();
@@ -3077,14 +3085,25 @@ function applyPreset(name){
   // 描かれてしまう既知の癖の対策）
   requestAnimationFrame(()=>requestAnimationFrame(()=>requestDraw("high")));
 }
-Object.keys(PRESETS).forEach(name=>{
-  const b=document.createElement("button");
-  b.textContent=name; b.addEventListener("click",()=>applyPreset(name));
-  $("presets").appendChild(b);
-});
+
+/* ================================================================
+   §15 状態管理（undo/redo・保存・共有・お気に入り）
+   ------------------------------------------------------------
+   全UI状態のスナップショット化と復元。undo/redo、JSON書き出し、URL共有、
+   localStorageお気に入りが全て snapshot()/applyState() を共有する。
+================================================================ */
+
+/* ── undo/redo・お気に入りの状態 ── */
 
 /* ---------- アンドゥ・リドゥ ---------- */
 const undoStack=[], redoStack=[]; let lastState=null;
+
+/* ---------- お気に入り（この端末に保存、名前をつけて一覧から呼び出せる） ----------
+   JSON書き出し・URL共有は「他人に渡す/別端末に移す」用途、お気に入りは
+   「この端末で気に入った状態をすぐ呼び出す」用途、と役割を分けている。
+   localStorageに配列で保持。1件ごとの中身はsnapshot()と同じ形式(JSON文字列)。 */
+const FAV_KEY="pachimoji_favorites";
+
 function snapshot(){
   const s={};
   document.querySelectorAll("#panel input[id], #panel select[id], #panel textarea[id]").forEach(el=>{
@@ -3099,6 +3118,7 @@ function snapshot(){
   s.__segSideColors = P.segSideColors||{};
   return JSON.stringify(s);
 }
+
 function applyState(json){
   const s=JSON.parse(json);
   // セグメント別の面グラデ設定を復元。保存に含まれない(旧データ/プリセット)ときは空にリセット。
@@ -3139,35 +3159,18 @@ function applyState(json){
   warmupFont($("pFont").value);
   requestAnimationFrame(()=>requestAnimationFrame(()=>requestDraw("high")));
 }
+
 function updateUndoBtns(){
   $("btnUndo").disabled=!undoStack.length;
   $("btnRedo").disabled=!redoStack.length;
 }
+
 function commitState(){
   const now=snapshot();
   if(now===lastState) return;
   if(lastState){ undoStack.push(lastState); if(undoStack.length>60) undoStack.shift(); }
   lastState=now; redoStack.length=0; updateUndoBtns();
 }
-$("btnUndo").addEventListener("click",()=>{
-  if(!undoStack.length) return;
-  redoStack.push(lastState); lastState=undoStack.pop();
-  applyState(lastState); updateUndoBtns();
-});
-$("btnRedo").addEventListener("click",()=>{
-  if(!redoStack.length) return;
-  undoStack.push(lastState); lastState=redoStack.pop();
-  applyState(lastState); updateUndoBtns();
-});
-document.addEventListener("keydown",e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){
-    e.preventDefault();
-    (e.shiftKey?$("btnRedo"):$("btnUndo")).click();
-  }
-});
-// 全コントロールの確定時（change）にスナップショット
-document.querySelectorAll("#panel input[id], #panel select[id], #panel textarea[id]")
-  .forEach(el=>el.addEventListener("change",commitState));
 
 /* ---------- スライダー横の数値を直接入力できるように ----------
    .val(data-for="X"のinput、またはid="olV0"などのoutline幅用input)への
@@ -3183,65 +3186,7 @@ function syncValInput(el, sliderId){
   slider.value=v;
   return true;
 }
-document.addEventListener("input", e=>{
-  const t=e.target;
-  if(!(t.tagName==="INPUT" && t.type==="number" && t.classList.contains("val"))) return;
-  if(t.dataset.for){ if(syncValInput(t,t.dataset.for)) onInput(); }
-  else if(t.id && t.id.startsWith("olV")){ if(syncValInput(t,"olW"+t.id.slice(3))) onInput(); }
-});
-document.addEventListener("change", e=>{
-  const t=e.target;
-  if(!(t.tagName==="INPUT" && t.type==="number" && t.classList.contains("val"))) return;
-  // クランプ後の正しい値を表示に反映してから確定（範囲外を打ち込んだ場合の補正）
-  if(t.dataset.for){ syncValInput(t,t.dataset.for); t.value=$(t.dataset.for).value; }
-  else if(t.id && t.id.startsWith("olV")){ const w="olW"+t.id.slice(3); syncValInput(t,w); t.value=$(w).value; }
-  commitState();
-});
 
-/* ---------- 設定の保存・読込・URL共有 ---------- */
-$("btnSaveJson").addEventListener("click",()=>{
-  const blob=new Blob([snapshot()],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="pachimoji-settings.json";
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-});
-$("btnLoadJson").addEventListener("click",()=>$("fileJson").click());
-$("fileJson").addEventListener("change",e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    try{ applyState(rd.result); commitState(); }
-    catch(err){ alert("設定ファイルを読み込めませんでした"); }
-  };
-  rd.readAsText(f);
-  e.target.value="";
-});
-$("btnShareUrl").addEventListener("click",async()=>{
-  const enc=btoa(unescape(encodeURIComponent(snapshot())));
-  const url=location.origin+location.pathname+"#p="+enc;
-  try{ await navigator.clipboard.writeText(url); $("btnShareUrl").textContent="コピーした！";
-    setTimeout(()=>$("btnShareUrl").textContent="URLをコピー",1500); }
-  catch(err){ prompt("このURLをコピーしてください", url); }
-});
-// URLハッシュから設定を復元
-// buildOutlineUI()は復元処理(olOn0等のDOM要素を触る)より前に実行する必要がある。
-// 以前はこれが「初期化」セクション（このIIFEより後）にしかなく、共有URL経由で
-// 開いた場合に縁取りの色・太さがDOM要素未生成のため復元されない潜在バグがあった。
-buildOutlineUI();
-let restoredFromUrl=false;
-(function(){
-  const m=location.hash.match(/#p=(.+)/);
-  if(!m) return;
-  try{ applyState(decodeURIComponent(escape(atob(m[1])))); restoredFromUrl=true; }catch(e){}
-})();
-
-/* ---------- お気に入り（この端末に保存、名前をつけて一覧から呼び出せる） ----------
-   JSON書き出し・URL共有は「他人に渡す/別端末に移す」用途、お気に入りは
-   「この端末で気に入った状態をすぐ呼び出す」用途、と役割を分けている。
-   localStorageに配列で保持。1件ごとの中身はsnapshot()と同じ形式(JSON文字列)。 */
-const FAV_KEY="pachimoji_favorites";
 function loadFavorites(){
   try{
     const raw=localStorage.getItem(FAV_KEY);
@@ -3249,10 +3194,12 @@ function loadFavorites(){
     return Array.isArray(arr)?arr:[];
   }catch(e){ return []; }
 }
+
 function saveFavorites(arr){
   try{ localStorage.setItem(FAV_KEY, JSON.stringify(arr)); return true; }
   catch(e){ alert("保存に失敗しました（保存容量の上限に達している可能性があります）"); return false; }
 }
+
 function renderFavList(){
   const box=$("favList");
   const favs=loadFavorites();
@@ -3279,6 +3226,342 @@ function renderFavList(){
     box.appendChild(chip);
   });
 }
+
+/* ================================================================
+   §16 イベント配線・初期化
+   ------------------------------------------------------------
+   ここから下は読み込み時に実行される。文の順序を変えないこと（特に末尾の初期化列）。
+================================================================ */
+
+/* ── レイヤー操作ボタン ── */
+
+$("btnLayerAdd").addEventListener("click",()=>{
+  const id=nextLayerId++;
+  brushLayers.push({id,name:"レイヤー"+id,visible:true,strokes:[],maskMode:"face"});
+  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
+});
+
+$("btnLayerDup").addEventListener("click",()=>{
+  const src=activeLayer(); const id=nextLayerId++;
+  brushLayers.push({id,name:src.name+"のコピー",visible:true,strokes:JSON.parse(JSON.stringify(src.strokes)),maskMode:src.maskMode||"face"});
+  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
+});
+
+$("btnLayerDel").addEventListener("click",()=>{
+  if(brushLayers.length<=1) return;
+  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
+  brushLayers.splice(idx,1);
+  activeLayerId=brushLayers[Math.max(0,idx-1)].id;
+  buildLayerUI(); commitState(); requestDraw();
+});
+
+$("btnLayerUp").addEventListener("click",()=>{
+  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
+  if(idx<brushLayers.length-1){ [brushLayers[idx],brushLayers[idx+1]]=[brushLayers[idx+1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
+});
+
+$("btnLayerDown").addEventListener("click",()=>{
+  const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
+  if(idx>0){ [brushLayers[idx],brushLayers[idx-1]]=[brushLayers[idx-1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
+});
+
+/* ── テキスト入力・色わけ追加 ── */
+
+$("pText").addEventListener("input",()=>{ textCustomized=true; rebuildSegSelector(); });
+
+/* 「➕色わけを追加」: テキストのカーソル位置に区切り「｜」を挿入する。
+   手で縦棒を打たなくても色わけを増やせる。挿入後は新しくできた色わけを編集対象にする。 */
+$("btnAddSplit").addEventListener("click",()=>{
+  const ta=$("pText");
+  const start=ta.selectionStart!=null?ta.selectionStart:ta.value.length;
+  const end=ta.selectionEnd!=null?ta.selectionEnd:ta.value.length;
+  const before=ta.value.slice(0,start), after=ta.value.slice(end);
+  ta.value = before + "｜" + after;
+  textCustomized=true;
+  // カーソルを区切りの直後へ
+  const pos=start+1;
+  ta.focus(); ta.setSelectionRange(pos,pos);
+  rebuildSegSelector();
+  // 挿入位置より前にある区切りの数＝新しくできた右側パートのindex。そこを編集対象にする。
+  const segIdx=(before.match(/[|｜]/g)||[]).length+1;
+  const sel=$("segEdit");
+  if(sel && segIdx < sel.options.length){ sel.value=segIdx; loadSegToUI(segIdx); }
+  onInput();
+});
+
+/* ── 色わけ編集の配線 ── */
+
+$("segEdit").addEventListener("change",()=>{ loadSegToUI(+$("segEdit").value); onInput(); });
+
+// 色わけの大きさ・角度スライダー本体の操作でも再描画（rangeIds/otherIdsに無いため個別配線）
+["segScale","segRot"].forEach(id=>$(id).addEventListener("input",onInput));
+
+// 色わけの縁色・側面色ピッカーも同様に個別配線
+["segOlC0","segOlC1","segOlC2","segOlC3","segExC1","segExC2"].forEach(id=>$(id).addEventListener("input",onInput));
+
+/* ── ブラシUIの配線 ── */
+
+// 系統を変えたら推奨色から始める / 種類変更は同系統内なので色維持
+$("brushCategory").addEventListener("change",()=>{ brushColorTouched=false; fillBrushTypes(); onInput(); });
+
+// 種類(明/中間/暗など)を選び直すのは「この色にしたい」という明確な操作なので、
+// 以前どこかで色を触っていたとしても、ここでは必ずその種類の色を適用する。
+$("brushType").addEventListener("change",()=>{ brushColorTouched=false; applyBrushTypeColor(); updateBrushRows(); });
+
+// 色ピッカーを触ったら以後尊重。プレビューも即更新
+$("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDraw("low"); });
+
+$("brushMask").addEventListener("change",()=>{
+  const l=activeLayer();
+  if(l){ l.maskMode=$("brushMask").value; commitState(); }
+  requestDraw();
+});
+
+$("brushMode").addEventListener("change",()=>{
+  cv.classList.toggle("brush-active", $("brushMode").checked);
+  if(!$("brushMode").checked) $("brushCursor").style.display="none";
+});
+
+$("btnSizeDown").addEventListener("click",()=>{ $("brushSize").value=Math.max(4,+$("brushSize").value-4); updateBrushLabel("brushSize"); onInput(); });
+
+$("btnSizeUp").addEventListener("click",()=>{ $("brushSize").value=Math.min(160,+$("brushSize").value+4); updateBrushLabel("brushSize"); onInput(); });
+
+// brushSize/brushFlowはP側のパラメータではない(=draw()を経由しない)ため、
+// 動かした瞬間にラベルが更新されない不具合があった。専用に直接更新する。
+["brushSize","brushFlow","brushSpacing","brushScatter","brushAngle","brushAngleJit"].forEach(id=>{
+  $(id).addEventListener("input",()=>updateBrushLabel(id));
+});
+
+$("brushSize").addEventListener("input",showBrushSizeGuide);
+
+$("btnSizeDown").addEventListener("click",showBrushSizeGuide);
+
+$("btnSizeUp").addEventListener("click",showBrushSizeGuide);
+
+/* ── キャンバスのポインタ操作（ブラシ描画・タッチスクロール抑制） ── */
+
+cv.addEventListener("pointerdown", e=>{
+  if(!$("brushMode").checked) return;
+  e.preventDefault();
+  try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+  brushDrawing=true;
+  const p=screenToLocal(e.clientX,e.clientY);
+  const type=($("brushCategory").value==="eraser") ? "eraser" : $("brushType").value;
+  const base={ type, color:$("brushColor").value, size:+$("brushSize").value, flow:+$("brushFlow").value };
+  if(type==="metal-hi"||type==="metal-mid"||type==="metal-lo"){
+    currentStroke={...base, anchor:p, reach:0}; // 角度追従型: 基準点のみ記録、伸びはdragで決める
+  }else if(type==="spark"){
+    // スパークルはスタンプ配置: 形状・間隔・散布・角度・角度ジッターを保持
+    currentStroke={...base, points:[p],
+      shape:$("brushShape").value, spacing:+$("brushSpacing").value, scatter:+$("brushScatter").value,
+      angle:+$("brushAngle").value, angleJit:+$("brushAngleJit").value};
+  }else{
+    currentStroke={...base, points:[p]};
+  }
+  requestDraw("low");
+}, {passive:false});
+
+cv.addEventListener("pointermove", e=>{
+  if(!brushDrawing||!currentStroke) return;
+  e.preventDefault();
+  const p=screenToLocal(e.clientX,e.clientY);
+  if(currentStroke.anchor){
+    // 現在の押し出し角度方向へドラッグを投影＝フリーハンドの揺れを角度に沿わせる
+    const ang=+$("pExAngle").value*Math.PI/180;
+    const ux=Math.cos(ang), uy=Math.sin(ang);
+    const dx=p.x-currentStroke.anchor.x, dy=p.y-currentStroke.anchor.y;
+    currentStroke.reach=dx*ux+dy*uy;
+  }else{
+    const last=currentStroke.points[currentStroke.points.length-1];
+    const minDist=Math.max(1,currentStroke.size*.12);
+    if(Math.hypot(p.x-last.x,p.y-last.y)<minDist) return;
+    currentStroke.points.push(p);
+  }
+  requestDraw("low");
+}, {passive:false});
+
+// iOS Safariはpointer/touchのpreventDefaultがpassiveリスナーだと無効になるため、
+// ブラシモード中はtouchstart/touchmoveも明示的にブロックしてページのゴム跳ね・揺れを止める
+["touchstart","touchmove"].forEach(evt=>{
+  cv.addEventListener(evt, e=>{
+    if($("brushMode").checked) e.preventDefault();
+  }, {passive:false});
+});
+
+cv.addEventListener("pointerup", endBrushStroke);
+
+cv.addEventListener("pointerleave", endBrushStroke);
+
+cv.addEventListener("pointercancel", endBrushStroke);
+
+$("btnClearBrush").addEventListener("click",()=>{
+  const layer=activeLayer();
+  if(!layer.strokes.length) return;
+  layer.strokes=[]; buildLayerUI(); commitState(); requestDraw();
+});
+
+/* ── ズーム ── */
+
+$("viewZoom").addEventListener("input", applyZoom);
+
+$("zoomOut").addEventListener("click",()=>{ $("viewZoom").value=Math.max(25,+$("viewZoom").value-25); applyZoom(); });
+
+$("zoomIn").addEventListener("click",()=>{ $("viewZoom").value=Math.min(400,+$("viewZoom").value+25); applyZoom(); });
+
+$("zoomReset").addEventListener("click",()=>{ $("viewZoom").value=100; applyZoom(); });
+
+/* ── 塗り角度ボタン・色味リセット ── */
+
+$("btnAngleH").addEventListener("click",()=>setFillAngle(0));   // 横=左→右
+
+$("btnAngleV").addEventListener("click",()=>setFillAngle(90));  // 縦=上→下
+
+$("btnAngleD").addEventListener("click",()=>setFillAngle(45));  // 斜め45°
+
+$("btnFillReset").addEventListener("click",()=>{
+  $("pFillHue").value=0; $("pFillSat").value=100; $("pFillLight").value=0;
+  document.querySelectorAll('.val[data-for="pFillHue"],.val[data-for="pFillSat"],.val[data-for="pFillLight"]')
+    .forEach(s=>{ s.value = $(s.dataset.for).value; });
+  commitState(); requestDraw();
+});
+
+/* ── 書き出し ── */
+
+/* ---------- 書き出し ---------- */
+$("btnExport").addEventListener("click",async()=>{
+  const scale=+$("expScale").value;
+  const off=document.createElement("canvas").getContext("2d");
+  draw(off,scale,$("expBg").checked);
+  // toBlob()は非同期(コールバックが1テック遅れて発火する)ため、その中でnavigator.share()を
+  // 呼ぶと「ユーザー操作の直接の結果ではない」と判定され、Safariがエラーも出さず
+  // 共有シートを出さないことがある。toDataURL()は同期処理なので、そこからBlobへの変換も
+  // 手動デコードで同期的に行い、クリック操作からshare()までの連鎖を途切れさせない。
+  const dataUrl=off.canvas.toDataURL("image/png");
+  const bin=atob(dataUrl.split(",")[1]);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  const blob=new Blob([bytes],{type:"image/png"});
+  const file=new File([blob],"pachimoji.png",{type:"image/png"});
+  // Web Share API対応環境(主にスマホのSafari/Chrome)では共有シートを開く。
+  // そこから「画像を保存」を選ぶとカメラロールに直接入る＝ダウンロードフォルダ経由にならない。
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title:"pachimoji.png"});
+      return;
+    }catch(err){
+      if(err && err.name==="AbortError") return; // ユーザーが共有をキャンセルしただけ
+      // 共有に失敗した場合は下のダウンロード方式にフォールバック
+    }
+  }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="pachimoji.png";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+});
+
+/* ── プリセットボタン生成 ── */
+
+Object.keys(PRESETS).forEach(name=>{
+  const b=document.createElement("button");
+  b.textContent=name; b.addEventListener("click",()=>applyPreset(name));
+  $("presets").appendChild(b);
+});
+
+/* ── undo/redo・キーボードショートカット ── */
+
+$("btnUndo").addEventListener("click",()=>{
+  if(!undoStack.length) return;
+  redoStack.push(lastState); lastState=undoStack.pop();
+  applyState(lastState); updateUndoBtns();
+});
+
+$("btnRedo").addEventListener("click",()=>{
+  if(!redoStack.length) return;
+  undoStack.push(lastState); lastState=redoStack.pop();
+  applyState(lastState); updateUndoBtns();
+});
+
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){
+    e.preventDefault();
+    (e.shiftKey?$("btnRedo"):$("btnUndo")).click();
+  }
+});
+
+/* ── スライダー数値の直接入力サポート ── */
+
+// 全コントロールの確定時（change）にスナップショット
+document.querySelectorAll("#panel input[id], #panel select[id], #panel textarea[id]")
+  .forEach(el=>el.addEventListener("change",commitState));
+
+document.addEventListener("input", e=>{
+  const t=e.target;
+  if(!(t.tagName==="INPUT" && t.type==="number" && t.classList.contains("val"))) return;
+  if(t.dataset.for){ if(syncValInput(t,t.dataset.for)) onInput(); }
+  else if(t.id && t.id.startsWith("olV")){ if(syncValInput(t,"olW"+t.id.slice(3))) onInput(); }
+});
+
+document.addEventListener("change", e=>{
+  const t=e.target;
+  if(!(t.tagName==="INPUT" && t.type==="number" && t.classList.contains("val"))) return;
+  // クランプ後の正しい値を表示に反映してから確定（範囲外を打ち込んだ場合の補正）
+  if(t.dataset.for){ syncValInput(t,t.dataset.for); t.value=$(t.dataset.for).value; }
+  else if(t.id && t.id.startsWith("olV")){ const w="olW"+t.id.slice(3); syncValInput(t,w); t.value=$(w).value; }
+  commitState();
+});
+
+/* ── JSON保存・読み込み・URL共有 ── */
+
+/* ---------- 設定の保存・読込・URL共有 ---------- */
+$("btnSaveJson").addEventListener("click",()=>{
+  const blob=new Blob([snapshot()],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="pachimoji-settings.json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+});
+
+$("btnLoadJson").addEventListener("click",()=>$("fileJson").click());
+
+$("fileJson").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{ applyState(rd.result); commitState(); }
+    catch(err){ alert("設定ファイルを読み込めませんでした"); }
+  };
+  rd.readAsText(f);
+  e.target.value="";
+});
+
+$("btnShareUrl").addEventListener("click",async()=>{
+  const enc=btoa(unescape(encodeURIComponent(snapshot())));
+  const url=location.origin+location.pathname+"#p="+enc;
+  try{ await navigator.clipboard.writeText(url); $("btnShareUrl").textContent="コピーした！";
+    setTimeout(()=>$("btnShareUrl").textContent="URLをコピー",1500); }
+  catch(err){ prompt("このURLをコピーしてください", url); }
+});
+
+/* ── 初期化シーケンス（順序に意味あり: 縁UI生成 → URL復元 → 初期状態適用 → 配線 → フォント読込） ── */
+
+// URLハッシュから設定を復元
+// buildOutlineUI()は復元処理(olOn0等のDOM要素を触る)より前に実行する必要がある。
+// 以前はこれが「初期化」セクション（このIIFEより後）にしかなく、共有URL経由で
+// 開いた場合に縁取りの色・太さがDOM要素未生成のため復元されない潜在バグがあった。
+buildOutlineUI();
+
+let restoredFromUrl=false;
+
+(function(){
+  const m=location.hash.match(/#p=(.+)/);
+  if(!m) return;
+  try{ applyState(decodeURIComponent(escape(atob(m[1])))); restoredFromUrl=true; }catch(e){}
+})();
+
+/* ── お気に入りの配線 ── */
+
 $("btnFavSave").addEventListener("click",()=>{
   const name=prompt("この状態の名前を入力してください（例: 俺ゴールド）");
   if(!name || !name.trim()) return;
@@ -3286,6 +3569,7 @@ $("btnFavSave").addEventListener("click",()=>{
   favs.push({id:Date.now(), name:name.trim().slice(0,20), json:snapshot()});
   if(saveFavorites(favs)) renderFavList();
 });
+
 renderFavList();
 
 /* ---------- 初期化 ---------- */
@@ -3295,14 +3579,19 @@ renderFavList();
 // まるごと復元する。60個以上のパラメータを手で個別に書き換えると転記ミスの
 // リスクが高いため、動作確認済みの状態を丸ごと読み込む方式にしてある。
 const INITIAL_STATE_JSON='{"pText":"激アツ‼︎","pFont":"system-heavy","pSize":"185","pSpacing":"-14","pLineH":"80","pFill":"metalGold","pFillC1":"#ffe37a","pFillC2":"#b34700","pFillAngle":"61","pFillRepeat":"5","pFillHue":"0","pFillSat":"199","pFillLight":"0","pTex":"none","pTexInt":"0","pTexScale":"4","pVary":"35","pMetal":"0","pMetalC":"#ffb060","pPuff":"0","pPuffEdge":"60","pPuffSoft":"45","pPuffSpec":"65","pPuffHard":"30","pPuffGlow":"45","pPuffLight":"45","pSeed":"7","olOn0":true,"olC0":"#ffffff","olW0":"22","olV0":"22","olOn1":true,"olC1":"#1a0e00","olW1":"18","olV1":"18","olOn2":true,"olC2":"#ffd76a","olW2":"10","olV2":"10","olOn3":true,"olC3":"#5a2d00","olW3":"4","olV3":"4","pExDepth":"16","pExAngle":"115","pExC1":"#b8811a","pExC2":"#3a2000","pBevel":"3","pExBand":"2","pExSpec":"75","pExRefl":true,"pExFlash":"6","pRim":"0","pRimC":"#ffcc66","pExLight":"315","pExSpecW":"9","brushMode":true,"brushCategory":"glow","brushType":"spark","brushShape":"cross","brushSpacing":"60","brushScatter":"57","brushAngle":"0","brushAngleJit":"0","brushSize":"20","brushFlow":"40","brushColor":"#ffe9c0","brushMask":"face","pGlowOn":false,"pGlowC":"#ff3300","pGlowBlur":"18","pGlossOn":false,"pGlossPos":"87","pGlossW":"18","pGlossA":"100","pBolt":"0","pBoltC":"#d19d01","pBoltW":"4","pBoltBranch":"2","pBoltRough":"50","pBoltOver":false,"pSparkN":"0","pSparkShape":"dot","pSparkSize":"35","pSparkLen":"58","pSparkVar":"18","pSparkEdge":"100","pSparkC":"#ffa337","pSparkSeed":"1","pTransformMode":"none","pArch":"12","pFanRadius":"300","pPerspAngle":"45","pPerspFrom":"80","pPerspTo":"120","pPerspDrift":"20","pTilt":"0","pRotate":"0","pTrapTop":"100","pTrapBottom":"100","pJitR":"0","pJitY":"0","pJitSeed":"1","pBg":"none","pBgGradShape":"radial","pBgAngle":"90","pBgC1":"#ffdd55","pBgC2":"#ffffff","pBgSpikeBgOn":false,"pBgSpikeBgC":"#1a0e00","pBgSpikeCount":"60","pBgSpikeLen":"45","pBgSpikeWidth":"6","pBgSpikeInnerX":"26","pBgSpikeInnerY":"30","pBgSpikeJitter":"20","pView":"all","fileJson":"","__brushLayers":[{"id":1,"name":"レイヤー1","visible":true,"strokes":[{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-4.18,"y":-35.01},"reach":139.6},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":35.16,"y":-38.68},"reach":155.89},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":70.82,"y":-27.14},"reach":149.61},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":118.03,"y":4.34},"reach":184.98},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":126.42,"y":-19.79},"reach":196.33},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":154.22,"y":-40.25},"reach":197.4},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":202.48,"y":6.96},"reach":172.3},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":215.59,"y":41.58},"reach":134.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-100.7,"y":23.74},"reach":161.62},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-174.66,"y":65.19},"reach":141.38},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-225.54,"y":-36.06},"reach":166.35},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":-78.67,"y":15.88},"reach":154.15},{"type":"metal-lo","color":"#140a04","size":20,"flow":40,"anchor":{"x":18.9,"y":-73.3},"reach":174.84}],"maskMode":"face"}],"__activeLayerId":1,"__nextLayerId":2,"__segFills":{"0":{"fill":"metalGold","c1":"#ffe37a","c2":"#b34700","hue":0,"sat":199,"light":0}},"__segShapes":{},"__segOutlineColors":{},"__segSideColors":{}}';
+
 applyZoom();
+
 // 共有URL(#p=...)から開かれた場合はそちらを優先し、新デフォルトで上書きしない
 // (URL復元時はapplyState内で既にbuildLayerUI/fillBrushTypesが呼ばれているため、ここでは不要)
 if(!restoredFromUrl){
   try{ applyState(INITIAL_STATE_JSON); }catch(e){ buildLayerUI(); fillBrushTypes(); }
 }
+
 lastState=snapshot(); updateUndoBtns();
+
 [...rangeIds,...otherIds].forEach(id=>$(id).addEventListener("input",onInput));
+
 $("expScale").addEventListener("input",requestDraw);
 
 /* フォント読込 → 再描画 */
@@ -3310,6 +3599,7 @@ const FONT_LIST=['400 40px "Reggae One"','400 40px "RocknRoll One"','400 40px "R
   '800 40px "Shippori Mincho B1"','800 40px "Kaisei Tokumin"','400 40px "DotGothic16"',
   '800 40px "M PLUS Rounded 1c"','900 40px "Zen Maru Gothic"',
   '400 40px "Hachi Maru Pop"','400 40px "Potta One"','400 40px "Mochiy Pop One"'];
+
 /* 各セクションのヒント文(説明書き)はデフォルト非表示にし、「使い方」ボタンで
    そのセクションだけ表示を切り替える。説明はUIを圧迫する一方で初見には必要なので、
    常時表示ではなく「読みたい時に読める」形に引き算した。 */
@@ -3329,7 +3619,9 @@ Promise.all(FONT_LIST.map(f=>document.fonts.load(f).catch(()=>[])))
     $("fontStatus").textContent = ok>0 ? `Webフォント ${ok}/${FONT_LIST.length} 読込済` : "Webフォント読込失敗（システムフォントで動作）";
     requestDraw();
   });
+
 document.fonts.ready.then(()=>requestDraw());
+
 requestDraw();
 </script>
 </body>
