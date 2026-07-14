@@ -304,7 +304,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         </select>
       </div>
       <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
-      <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="10" value="4"><input type="number" class="val" data-for="pTexScale"></div>
+      <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="14" value="4"><input type="number" class="val" data-for="pTexScale"></div>
       <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><input type="number" class="val" data-for="pVary"></div>
       <div class="row"><label>メタルツヤ</label><input type="range" id="pMetal" min="0" max="100" value="0"><input type="number" class="val" data-for="pMetal"></div>
       <div class="row"><label>映り込み色</label><input type="color" id="pMetalC" value="#ffb060"></div>
@@ -675,6 +675,23 @@ function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),pars
 
 function lerp(a,b,t){return a+(b-a)*t;}
 
+/* ---------- UTF-8対応 base64（URL共有用） ----------
+   以前は btoa(unescape(encodeURIComponent(s))) / 逆変換 を使っていたが、
+   escape/unescape は非推奨API。TextEncoder/TextDecoder 方式に置き換えた。
+   バイト列表現は旧方式と同一なので、過去に発行した共有URLもそのまま読める。 */
+function b64encodeUtf8(str){
+  const bytes=new TextEncoder().encode(str);
+  let bin=""; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function b64decodeUtf8(b64){
+  const bin=atob(b64);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
 /* ---------- 色味調整（色相・彩度・明るさ） ----------
    どのグラデ（内蔵・プロシージャル金属・カスタム）にも後掛けできる汎用調整。
    「プリセットの色が強すぎる／好みの色相に寄せたい」をUIから直接いじれるように。 */
@@ -726,8 +743,8 @@ function adjustColor(c, hueDeg, satPct, lightPct){
 /* ================================================================
    §3 パラメータ入出力（UI ⇄ P）
    ------------------------------------------------------------
-   全コントロールの値をグローバル P に吸い上げる readParams と、縁取りスロットUIの生成。
-   readParams は値の収集に加えて「どの行を表示するか」のUI出し分けも担う。
+   全コントロールの値をグローバル P に吸い上げる readParams（純粋な読取）と、
+   表示切替・ラベル同期を担う updateControlUI、縁取りスロットUIの生成。
 ================================================================ */
 
 function buildOutlineUI(){
@@ -746,6 +763,10 @@ function buildOutlineUI(){
 }
 
 function readParams(){
+  // UI → P の「読み取り」だけを行う純粋関数。DOMへの書き込み（表示切替・
+  // ラベル同期など）は updateControlUI() に分離した。draw() は書き出し用の
+  // オフスクリーン描画からも呼ばれるため、そこで表示制御まで走るのは
+  // 無駄な仕事＆責務違反だった（読む関数が画面を書き換えていた）。
   rangeIds.forEach(id=>P[id]=+$(id).value);
   otherIds.forEach(id=>{
     const el=$(id);
@@ -754,14 +775,7 @@ function readParams(){
   P.outlines=[];
   for(let i=0;i<4;i++){
     P.outlines.push({on:$("olOn"+i).checked, color:$("olC"+i).value, w:+$("olW"+i).value});
-    const olv=$("olV"+i);
-    if(document.activeElement!==olv) olv.value = $("olW"+i).value; // 入力中は上書きしない
   }
-  // range値表示（直接入力できるinput化したので、編集中(フォーカス中)は上書きしない）
-  document.querySelectorAll(".val[data-for]").forEach(s=>{
-    if(document.activeElement===s) return;
-    s.value = $(s.dataset.for).value;
-  });
   // --- セグメント別の面グラデ同期 ---
   // 面グラデ系コントロールは「編集中セグメント」の色を常に指し示す。読むたびに
   // 現在の編集対象seg(0=全体 含む)の値をUIから吸い上げてP.segFillsに保存しておく。
@@ -779,10 +793,6 @@ function readParams(){
   if(segEdit>0){
     P.segShapes[segEdit]={ scale:+$("segScale").value, rot:+$("segRot").value };
   }
-  // 大きさ・角度スライダーは色わけ2以降を編集中のときだけ表示する
-  const showShape = segEdit>0;
-  $("segScaleRow").style.display = showShape ? "flex":"none";
-  $("segRotRow").style.display = showShape ? "flex":"none";
   // --- 色わけごとの縁色・側面色 ---
   if(!P.segOutlineColors) P.segOutlineColors={};
   if(!P.segSideColors) P.segSideColors={};
@@ -790,6 +800,28 @@ function readParams(){
     P.segOutlineColors[segEdit]=[$("segOlC0").value,$("segOlC1").value,$("segOlC2").value,$("segOlC3").value];
     P.segSideColors[segEdit]={ c1:$("segExC1").value, c2:$("segExC2").value };
   }
+}
+
+/* P（直前のreadParamsで更新済み）とUIの現在値をもとに、コントロールの
+   表示/非表示・ラベル・スライダー数値表示を同期する。プレビュー再描画の
+   rAF内で1フレームに1回だけ呼ばれる（全UI操作は requestDraw を通るので、
+   ここに置けば取りこぼしがない）。書き出し用の draw() 呼び出しでは走らない。 */
+function updateControlUI(){
+  for(let i=0;i<4;i++){
+    const olv=$("olV"+i);
+    if(document.activeElement!==olv) olv.value = $("olW"+i).value; // 入力中は上書きしない
+  }
+  // range値表示（直接入力できるinput化したので、編集中(フォーカス中)は上書きしない）
+  document.querySelectorAll(".val[data-for]").forEach(s=>{
+    if(document.activeElement===s) return;
+    s.value = $(s.dataset.for).value;
+  });
+  const segEditEl=$("segEdit");
+  const segEdit=segEditEl?+segEditEl.value:0;
+  // 大きさ・角度スライダーは色わけ2以降を編集中のときだけ表示する
+  const showShape = segEdit>0;
+  $("segScaleRow").style.display = showShape ? "flex":"none";
+  $("segRotRow").style.display = showShape ? "flex":"none";
   // 色わけ用の縁色・側面色ブロックは色わけ2以降を編集中のときだけ表示
   const segLbl = segDisplayName(segEdit);
   $("segOutlineBlock").style.display = showShape ? "block":"none";
@@ -849,8 +881,13 @@ function readParams(){
    面の塗りに使うグラデ定義・value noiseテクスチャ・プロシージャル金属ストップの生成。
 ================================================================ */
 
-function makeTexture(type, scale, seed){
-  const key = type+"_"+scale+"_"+seed;
+function makeTexture(type, scale, seed, hue, sat, light){
+  // 色味調整（色相・彩度・明るさ）はテクスチャにも適用する。
+  // 【バグ修正】以前はテクスチャの色が固定RGBのままで、溶岩・ダイヤなど
+  // テクスチャ強さ100%のプリセットでは色相スライダーが見た目に全く効かなかった
+  // （調整が下の面グラデにしか掛からず、上に被さるテクスチャで隠れていた）。
+  hue=hue||0; sat=(sat===undefined?100:sat); light=light||0;
+  const key = type+"_"+scale+"_"+seed+"_"+hue+"_"+sat+"_"+light;
   if(texCache.key===key) return texCache.canvas;
   const S=256, c=document.createElement("canvas"); c.width=c.height=S;
   const x=c.getContext("2d");
@@ -896,9 +933,10 @@ function makeTexture(type, scale, seed){
       else if(v<.7){const t=(v-.45)/.25; r=120+120*t; g=20+50*t; b=8;}
       else{const t=(v-.7)/.3; r=255; g=90+130*t; b=20+60*t;}  // 灼熱の割れ目
     }else if(type==="glitter"){
-      // 低コントラストの下地（輝点は後描き）
+      // 下地（輝点は後描き）。以前は200〜245のほぼ白一色で粒が全く目立たなかった。
+      // 中明度グレー＋広めの振れ幅にして、暗粒・白粒の両方が映えるようにする。
       v=fbm(px/S*sc*3, py/S*sc*3);
-      r=200+45*v; g=195+45*v; b=205+45*v;
+      r=142+72*v; g=140+72*v; b=155+74*v;
     }else if(type==="facet"){
       // 下地は薄いノイズ（三角面は後描き）
       v=fbm(px/S*sc, py/S*sc);
@@ -910,44 +948,100 @@ function makeTexture(type, scale, seed){
   }
   x.putImageData(img,0,0);
   if(type==="facet"){
-    // ダイヤカット: 明暗ランダムの三角面パッチ＋細い境界線
+    // ダイヤカット: 明暗ランダムの三角面＋シャープなカットライン＋頂点のギラ。
+    // 【改善】以前は半透明の面を薄い下地に重ねる方式で、最大でも「うっすら
+    // 白っぽい/青っぽい」程度のコントラストしか出なかった。面を不透明で塗り、
+    // 明度分布を両極端（濃紺〜純白）に寄せて、カット面らしいバキバキ感を出す。
     const fr=mulberry32(seed*577);
+    const grid2=3+Math.round(scale*1.6); // 同じ細かさ値でも従来比約2倍の分割数
+    const gN=grid2+2; // 端1マスぶん外へはみ出させて、ジッターで下地が覗く隙間を無くす
     const pts=[];
-    const grid2=5+Math.round(scale*.8);
-    for(let iy=0;iy<=grid2;iy++)for(let ix=0;ix<=grid2;ix++){
-      pts.push({x:ix/grid2*S+(fr()-.5)*S/grid2*.9, y:iy/grid2*S+(fr()-.5)*S/grid2*.9});
+    for(let iy=0;iy<=gN;iy++)for(let ix=0;ix<=gN;ix++){
+      pts.push({x:(ix-1)/grid2*S+(fr()-.5)*S/grid2*.9, y:(iy-1)/grid2*S+(fr()-.5)*S/grid2*.9});
     }
-    const at=(ix,iy)=>pts[iy*(grid2+1)+ix];
-    for(let iy=0;iy<grid2;iy++)for(let ix=0;ix<grid2;ix++){
+    const at=(ix,iy)=>pts[iy*(gN+1)+ix];
+    for(let iy=0;iy<gN;iy++)for(let ix=0;ix<gN;ix++){
       const a=at(ix,iy), b2=at(ix+1,iy), c2=at(ix,iy+1), d2=at(ix+1,iy+1);
       const tris = fr()<.5 ? [[a,b2,d2],[a,d2,c2]] : [[a,b2,c2],[b2,d2,c2]];
       for(const tri of tris){
         const lum=fr();
+        // 中間調を減らした3段構成: 濃紺グレーの影面 / 明るいグレー面 / 純白のフラッシュ面
+        let cr,cg,cb;
+        if(lum<.42){ const t=lum/.42; cr=22+42*t; cg=28+46*t; cb=50+58*t; }
+        else if(lum<.82){ const t=(lum-.42)/.4; cr=168+62*t; cg=174+58*t; cb=192+50*t; }
+        else { cr=cg=cb=255; }
         x.beginPath(); x.moveTo(tri[0].x,tri[0].y);
         x.lineTo(tri[1].x,tri[1].y); x.lineTo(tri[2].x,tri[2].y); x.closePath();
-        x.fillStyle = lum>.5
-          ? `rgba(255,255,255,${(lum-.5)*.9})`
-          : `rgba(40,45,70,${(.5-lum)*.75})`;
+        x.fillStyle=`rgb(${cr|0},${cg|0},${cb|0})`;
         x.fill();
-        x.strokeStyle="rgba(255,255,255,.35)"; x.lineWidth=.7; x.stroke();
+        // 白いカットラインは廃止（面の明暗差だけで切り替わりを見せる）。
+        // ただし隣接面のアンチエイリアス境界に下地が1px滲むのを防ぐため、
+        // 面自身の色で細くなぞって継ぎ目を埋める（見た目には線が出ない）。
+        x.strokeStyle=x.fillStyle; x.lineWidth=1; x.stroke();
       }
     }
-  }
-  if(type==="glitter"){
-    // ラメ輝点: 小粒多数 + 中粒少数（shadowで滲ませる）
-    const gr=mulberry32(seed*401);
-    for(let i=0;i<380;i++){
-      const gx=gr()*S, gy=gr()*S, r0=.4+gr()*1.4;
-      x.fillStyle=`rgba(255,255,255,${.35+gr()*.65})`;
-      x.beginPath(); x.arc(gx,gy,r0,0,7); x.fill();
-    }
-    x.shadowColor="#ffffff"; x.shadowBlur=3;
-    for(let i=0;i<50;i++){
-      const gx=gr()*S, gy=gr()*S;
-      x.fillStyle="rgba(255,255,255,.95)";
-      x.beginPath(); x.arc(gx,gy,1.2+gr()*1.6,0,7); x.fill();
+    // 頂点のギラ: ランダムな頂点に十字スパークを散らす（宝石の輝き）
+    x.shadowColor="#ffffff"; x.shadowBlur=5;
+    x.strokeStyle="rgba(255,255,255,.95)"; x.lineWidth=1;
+    for(let i=0;i<8+grid2;i++){
+      const p=pts[(fr()*pts.length)|0], len=2.5+fr()*4.5;
+      x.beginPath();
+      x.moveTo(p.x-len,p.y); x.lineTo(p.x+len,p.y);
+      x.moveTo(p.x,p.y-len); x.lineTo(p.x,p.y+len);
+      x.stroke();
     }
     x.shadowBlur=0;
+  }
+  if(type==="glitter"){
+    // ラメ輝点。【改善】以前は明るい下地に白粒だけで、ほぼ無地に見えていた。
+    // 暗い粒を先に沈めて明暗両側からコントラストを作り、白粒→強い輝点→
+    // 十字ギラの3層で重ねる。粒の数・小ささは「細かさ」スライダーに連動。
+    const gr=mulberry32(seed*401);
+    const k=Math.sqrt(Math.max(1,scale)/4); // 細かさ4を基準: 上げると粒が増えて小さくなる
+    // 1) 暗い粒（影ラメ）: 白粒を引き立てる暗側のコントラスト
+    for(let i=0;i<(260*k)|0;i++){
+      const gx=gr()*S, gy=gr()*S, r0=(.5+gr()*1.5)/k;
+      x.fillStyle=`rgba(14,17,32,${.35+gr()*.4})`;
+      x.beginPath(); x.arc(gx,gy,r0,0,7); x.fill();
+    }
+    // 2) 白い小粒 多数
+    for(let i=0;i<(430*k)|0;i++){
+      const gx=gr()*S, gy=gr()*S, r0=(.4+gr()*1.4)/k;
+      x.fillStyle=`rgba(255,255,255,${.55+gr()*.45})`;
+      x.beginPath(); x.arc(gx,gy,r0,0,7); x.fill();
+    }
+    // 3) 強い輝点（にじみ付き）
+    x.shadowColor="#ffffff"; x.shadowBlur=4;
+    for(let i=0;i<(70*k)|0;i++){
+      const gx=gr()*S, gy=gr()*S;
+      x.fillStyle="rgba(255,255,255,1)";
+      x.beginPath(); x.arc(gx,gy,(1.1+gr()*1.7)/k,0,7); x.fill();
+    }
+    // 4) 十字ギラ（少数の大きな輝き）
+    x.strokeStyle="rgba(255,255,255,.95)"; x.lineWidth=.9;
+    for(let i=0;i<12;i++){
+      const gx=gr()*S, gy=gr()*S, len=(2.5+gr()*4)/Math.max(1,k*.8);
+      x.beginPath();
+      x.moveTo(gx-len,gy); x.lineTo(gx+len,gy);
+      x.moveTo(gx,gy-len); x.lineTo(gx,gy+len);
+      x.stroke();
+    }
+    x.shadowBlur=0;
+  }
+  // 色味調整（色相・彩度・明るさ）は「後描きの面・粒まで含めた最終結果」に掛ける。
+  // キャッシュされるので実行は調整値の変更時に一度きり。ドラッグ中のlow品質描画は
+  // テクスチャ自体をスキップするため、スライダー操作が重くなることもない。
+  if(hue!==0 || sat!==100 || light!==0){
+    const fin=x.getImageData(0,0,S,S), fd=fin.data;
+    for(let i=0;i<fd.length;i+=4){
+      let [h2,s2,l2]=rgbToHsl(fd[i],fd[i+1],fd[i+2]);
+      h2=((h2+hue/360)%1+1)%1;
+      s2=Math.max(0,Math.min(1,s2*(sat/100)));
+      l2=Math.max(0,Math.min(1,l2+light/100));
+      const [nr,ng,nb]=hslToRgb(h2,s2,l2);
+      fd[i]=nr|0; fd[i+1]=ng|0; fd[i+2]=nb|0;
+    }
+    x.putImageData(fin,0,0);
   }
   texCache.key=key; texCache.canvas=c;
   return c;
@@ -1038,11 +1132,21 @@ function getFillStops(seg){
     const [d,l]=METAL_PAL[fill];
     stops=makeMetalStops(P.pSeed*7+3,d,l,false);
   }else stops=GRADS[fill]||GRADS[P.pFill];
-  const hue=(ov&&ov.hue!==undefined?ov.hue:P.pFillHue)||0;
-  const sat=(ov&&ov.sat!==undefined?ov.sat:(P.pFillSat!==undefined?P.pFillSat:100));
-  const light=(ov&&ov.light!==undefined?ov.light:P.pFillLight)||0;
+  const {hue,sat,light}=getFillAdjust(seg);
   if(hue===0 && sat===100 && light===0) return stops;
   return stops.map(([p,c])=>[p, adjustColor(c,hue,sat,light)]);
+}
+
+/* segの色味調整値(色相・彩度・明るさ)を解決する。getFillStops(面グラデ)と
+   makeTexture(テクスチャ)の両方から使う共通ロジック。 */
+function getFillAdjust(seg){
+  seg=seg||0;
+  const ov = (P.segFills && P.segFills[seg]) ? P.segFills[seg] : null;
+  return {
+    hue:  (ov&&ov.hue!==undefined   ? ov.hue   : P.pFillHue)||0,
+    sat:  (ov&&ov.sat!==undefined   ? ov.sat   : (P.pFillSat!==undefined?P.pFillSat:100)),
+    light:(ov&&ov.light!==undefined ? ov.light : P.pFillLight)||0
+  };
 }
 
 /* ================================================================
@@ -1549,7 +1653,8 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
 
   // 3) テクスチャ（面内のみ）。ドラッグ中(low)はスキップ（ベベルと同じ方針）
   if(P.pTex!=="none" && P.pTexInt>0 && quality==="high"){
-    const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed);
+    const adj=getFillAdjust(0);
+    const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed,adj.hue,adj.sat,adj.light);
     g.globalCompositeOperation="source-atop";
     g.globalAlpha=P.pTexInt/100;
     const pw=Math.max(L.maxW,256), ph=Math.max(L.totalH+L.size,256);
@@ -2158,10 +2263,10 @@ function textCacheKey(scale,quality){
     if(BG_ONLY_KEYS.has(key)) continue;
     k+=key+":"+JSON.stringify(P[key])+";";
   }
-  // ブラシ内容・描画中ストローク・アクティブレイヤーも文字レイヤーの見た目に影響する
-  return k+"|"+scale+"|"+quality+"|"+JSON.stringify(brushLayers)+"|"+activeLayerId+"|"+
-    (typeof currentStroke!=="undefined"&&currentStroke?JSON.stringify(currentStroke):"")+
-    "|"+(typeof brushDrawing!=="undefined"?brushDrawing:"");
+  // ブラシ内容・描画中ストローク・アクティブレイヤーも文字レイヤーの見た目に影響する。
+  // ブラシに関わる変更箇所は全て bumpBrushRev() を通るので、世代番号＋
+  // アクティブレイヤーIDだけでキャッシュの一致判定ができる（stringify不要）。
+  return k+"|"+scale+"|"+quality+"|"+brushRev+"|"+activeLayerId;
 }
 function bgCacheKey(cw,ch){
   let k="";
@@ -2571,6 +2676,14 @@ let nextLayerId = 2;
 
 let currentStroke = null;
 
+/* ブラシ状態の世代番号。ブラシに関わる変更（ストローク追加・レイヤー操作・
+   復元など）のたびに bumpBrushRev() で+1し、キャッシュキーにはこの番号だけを
+   入れる。以前はキー生成のたびに brushLayers 全体を JSON.stringify していた
+   ため、描き込むほどキー計算自体が重くなっていた（毎rAFで発生）。 */
+let brushRev = 0;
+
+function bumpBrushRev(){ brushRev++; }
+
 let lastLayout = {offX:0, offY:0, scale:1, cw:0, ch:0, rot:0, pivotY:0, trapTop:1, trapBottom:1, trapContentHalfW:0};
 
 /* ---------- 描画インタラクション ---------- */
@@ -2849,7 +2962,7 @@ function buildLayerUI(){
     const row=document.createElement("div");
     row.className="layerRow"+(L.id===activeLayerId?" active":"");
     const vis=document.createElement("input"); vis.type="checkbox"; vis.checked=L.visible;
-    vis.addEventListener("change",()=>{ L.visible=vis.checked; commitState(); requestDraw(); });
+    vis.addEventListener("change",()=>{ L.visible=vis.checked; bumpBrushRev(); commitState(); requestDraw(); });
     const name=document.createElement("span"); name.className="layerName"; name.textContent=L.name+` (${L.strokes.length})`;
     row.appendChild(vis); row.appendChild(name);
     row.addEventListener("click",(e)=>{ if(e.target===vis) return; activeLayerId=L.id; buildLayerUI(); });
@@ -2982,6 +3095,7 @@ function endBrushStroke(){
     buildLayerUI();
   }
   currentStroke=null;
+  bumpBrushRev();
   requestDraw("high");
 }
 
@@ -3117,6 +3231,7 @@ function requestDraw(quality){
       // ブラシ操作中は跡がボケないよう等倍。スライダー操作中のみ0.6に落とす。
       const pScale=(q==="low" && !brushDrawing) ? PREVIEW_LOW_SCALE : currentPreviewScale();
       const s=draw(ctx,pScale,true,q);
+      updateControlUI(); // 表示切替・ラベル同期（readParamsから分離したDOM書き込み側）
       if(q==="high"){
         // sizeNoteは「書き出しサイズの目安(等倍)」を示す欄なので、ズームで内部解像度を
         // 上げていてもズームに影響されないよう pScale で割り戻した値を表示する。
@@ -3244,6 +3359,7 @@ function applyPreset(name){
     }
   }
   if(!("brush" in p)) brushLayers=[{id:1,name:"レイヤー1",visible:true,strokes:[],maskMode:"face"}]; // ブラシ無指定なら初期化
+  bumpBrushRev();
   if(p.pFont) syncFontToValue(p.pFont); // 別カテゴリのフォントを含むプリセットにも対応
   // 【バグ修正】プリセットは「構成一式の置き換え」なので、前の状態のセグメント別上書き
   // （色わけごとの色・大きさ・縁色・側面色）は全てリセットする。残したままだと、
@@ -3332,6 +3448,7 @@ function applyState(json){
   fillBrushTypes();
   if(s.brushType && [...$("brushType").options].some(o=>o.value===s.brushType)) $("brushType").value=s.brushType;
   if(s.brushColor!==undefined) $("brushColor").value=s.brushColor;
+  bumpBrushRev(); // brushLayers を丸ごと差し替えた可能性があるため必ず世代を進める
   buildLayerUI();
   rebuildSegSelector();
   loadSegToUI(+($("segEdit").value||0));
@@ -3829,13 +3946,13 @@ const PRESET_TEXT_EN={
 $("btnLayerAdd").addEventListener("click",()=>{
   const id=nextLayerId++;
   brushLayers.push({id,name:"レイヤー"+id,visible:true,strokes:[],maskMode:"face"});
-  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
+  activeLayerId=id; bumpBrushRev(); buildLayerUI(); commitState(); requestDraw();
 });
 
 $("btnLayerDup").addEventListener("click",()=>{
   const src=activeLayer(); const id=nextLayerId++;
   brushLayers.push({id,name:src.name+"のコピー",visible:true,strokes:JSON.parse(JSON.stringify(src.strokes)),maskMode:src.maskMode||"face"});
-  activeLayerId=id; buildLayerUI(); commitState(); requestDraw();
+  activeLayerId=id; bumpBrushRev(); buildLayerUI(); commitState(); requestDraw();
 });
 
 $("btnLayerDel").addEventListener("click",()=>{
@@ -3843,17 +3960,17 @@ $("btnLayerDel").addEventListener("click",()=>{
   const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
   brushLayers.splice(idx,1);
   activeLayerId=brushLayers[Math.max(0,idx-1)].id;
-  buildLayerUI(); commitState(); requestDraw();
+  bumpBrushRev(); buildLayerUI(); commitState(); requestDraw();
 });
 
 $("btnLayerUp").addEventListener("click",()=>{
   const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
-  if(idx<brushLayers.length-1){ [brushLayers[idx],brushLayers[idx+1]]=[brushLayers[idx+1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
+  if(idx<brushLayers.length-1){ [brushLayers[idx],brushLayers[idx+1]]=[brushLayers[idx+1],brushLayers[idx]]; bumpBrushRev(); buildLayerUI(); commitState(); requestDraw(); }
 });
 
 $("btnLayerDown").addEventListener("click",()=>{
   const idx=brushLayers.findIndex(l=>l.id===activeLayerId);
-  if(idx>0){ [brushLayers[idx],brushLayers[idx-1]]=[brushLayers[idx-1],brushLayers[idx]]; buildLayerUI(); commitState(); requestDraw(); }
+  if(idx>0){ [brushLayers[idx],brushLayers[idx-1]]=[brushLayers[idx-1],brushLayers[idx]]; bumpBrushRev(); buildLayerUI(); commitState(); requestDraw(); }
 });
 
 /* ── テキスト入力・色わけ追加 ── */
@@ -3904,7 +4021,7 @@ $("brushColor").addEventListener("input",()=>{ brushColorTouched=true; requestDr
 
 $("brushMask").addEventListener("change",()=>{
   const l=activeLayer();
-  if(l){ l.maskMode=$("brushMask").value; commitState(); }
+  if(l){ l.maskMode=$("brushMask").value; bumpBrushRev(); commitState(); }
   requestDraw();
 });
 
@@ -3949,6 +4066,7 @@ cv.addEventListener("pointerdown", e=>{
   }else{
     currentStroke={...base, points:[p]};
   }
+  bumpBrushRev();
   requestDraw("low");
 }, {passive:false});
 
@@ -3968,6 +4086,7 @@ cv.addEventListener("pointermove", e=>{
     if(Math.hypot(p.x-last.x,p.y-last.y)<minDist) return;
     currentStroke.points.push(p);
   }
+  bumpBrushRev();
   requestDraw("low");
 }, {passive:false});
 
@@ -3988,7 +4107,7 @@ cv.addEventListener("pointercancel", endBrushStroke);
 $("btnClearBrush").addEventListener("click",()=>{
   const layer=activeLayer();
   if(!layer.strokes.length) return;
-  layer.strokes=[]; buildLayerUI(); commitState(); requestDraw();
+  layer.strokes=[]; bumpBrushRev(); buildLayerUI(); commitState(); requestDraw();
 });
 
 /* ── 背景画像の読み込み（カメラロール等から） ── */
@@ -4161,7 +4280,7 @@ $("fileJson").addEventListener("change",e=>{
 });
 
 $("btnShareUrl").addEventListener("click",async()=>{
-  const enc=btoa(unescape(encodeURIComponent(snapshot())));
+  const enc=b64encodeUtf8(snapshot());
   const url=location.origin+location.pathname+"#p="+enc;
   try{ await navigator.clipboard.writeText(url); $("btnShareUrl").textContent=t("コピーした！");
     setTimeout(()=>$("btnShareUrl").textContent=t("URLをコピー"),1500); }
@@ -4187,7 +4306,7 @@ let restoredFromUrl=false;
 (function(){
   const m=location.hash.match(/#p=(.+)/);
   if(!m) return;
-  try{ applyState(decodeURIComponent(escape(atob(m[1])))); restoredFromUrl=true; }catch(e){}
+  try{ applyState(b64decodeUtf8(m[1])); restoredFromUrl=true; }catch(e){}
 })();
 
 /* ── お気に入りの配線 ── */
