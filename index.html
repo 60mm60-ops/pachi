@@ -424,7 +424,8 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
       <p class="hint">グロー・光沢・稲妻・スパークル。PSの光彩（外側）＋自作ブラシに相当。</p>
       <label class="chk"><input type="checkbox" id="pGlowOn" checked><span>外側グロー</span></label>
       <div class="row"><label>グロー色</label><input type="color" id="pGlowC" value="#ff8c00">
-        <input type="range" id="pGlowBlur" min="2" max="60" value="24" style="flex:1"><input type="number" class="val" data-for="pGlowBlur"></div>
+        <input type="range" id="pGlowBlur" min="2" max="100" value="24" style="flex:1"><input type="number" class="val" data-for="pGlowBlur"></div>
+      <div class="row"><label>グロー流量</label><input type="range" id="pGlowInt" min="10" max="200" value="100"><input type="number" class="val" data-for="pGlowInt"></div>
       <label class="chk"><input type="checkbox" id="pGlossOn" checked><span>光沢スイープ（斜め帯）</span></label>
       <div class="row"><label>位置</label><input type="range" id="pGlossPos" min="0" max="100" value="35"><input type="number" class="val" data-for="pGlossPos"></div>
       <div class="row"><label>幅</label><input type="range" id="pGlossW" min="4" max="60" value="18"><input type="number" class="val" data-for="pGlossW"></div>
@@ -494,6 +495,8 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="beta">ベタフラ（芯ありのトゲ）</option>
           <option value="burst">バースト（放射光線の爆発）</option>
           <option value="bolt">稲妻（電撃＋集中線）</option>
+          <option value="splatter">スパッタ（飛沫・インク）</option>
+          <option value="water">水面（光の網目）</option>
         </select>
       </div>
       <div class="row" id="bgImageRow" style="display:none">
@@ -532,12 +535,12 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
         <label class="chk" style="margin:0"><input type="checkbox" id="pBgSpikeBgOn"><span>背景色を敷く</span></label>
         <input type="color" id="pBgSpikeBgC" value="#1a0e00" style="margin-left:8px">
       </div>
-      <div class="row" id="bgSpikeCountRow"><label>本数</label><input type="range" id="pBgSpikeCount" min="12" max="150" value="60"><input type="number" class="val" data-for="pBgSpikeCount"></div>
+      <div class="row" id="bgSpikeCountRow"><label id="bgSpikeCountLabel">本数</label><input type="range" id="pBgSpikeCount" min="12" max="150" value="60"><input type="number" class="val" data-for="pBgSpikeCount"></div>
       <div class="row" id="bgSpikeLenRow"><label>長さ</label><input type="range" id="pBgSpikeLen" min="10" max="100" value="45"><input type="number" class="val" data-for="pBgSpikeLen"></div>
       <div class="row" id="bgSpikeWidthRow"><label>太さ</label><input type="range" id="pBgSpikeWidth" min="1" max="40" value="6"><input type="number" class="val" data-for="pBgSpikeWidth"></div>
       <div class="row" id="bgSpikeInnerXRow"><label>横半径</label><input type="range" id="pBgSpikeInnerX" min="0" max="60" value="26"><input type="number" class="val" data-for="pBgSpikeInnerX"></div>
       <div class="row" id="bgSpikeInnerYRow"><label>縦半径</label><input type="range" id="pBgSpikeInnerY" min="0" max="60" value="30"><input type="number" class="val" data-for="pBgSpikeInnerY"></div>
-      <div class="row" id="bgSpikeJitterRow"><label>乱れ</label><input type="range" id="pBgSpikeJitter" min="0" max="100" value="20"><input type="number" class="val" data-for="pBgSpikeJitter"></div>
+      <div class="row" id="bgSpikeJitterRow"><label id="bgSpikeJitterLabel">乱れ</label><input type="range" id="pBgSpikeJitter" min="0" max="100" value="20"><input type="number" class="val" data-for="pBgSpikeJitter"></div>
       <p class="hint" id="bgSpikeHint">ウニフラ＝トゲの形を色で塗る（中心は空洞のリング状）。ベタフラ＝画面のフチから中心へ刺さるトゲを描く（フチ側は自然にベタ塗りになり、中央は透明が残る。「横半径・縦半径」で中央の透明領域の大きさを調整）。</p>
     </div></details>
 
@@ -626,7 +629,7 @@ const cv = $("cv"), ctx = cv.getContext("2d");
 const P = {};
 
 const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillHue","pFillSat","pFillLight","pTexInt","pTexScale","pSeed","pMetal","pVary","pPuff","pPuffEdge","pPuffSoft","pPuffSpec","pPuffHard","pPuffGlow","pPuffLight",
-  "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlossPos","pGlossW","pGlossA","pBolt",
+  "pExDepth","pExAngle","pBevel","pExBand","pExSpec","pExLight","pExSpecW","pExFlash","pRim","pGlowBlur","pGlowInt","pGlossPos","pGlossW","pGlossA","pBolt",
   "pSparkN","pSparkSize","pSparkSeed","pSparkLen","pSparkVar","pSparkEdge","pBoltW","pBoltBranch","pBoltRough",
   "pArch","pFanRadius","pPerspAngle","pPerspFrom","pPerspTo","pPerspDrift","pTilt","pRotate","pTrapTop","pTrapBottom","pJitR","pJitY","pJitSeed",
   "pBgAngle","pBgSpikeCount","pBgSpikeLen","pBgSpikeWidth","pBgSpikeInnerX","pBgSpikeInnerY","pBgSpikeJitter",
@@ -850,6 +853,7 @@ function updateControlUI(){
   const isGrad=bg==="gradient", isSpike=(bg==="uni"||bg==="beta");
   const isBurst=bg==="burst", isBolt=bg==="bolt", isFx=(isBurst||isBolt);
   const isImage=bg==="image";
+  const isSplat=bg==="splatter", isWater=bg==="water";
   // 背景画像の行（画像選択・フィット・暗くする）は画像タイプのときだけ表示
   ["bgImageRow","bgImageFitRow","bgImageDarkRow"].forEach(id=>{
     const el=$(id); if(el) el.style.display = isImage ? "flex":"none";
@@ -860,20 +864,27 @@ function updateControlUI(){
   });
   $("bgGradShapeRow").style.display = isGrad ? "flex":"none";
   $("bgGradAngleRow").style.display = (isGrad && P.pBgGradShape==="linear") ? "flex":"none";
-  $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike||isFx) ? "flex":"none";
-  $("pBgC2").style.display = (isGrad||isFx) ? "inline-block":"none"; // バースト/稲妻は2色使う
-  $("bgColor1Label").textContent = t(isGrad ? "色" : (isSpike ? "トゲの色" : (isBolt ? "芯/グロー色" : (isBurst ? "芯/中間色" : "色"))));
-  $("bgSpikeBgRow").style.display = (isSpike||isFx||isImage) ? "flex":"none"; // 背景色を敷くはFx・画像(全体表示の余白色)でも使える
+  $("bgColor1Row").style.display = (bg==="solid"||isGrad||isSpike||isFx||isSplat||isWater) ? "flex":"none";
+  $("pBgC2").style.display = (isGrad||isFx||isWater) ? "inline-block":"none"; // バースト/稲妻/水面は2色使う
+  $("bgColor1Label").textContent = t(isGrad ? "色" : (isSpike ? "トゲの色" : (isBolt ? "芯/グロー色" : (isBurst ? "芯/中間色" : (isSplat ? "飛沫の色" : (isWater ? "水/光の色" : "色"))))));
+  $("bgSpikeBgRow").style.display = (isSpike||isFx||isImage||isSplat) ? "flex":"none"; // 背景色を敷くはFx・画像・スパッタでも使える
   $("pBgSpikeBgC").style.display = P.pBgSpikeBgOn ? "inline-block":"none";
   // ベタフラは「フチから中心へ刺さるトゲを直接描く」方式のため、長さ・太さは
   // 自動で決まる（本数・中央領域サイズ・乱れだけが効く）。効かないスライダーは隠す。
   // バースト/稲妻は 本数・横半径(コア)・縦半径(コア)・乱れ を共通で使う。
-  ["bgSpikeCountRow","bgSpikeInnerXRow","bgSpikeInnerYRow","bgSpikeJitterRow"].forEach(id=>{
+  // 本数・乱れはスパッタ（飛沫の塊数/形の暴れ）・水面（波の本数/揺らぎ）でも使う
+  ["bgSpikeCountRow","bgSpikeJitterRow"].forEach(id=>{
+    $(id).style.display = (isSpike||isFx||isSplat||isWater) ? "flex" : "none";
+  });
+  ["bgSpikeInnerXRow","bgSpikeInnerYRow"].forEach(id=>{
     $(id).style.display = (isSpike||isFx) ? "flex" : "none";
   });
   $("bgSpikeHint").style.display = isSpike ? "block" : "none";
-  // 長さ: ウニフラとバースト / 太さ: ウニフラと稲妻
-  $("bgSpikeLenRow").style.display = (bg==="uni"||isBurst) ? "flex":"none";
+  // 水面では本数→細かさ、乱れ→揺らぎとして読むのでラベルを付け替える
+  $("bgSpikeCountLabel").textContent = t(isWater ? "細かさ" : "本数");
+  $("bgSpikeJitterLabel").textContent = t(isWater ? "揺らぎ" : "乱れ");
+  // 長さ: ウニフラ・バースト・スパッタ(飛び散り距離) / 太さ: ウニフラと稲妻
+  $("bgSpikeLenRow").style.display = (bg==="uni"||isBurst||isSplat) ? "flex":"none";
   $("bgSpikeWidthRow").style.display = (bg==="uni"||isBolt) ? "flex":"none";
   // 変形モードに応じて関連スライダーだけ表示（他モードのスライダーは隠す）
   const tm = P.pTransformMode||"arch";
@@ -1354,7 +1365,7 @@ function applyTransformWarp(chars, size){
 /* ---------- メイン描画 ---------- */
 function computeCanvasSize(L){
   const maxStroke=Math.max(...P.outlines.filter(o=>o.on).map(o=>o.w),0);
-  const glowPad=P.pGlowOn?P.pGlowBlur*2:0;
+  const glowPad=P.pGlowOn?P.pGlowBlur*3.2:0; // 最外層はぼかし×2で広がるため余白も拡張
   const exPad=P.pExDepth+4;
   // 変形(アーチ/扇形/パース)による実際のはみ出し量を文字ごとの計算結果から動的に算出。
   // モードごとに個別の余白式を持たせず、実測ベースにすることで新モード追加時も自動対応する。
@@ -2031,6 +2042,222 @@ function drawBurstBg(g, cx, cy, cw, ch, col1, col2, count, lenPct, coreRX, coreR
 
 /* 稲妻: 集中線＋枝分かれする太い電撃(3層グロー)＋キラキラ＋楕円コア。
    col=芯(白)/glowCol=グロー色。太さwidthPx、本数mainCount。 */
+/* ---------- スパッタ（血飛沫・インクの飛び散り） ----------
+   本体ブロブ（円の重ね合わせによる不定形）＋縁の楔ギザ＋距離減衰する衛星飛沫の
+   3層構成。遠くへ飛んだ滴ほど小さく・涙滴状に伸びる（実際の飛沫の物理に寄せる）。
+   本数=飛沫の塊数 / 長さ=飛び散り距離 / 乱れ=形の暴れ。 */
+function drawSplatterBg(g, cw, ch, col, count, lenK, jitter, seed){
+  const rnd=mulberry32((seed||1)*277+13);
+  const base=Math.min(cw,ch);
+  g.save();
+  g.fillStyle=col;
+  const drop=(x,y,r,ang,elong)=>{ // 涙滴: 進行方向に伸びた楕円
+    g.beginPath();
+    g.ellipse(x,y,r*(1+elong*2),r,ang,0,7);
+    g.fill();
+  };
+  // 配置は黄金比系列＋ジッター。素の乱数だと塊数が少ないとき偏って見えるため。
+  const ox=rnd(), oy=rnd();
+  for(let s=0;s<count;s++){
+    const cx=(((s*0.6180339887+ox)%1) + (rnd()-.5)*.22)*cw;
+    const cy=(((s*0.3819660113+oy)%1) + (rnd()-.5)*.22)*ch;
+    const R=base*(0.07+rnd()*0.11)*(0.5+lenK);
+    const dir=rnd()*Math.PI*2; // この塊の飛翔方向（筋・衛星が片側に集中する）
+    // 本体: 円を重ねた不定形ブロブ（飛翔方向にやや伸ばす）
+    const lobes=6+((rnd()*4)|0);
+    const lobeArr=[];
+    g.beginPath();
+    for(let i=0;i<lobes;i++){
+      const a=rnd()*Math.PI*2, d=rnd()*R*.55*(1+jitter*.6);
+      const stretch=1+Math.cos(a-dir)*.35; // 方向側に重心
+      const rr=R*(.4+rnd()*.4);
+      const bx=cx+Math.cos(a)*d*stretch, by=cy+Math.sin(a)*d*stretch;
+      lobeArr.push({bx,by,rr});
+      g.moveTo(bx+rr,by);
+      g.arc(bx,by,rr,0,7);
+    }
+    g.fill();
+    const edgeDist=(a)=>{
+      const dx=Math.cos(a), dy=Math.sin(a);
+      let far=-1;
+      for(const L of lobeArr){
+        const fx=L.bx-cx, fy=L.by-cy;
+        const tc=fx*dx+fy*dy;
+        const disc=L.rr*L.rr-(fx*fx+fy*fy-tc*tc);
+        if(disc<0) continue;
+        const t=tc+Math.sqrt(disc);
+        if(t>far) far=t;
+      }
+      return far;
+    };
+    // 本体輪郭の荒れ: 実輪郭に沿って小さいコブを乗せ、円の合成っぽさを消す
+    const bumps=16+((rnd()*10)|0);
+    for(let i=0;i<bumps;i++){
+      const a=rnd()*Math.PI*2, E=edgeDist(a);
+      if(E<=0) continue;
+      const br2=R*(.05+rnd()*.09);
+      g.beginPath(); g.arc(cx+Math.cos(a)*(E-br2*.3), cy+Math.sin(a)*(E-br2*.3), br2, 0, 7); g.fill();
+    }
+    // 筋（触手）: 方向側に集中し、方向に近いほど長い。根本太め→丸い先端。
+    const teeth=13+((rnd()*9)|0);
+    for(let i=0;i<teeth;i++){
+      // 70%は飛翔方向±70°に集中、30%は全周
+      const a = rnd()<.7 ? dir+(rnd()-.5)*2.4 : rnd()*Math.PI*2;
+      const E=edgeDist(a);
+      if(E<=0) continue;
+      const align=Math.max(0,Math.cos(a-dir));       // 方向との一致度 0〜1
+      const r0=Math.max(0, E-5);
+      // 長さは2.4乗分布: 大半はごく短く、ときどき突出して長い筋が混ざる
+      // （一様乱数だと「全部そこそこの長さ」になって単調に見える）
+      const lr=Math.pow(rnd(),2.4);
+      const len=5+R*(.08+lr*(1.0+align*.8))*(1+jitter);
+      const w=R*(.035+rnd()*.04)*(1+align*.3)*(1-lr*.35); // 長い筋ほど細く
+      const tipK=.18+rnd()*.12;
+      const bend=(rnd()-.5)*.45;
+      const hasDrop=rnd()<.4;
+      const dropR=w*(.5+rnd()*.4);
+      const ca=Math.cos(a), sa=Math.sin(a);
+      const cp=Math.cos(a+Math.PI/2), sp=Math.sin(a+Math.PI/2);
+      const x0=cx+ca*r0, y0=cy+sa*r0;
+      const neckR=w*tipK;
+      const steps=Math.max(10, (len/Math.max(.8,neckR*.9))|0);
+      for(let s2=0;s2<=steps;s2++){
+        const t=s2/steps;
+        let tr=w*((1-t)*(1-tipK)+tipK);
+        if(hasDrop && t>.72){
+          let s3=(t-.72)/.28; s3=s3*s3*(3-2*s3);
+          tr=tr*(1-s3)+dropR*s3; // 首→雫へ連続的に膨らみ、丸く終わる
+        }
+        const off=bend*len*.35*t*t;
+        g.beginPath(); g.arc(x0+ca*len*t+cp*off, y0+sa*len*t+sp*off, tr, 0, 7); g.fill();
+      }
+    }
+    // 衛星飛沫: 方向側に流れて散る。遠いほど小さく、楕円は飛翔方向に伸びる
+    const sat=(16+rnd()*18)|0;
+    for(let i=0;i<sat;i++){
+      const a = rnd()<.65 ? dir+(rnd()-.5)*1.8 : rnd()*Math.PI*2;
+      const t=Math.pow(rnd(),1.5);
+      const d=R*(1.15+t*(2.2+lenK*3)*(.6+jitter));
+      const r=Math.max(.6, R*.12*(1-t*.7)*(.5+rnd()));
+      drop(cx+Math.cos(a)*d, cy+Math.sin(a)*d, r, a, t*.7);
+    }
+  }
+  g.restore();
+}
+
+/* ---------- 水面  g.restore();
+}
+
+/* ---------- 水面（コースティクス: 上から見た光の網目） ----------
+   プールや浅瀬を真上から見た、白く光る「つながった網目」（コースティクス）。
+   【作り直し】リッジノイズ方式は筋がぶつ切りの「もやもや」にしかならず
+   網目に見えなかった。実際のコースティクスはセル構造の境界に光が集まるので、
+   ボロノイのセル境界（F2-F1が0に近い場所）に光を乗せる方式へ変更。
+   これなら線が必ず連結した網になる。ドメインワープで境界を有機的に歪ませ、
+   スケール違いの2層を重ねて写真的な奥行きを出す。
+   色1=水の色 / 色2=光の色（白推奨） / 細かさ=セルの細かさ / 揺らぎ=網目の歪み。
+   タイルは1回生成してキャッシュし、一様拡大で全面を覆う（歪み防止）。 */
+const waterTileCache={key:"",canvas:null};
+function drawWaterBg(g, cw, ch, col1, col2, fineness, warpK, seed){
+  const T=224;
+  const key=[col1,col2,fineness,warpK,seed].join("_");
+  let tile=waterTileCache.canvas;
+  if(waterTileCache.key!==key){
+    tile=document.createElement("canvas"); tile.width=tile.height=T;
+    const tx=tile.getContext("2d");
+    const img=tx.createImageData(T,T), d=img.data;
+    // --- セル用の整数ハッシュ（格子ごとに決まる特徴点の位置） ---
+    const sd=(seed||1)|0;
+    const h2=(ix,iy,k)=>{
+      let n=(ix*374761393 + iy*668265263 + k*1013904223 + sd*69069)|0;
+      n=Math.imul(n^(n>>>13),1274126177);
+      return ((n^(n>>>16))>>>0)/4294967296;
+    };
+    // --- ドメインワープ用のバリューノイズ ---
+    const sm=t=>t*t*(3-2*t);
+    const vnoise=(x,y,k)=>{
+      const ix=Math.floor(x), iy=Math.floor(y), fx=x-ix, fy=y-iy;
+      const a=h2(ix,iy,k), b=h2(ix+1,iy,k), c2=h2(ix,iy+1,k), d2=h2(ix+1,iy+1,k);
+      const ux=sm(fx), uy=sm(fy);
+      return a+(b-a)*ux+(c2-a)*uy+(a-b-c2+d2)*ux*uy;
+    };
+    const fbm=(x,y,k)=>{ let v=0,amp=.55,f=1; for(let o=0;o<3;o++){v+=vnoise(x*f,y*f,k+o*7)*amp; f*=2.1; amp*=.5;} return v; };
+    // --- ボロノイ: F2-F1（セル境界で0）を返す ---
+    const voro=(X,Y,k)=>{
+      const cx=Math.floor(X), cy=Math.floor(Y);
+      let f1=9, f2=9;
+      for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+        const ix=cx+ox, iy=cy+oy;
+        const px=ix+.1+h2(ix,iy,k)*.8, py=iy+.1+h2(iy+91,ix+57,k)*.8;
+        // 点ごとにランダムな「泡の大きさ」を持たせる（加法重み付きボロノイ）。
+        // 素のボロノイは境界が直線＋頂点が鋭角でカクカクするが、
+        // 距離から半径を引くと境界が双曲線＝曲線になり、大きい泡が
+        // 小さい泡へ丸く食い込む有機的なセルになる。
+        const rad=h2(ix*3+7, iy*5+1, k+13)*.3;
+        const dx=X-px, dy=Y-py, dist=Math.sqrt(dx*dx+dy*dy)-rad;
+        if(dist<f1){ f2=f1; f1=dist; } else if(dist<f2){ f2=dist; }
+      }
+      return f2-f1;
+    };
+    const [r1,g1,b1]=hex(col1), [r2,g2,b2]=hex(col2);
+    const sc=3+fineness*0.06;             // 細かさ: 12〜150 → 約3.7〜12セル/タイル
+    const warpAmp=(0.15+warpK*0.55);      // 揺らぎ: ワープ量（セル単位）
+    // タイル境界でシームレスにするため、円筒トーラス座標…はコストが重いので
+    // カバー配置（タイル1枚を拡大して全面を覆う）でタイリング自体を回避している。
+    for(let py=0;py<T;py++)for(let px=0;px<T;px++){
+      const u=px/T, v=py/T;
+      // 有機的な歪み: 大うねり＋中の丸め＋縁の細かい揺れの3段ワープ。
+      // 低周波だけだと辺全体が曲がるだけで頂点の尖りが残るため、
+      // 中〜高周波を足して角を溶かし、縁の線そのものをうねらせる。
+      const wx=(fbm(u*2.3, v*2.3, 5)-.5)*warpAmp*sc*.6
+              +(fbm(u*5.3, v*5.3, 17)-.5)*warpAmp*sc*.25
+              +(fbm(u*11.4, v*11.4, 29)-.5)*warpAmp*sc*.09;
+      const wy=(fbm(u*2.3+9.4, v*2.3+4.2, 11)-.5)*warpAmp*sc*.6
+              +(fbm(u*5.3+3.8, v*5.3+7.1, 19)-.5)*warpAmp*sc*.25
+              +(fbm(u*11.4+6.6, v*11.4+1.9, 31)-.5)*warpAmp*sc*.09;
+      const X=u*sc+wx, Y=v*sc+wy;
+      // 線の太さのムラ: しきい値幅を別のノイズ場で変調する。
+      // 同じ脈でも通る場所によって幅が変わるので、途中で膨らんだり
+      // 痩せて消えかけたりする（写真のコースティクスの揺らぎ）。
+      // wModを2乗で歪ませて分布を両極端に寄せる: 大半は細めやが、
+      // ところどころドカッと太い帯が出る（線形やと「中くらい」ばかりになる）
+      const wRaw=fbm(u*3.1+1.7, v*3.1+6.3, 31);
+      const wMod=wRaw*wRaw*2.2;
+      const coreW=0.14*(0.18+wMod*2.6);  // 約0.025〜0.6超: 糸みたいな細さ〜ぶっとい帯まで
+      const glowW=0.5*(0.35+wMod*1.5);
+      // 明るさのムラも強めに（消えかけの脈とギラつく脈）
+      const bMod=0.5+fbm(u*2.2+8.1, v*2.2+2.9, 47)*0.95;
+      // 層1: 主網目（境界の白い脈＝コア＋にじみのグロー）
+      const e1=voro(X,Y,1);
+      const core=Math.pow(Math.max(0,1-e1/coreW),2);
+      const glow=Math.pow(Math.max(0,1-e1/glowW),3);
+      // 層2: 一回り大きい薄い網目（写真の「奥の網」）
+      const e2=voro(X*.55+3.3, Y*.55+7.7, 2);
+      const sub=Math.pow(Math.max(0,1-e2/(0.22*(0.4+wMod*1.2))),2);
+      // ベースの水色: 2スケールの雲状ノイズで強めの濃淡（深い青の淀みと明るい溜まり）。
+      // 写真の水は一様な青ではなく、もやっとした明暗のむらが下地にある。
+      const depth=fbm(u*1.3+3.7, v*1.3+9.2, 23)*0.65 + fbm(u*3.4+12.9, v*3.4+5.5, 59)*0.35;
+      const k2=0.52+depth*0.9;
+      const dr=r1*k2*0.94, dg=g1*k2, db=b1*Math.min(1.12,k2+0.08);
+      // 光は「混ぜる」ではなく「加算」: 脈が交差・重複した場所は光が積み上がって
+      // 白へ飛ぶ（写真の交点の白い溜まりはこれ）。クランプは最後の1回だけにして、
+      // 途中の合計はあえて1を超えさせる。最後の項は明るい淀みのぼんやりした底光り。
+      const add=(core*.95 + glow*.45)*bMod + sub*.35 + Math.pow(depth,3)*.18;
+      const i=(py*T+px)*4;
+      d[i]  =Math.min(255, dr + r2*add);
+      d[i+1]=Math.min(255, dg + g2*add);
+      d[i+2]=Math.min(255, db + b2*add);
+      d[i+3]=255;
+    }
+    tx.putImageData(img,0,0);
+    waterTileCache.key=key; waterTileCache.canvas=tile;
+  }
+  // カバー配置: 一様拡大で全面を覆う（縦横別倍率だと網目のセルが潰れるため）
+  const s=Math.max(cw/T,ch/T);
+  const dw=T*s, dh=T*s;
+  g.drawImage(tile,(cw-dw)/2,(ch-dh)/2,dw,dh);
+}
+
 function drawBoltBg(g, cx, cy, cw, ch, col, glowCol, mainCount, widthPx, coreRX, coreRY, jitter, seed){
   const rnd=mulberry32((seed||1)*131+7);
   const maxR=Math.hypot(cw,ch)*0.62;
@@ -2433,6 +2660,17 @@ function renderBgLayer(cw,ch){
         P.pBgSpikeCount, base*(P.pBgSpikeWidth/100)*.08,
         base*(P.pBgSpikeInnerX/100), base*(P.pBgSpikeInnerY/100),
         P.pBgSpikeJitter/100, P.pSeed);
+    }else if(P.pBg==="splatter"){
+      // スパッタ: 背景色を敷く(任意)→飛沫。色1=飛沫の色。
+      // 本数スライダー(12〜150)は他タイプと共用のため、塊数へは1/12で
+      // マッピングする（60→5塊。生の値では多すぎて画面が埋まる）。
+      if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
+      drawSplatterBg(mg, cw, ch, P.pBgC1,
+        Math.max(1,Math.round(P.pBgSpikeCount/12)), P.pBgSpikeLen/100, P.pBgSpikeJitter/100, P.pSeed);
+    }else if(P.pBg==="water"){
+      // 水面: 全面を塗るので「背景色を敷く」は不要。色1=水、色2=光（白推奨）。
+      drawWaterBg(mg, cw, ch, P.pBgC1, P.pBgC2,
+        P.pBgSpikeCount, P.pBgSpikeJitter/100, P.pSeed);
     }
   }
   return c;
@@ -2472,12 +2710,31 @@ function renderTextLayer(L,W,H,pad,scale,quality){
   };
 
   // ① グロー（縁込みシルエットを発光色で）
-  // shadowBlurは全文字ぶん2回描画するため特に重い。ドラッグ中(low)は省略し、
+  // shadowBlurは全文字ぶん複数回描画するため特に重い。ドラッグ中(low)は省略し、
   // 手を離した本描画(high)でのみ正確に描く＝スライダー操作時のカクつき対策
+  // 【作り直し】旧実装は「同じぼかし半径で2回ベタ重ね」で、濃い霧の塊の外側に
+  // くっきりした境界が出ていた（エッジが強すぎる問題）。本物のネオンの光は
+  // 指数的に減衰するので、狭く濃い→広く薄いの3層重ねで柔らかい裾を作る。
+  // 流量(pGlowInt)は全層のアルファに掛かる: 下げると透けた控えめな光、
+  // 100超は中間層をもう1周重ねてギラつかせる。
   if(P.pGlowOn&&showGlow&&quality==="high"){
     mg.save();
-    mg.shadowColor=P.pGlowC; mg.shadowBlur=P.pGlowBlur*scale;
-    silhouette(P.pGlowC,0,0); silhouette(P.pGlowC,0,0); // 2度描きで濃く
+    mg.shadowColor=P.pGlowC;
+    const gk=(P.pGlowInt===undefined?100:P.pGlowInt)/100;
+    const passes=[[.45,.9],[1,.55],[2,.3]]; // [ぼかし倍率, 基準アルファ]
+    for(const [bm,am] of passes){
+      const a=Math.min(1, am*gk);
+      if(a<=0.01) continue;
+      mg.globalAlpha=a;
+      mg.shadowBlur=P.pGlowBlur*bm*scale;
+      silhouette(P.pGlowC,0,0);
+    }
+    if(gk>1){ // 流量100超: 中間ぼかしを追い足しして密度を上げる
+      mg.globalAlpha=Math.min(1, gk-1);
+      mg.shadowBlur=P.pGlowBlur*scale;
+      silhouette(P.pGlowC,0,0);
+    }
+    mg.globalAlpha=1;
     mg.restore();
   }
 
@@ -3344,7 +3601,7 @@ function onInput(){requestDraw("low");}
 /* ---------- プリセット ---------- */
 /* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
 const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexBlend:"normal",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pPuff:0,pPuffEdge:60,pPuffSoft:45,pPuffSpec:65,pPuffHard:30,pPuffGlow:45,pPuffLight:45,
-  pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
+  pBevel:3,pGlowOn:false,pGlowInt:100,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
   pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,
   pBg:"none",pBgGradShape:"radial",pBgAngle:90,pBgSpikeCount:60,pBgSpikeLen:45,pBgSpikeWidth:6,pBgSpikeInnerX:26,pBgSpikeInnerY:30,pBgSpikeJitter:20,
@@ -3392,6 +3649,15 @@ const PRESETS = {
     pExDepth:12,pExAngle:93,pExC1:"#e22400",pExC2:"#120100",pBevel:4,pExFlash:6,
     pGlowOn:false,
     pArch:0,pTilt:0,pJitR:5,pJitY:6,pJitSeed:1},
+  "ネオン":{pText:"NEON",pFont:"Pacifico",pSize:185,pSpacing:-9,pLineH:80,
+    // ネオン管: 白い管芯＋シアンの光。立体・ベベルは切って「光る管」に徹する。
+    // グローは多層フォールオフ＋流量92で、裾の柔らかい後光になる設定。
+    pFill:"solid",pFillC1:"#ffffff",
+    ol:[[true,"#93e3fd",0],[false,"#00a1d8",0],[false,"#ffd76a",0],[false,"#5a2d00",0]],
+    pExDepth:0,pBevel:0,pRim:0,
+    pGlowOn:true,pGlowC:"#01c7fc",pGlowBlur:27,pGlowInt:92,
+    pGlossOn:false,pBolt:0,pSparkN:0,
+    pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:1,pBg:"none"},
   "ピンクグロス":{pText:"ピンクグロス",pFont:"Shippori Mincho B1",pSpacing:-14,pLineH:80,
     pFill:"chromePink",pFillAngle:242,pFillRepeat:5,pVary:35,
     ol:[[true,"#f4a4c0",22],[true,"#3c071b",0],[true,"#551029",9],[true,"#e63b7a",4]],
@@ -3684,6 +3950,12 @@ const I18N={
   "ダイヤカット（多面体）": "Diamond cut (facets)",
   "強さ": "Strength",
   "合成": "Blend",
+  "グロー流量": "Glow amount",
+  "スパッタ（飛沫・インク）": "Splatter (ink)",
+  "水面（光の網目）": "Water caustics",
+  "揺らぎ": "Waviness",
+  "飛沫の色": "Splat color",
+  "水/光の色": "Water / light",
   "強さ（影響値）": "Strength (opacity)",
   "通常（置き換え）": "Normal (replace)",
   "乗算": "Multiply",
