@@ -303,6 +303,15 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="facet">ダイヤカット（多面体）</option>
         </select>
       </div>
+      <div class="row"><label>合成</label>
+        <select id="pTexBlend">
+          <option value="normal">通常（置き換え）</option>
+          <option value="multiply">乗算</option>
+          <option value="overlay">オーバーレイ</option>
+          <option value="screen">スクリーン</option>
+          <option value="lighter">加算</option>
+        </select>
+      </div>
       <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
       <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="14" value="4"><input type="number" class="val" data-for="pTexScale"></div>
       <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><input type="number" class="val" data-for="pVary"></div>
@@ -624,7 +633,7 @@ const rangeIds = ["pSize","pSpacing","pLineH","pFillAngle","pFillRepeat","pFillH
   "pTextX","pTextY","pBgImageDark"];
 
 const otherIds = ["pText","pFont","pFill","pFillC1","pFillC2","pTex","pExC1","pExC2","pMetalC",
-  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgGradShape","pBgC1","pBgC2","pTransformMode",
+  "pGlowOn","pGlowC","pGlossOn","pBoltC","pBoltOver","pSparkC","pSparkShape","pExRefl","pRimC","pView","pBg","pBgGradShape","pBgC1","pBgC2","pTransformMode","pTexBlend",
   "pBgSpikeBgOn","pBgSpikeBgC","pBgImageFit"];
 
 /* 縁取りスロット（外→内）4本 */
@@ -1655,10 +1664,28 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   if(P.pTex!=="none" && P.pTexInt>0 && quality==="high"){
     const adj=getFillAdjust(0);
     const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed,adj.hue,adj.sat,adj.light);
-    g.globalCompositeOperation="source-atop";
-    g.globalAlpha=P.pTexInt/100;
+    const blend=P.pTexBlend||"normal";
     const pw=Math.max(L.maxW,256), ph=Math.max(L.totalH+L.size,256);
-    g.drawImage(tex,-L.maxW/2-20,-L.size/2-20,pw+40,ph+40);
+    g.globalAlpha=P.pTexInt/100; // 「強さ」＝テクスチャの不透明度
+    if(blend==="normal"){
+      // 通常: グラデ面をテクスチャで置き換える従来動作
+      g.globalCompositeOperation="source-atop";
+      g.drawImage(tex,-L.maxW/2-20,-L.size/2-20,pw+40,ph+40);
+    }else{
+      // 乗算・オーバーレイ・スクリーン・加算: 下のグラデ面と混色するので、
+      // 強いグラデを活かしたままテクスチャの陰影・粒だけを乗せられる。
+      // ブレンド系の合成は透明部にもソースがそのまま描かれてしまう仕様のため、
+      // 合成前のシルエットを控えておき、destination-inで文字の形に切り戻す。
+      const snap=snapshotCanvas(c);
+      g.globalCompositeOperation = blend==="lighter" ? "lighter" : blend;
+      g.drawImage(tex,-L.maxW/2-20,-L.size/2-20,pw+40,ph+40);
+      g.save();
+      g.setTransform(1,0,0,1,0,0); // snapはキャンバス座標そのまま重ねる
+      g.globalCompositeOperation="destination-in";
+      g.globalAlpha=1;
+      g.drawImage(snap,0,0);
+      g.restore();
+    }
     g.globalAlpha=1;
     g.globalCompositeOperation="source-over";
   }
@@ -3258,7 +3285,7 @@ function onInput(){requestDraw("low");}
 
 /* ---------- プリセット ---------- */
 /* 適用前にDEFAULTSでリセット→未指定パラメータの引きずり防止 */
-const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pPuff:0,pPuffEdge:60,pPuffSoft:45,pPuffSpec:65,pPuffHard:30,pPuffGlow:45,pPuffLight:45,
+const DEFAULTS={pFillRepeat:1,pFillHue:0,pFillSat:100,pFillLight:0,pTex:"none",pTexBlend:"normal",pTexInt:0,pTexScale:4,pMetal:0,pMetalC:"#ffb060",pVary:0,pPuff:0,pPuffEdge:60,pPuffSoft:45,pPuffSpec:65,pPuffHard:30,pPuffGlow:45,pPuffLight:45,
   pBevel:3,pGlowOn:false,pGlossOn:false,pBolt:0,pBoltW:4,pBoltBranch:2,pBoltRough:50,pBoltOver:false,pSparkN:0,pSparkSize:14,pSparkC:"#ffd7f0",pSparkShape:"cross",pSparkLen:100,pSparkVar:60,pSparkEdge:70,
   pExBand:0,pExSpec:0,pExLight:315,pExSpecW:14,pExRefl:true,pExFlash:6,pRim:0,pRimC:"#ffcc66",
   pArch:0,pTransformMode:"arch",pFanRadius:300,pPerspAngle:45,pPerspFrom:80,pPerspTo:120,pPerspDrift:20,pTilt:0,pRotate:0,pTrapTop:100,pTrapBottom:100,pJitR:0,pJitY:0,
@@ -3598,6 +3625,12 @@ const I18N={
   "ラメ（グリッター）": "Glitter",
   "ダイヤカット（多面体）": "Diamond cut (facets)",
   "強さ": "Strength",
+  "合成": "Blend",
+  "通常（置き換え）": "Normal (replace)",
+  "乗算": "Multiply",
+  "オーバーレイ": "Overlay",
+  "スクリーン": "Screen",
+  "加算": "Add",
   "細かさ": "Detail",
   "輝きの暴れ": "Shimmer scatter",
   "メタルツヤ": "Metal sheen",
