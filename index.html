@@ -1752,9 +1752,12 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   }
 
   // 4) 稲妻（面内クリップ。「はみ出す」オン時はdraw側で最前面に描く）
-  if(P.pBolt>0 && !P.pBoltOver && P.pView!=="nofx" && quality==="high"){
+  // 【改善】以前はドラッグ中(low)丸ごとスキップで、本数・太さ・乱れの
+  // スライダーを動かしても手を離すまで結果が見えなかった。
+  // lowではグロー無しの芯だけを描いて、位置・本数をリアルタイムに見せる。
+  if(P.pBolt>0 && !P.pBoltOver && P.pView!=="nofx"){
     g.globalCompositeOperation="source-atop";
-    drawBolts(g,L,false);
+    drawBolts(g,L,false,quality);
     g.globalCompositeOperation="source-over";
   }
 
@@ -2101,19 +2104,26 @@ function strokeBolt(g,pts,w,color,glowR){
   for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]);
   g.lineJoin="round"; g.lineCap="round";
   g.strokeStyle=color; g.lineWidth=w*2.2;
-  g.shadowColor=color; g.shadowBlur=glowR;
-  g.stroke(); g.stroke(); // 2度でグロー濃く
-  g.shadowBlur=0;
+  // グロー(shadowBlur)はコストが高いので、ドラッグ中(glowR=0で呼ばれる)は
+  // 色付きの外側ストローク＋白い芯だけで形を即時に見せ、
+  // 手を離した本描画でにじみを乗せる。
+  if(glowR>0){
+    g.shadowColor=color; g.shadowBlur=glowR;
+    g.stroke(); g.stroke(); // 2度でグロー濃く
+    g.shadowBlur=0;
+  }else{
+    g.stroke();
+  }
   g.strokeStyle="rgba(255,255,255,.95)"; g.lineWidth=Math.max(.8,w*.8); g.stroke();
 }
 
-function drawBolts(g,L,over){
+function drawBolts(g,L,over,quality){
   const br=mulberry32(P.pSeed*31+P.pBolt*7);
   const ext=over?L.size*.45:0;
   const top=-L.size/2-ext, bot=(L.lines-1)*L.lineH+L.size/2+ext;
   const wBase=L.size*.011*P.pBoltW;
   const rough=P.pBoltRough/100;
-  const glowR=L.size*.12;
+  const glowR = quality==="high" ? L.size*.12 : 0; // lowはグロー無しの即時プレビュー
   for(let b=0;b<P.pBolt;b++){
     let bx=(br()*2-1)*L.maxW/2, by=top;
     const pts=[[bx,by]];
@@ -2261,11 +2271,28 @@ function drawPetalPath(g, r, skew=0.8, bend=0){
   g.closePath();
 }
 
-function scatterSparkles(mg, face, cw, ch, scale){
+function scatterSparkles(mg, face, cw, ch, scale, quality){
   if(P.pSparkN<=0) return;
-  const fctx=face.getContext("2d");
-  const data=fctx.getImageData(0,0,cw,ch).data;
-  const A=(x,y)=> (x<0||y<0||x>=cw||y>=ch)?0:data[((y|0)*cw+(x|0))*4+3];
+  // 配置判定用の面アルファの読み取り。getImageDataはGPU→CPU同期を強制するため
+  // 毎フレーム全面読みするとiOSでカクつく。ドラッグ中(low)は面を最大160px幅に
+  // 縮小してから読むことで、同期コストをほぼ固定の小ささに抑える
+  // （エッジ判定の精度は少し落ちるが、プレビュー用途には十分）。
+  let data, sw=cw, sh=ch, ss=1;
+  if(quality!=="high" && cw>160){
+    ss=160/cw;
+    sw=Math.max(1,(cw*ss)|0); sh=Math.max(1,(ch*ss)|0);
+    const smallC=document.createElement("canvas"); smallC.width=sw; smallC.height=sh;
+    const sg2=smallC.getContext("2d");
+    sg2.drawImage(face,0,0,sw,sh);
+    data=sg2.getImageData(0,0,sw,sh).data;
+  }else{
+    const fctx=face.getContext("2d");
+    data=fctx.getImageData(0,0,cw,ch).data;
+  }
+  const A=(x,y)=>{
+    const xx=(x*ss)|0, yy=(y*ss)|0;
+    return (xx<0||yy<0||xx>=sw||yy>=sh)?0:data[(yy*sw+xx)*4+3];
+  };
   const rnd=mulberry32(P.pSparkSeed*13+P.pSparkN);
   const step=7*scale;
   const edgeRate=P.pSparkEdge/100;
@@ -2611,17 +2638,17 @@ function renderTextLayer(L,W,H,pad,scale,quality){
   }
 
   // ④.5 はみ出し稲妻（文字の上を横切って全体に走る）
-  if(P.pBolt>0 && P.pBoltOver && showFx && quality==="high"){
+  if(P.pBolt>0 && P.pBoltOver && showFx){
     mg.save();
     mg.translate(offX,offY); mg.scale(scale,scale);
     applyWholeRotation(mg,L);
-    drawBolts(mg,L,true);
+    drawBolts(mg,L,true,quality);
     mg.restore();
   }
 
   // ⑤ 十字スパークル（最前面、面のエッジ優先で配置）
-  // getImageDataの走査が重いので、ドラッグ中(low)はスキップ
-  if(showFx && quality==="high") scatterSparkles(mg,face,cw,ch,scale);
+  // ドラッグ中(low)も描く。配置判定は縮小サンプリングで安く読む（関数内参照）
+  if(showFx) scatterSparkles(mg,face,cw,ch,scale,quality);
 
   // ⑥ 手描きブラシ（レイヤーごとに合成。金属反射は側面マスクでクリップ＝面まで明るくしない）
   if(hasBrushWork){
