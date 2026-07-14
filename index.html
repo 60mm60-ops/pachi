@@ -645,7 +645,8 @@ const OUTLINE_DEFAULTS = [
 ];
 
 /* ---------- value noise テクスチャ ---------- */
-const texCache = {key:"", canvas:null};
+const texCache = {key:"", canvas:null};      // 色味調整済みの最終タイル
+const texBaseCache = {key:"", canvas:null};  // 色味調整前の素タイル（fbm・粒・面まで）
 
 const sideCache = {key:"", canvas:null};
 
@@ -890,15 +891,30 @@ function updateControlUI(){
    面の塗りに使うグラデ定義・value noiseテクスチャ・プロシージャル金属ストップの生成。
 ================================================================ */
 
-function makeTexture(type, scale, seed, hue, sat, light){
+function makeTexture(type, scale, seed, hue, sat, light, size){
   // 色味調整（色相・彩度・明るさ）はテクスチャにも適用する。
   // 【バグ修正】以前はテクスチャの色が固定RGBのままで、溶岩・ダイヤなど
   // テクスチャ強さ100%のプリセットでは色相スライダーが見た目に全く効かなかった
   // （調整が下の面グラデにしか掛からず、上に被さるテクスチャで隠れていた）。
   hue=hue||0; sat=(sat===undefined?100:sat); light=light||0;
-  const key = type+"_"+scale+"_"+seed+"_"+hue+"_"+sat+"_"+light;
+  // size: タイル解像度。ドラッグ中のリアルタイムプレビューでは112を渡して
+  // 生成コストを約1/5に落とす（fbm・色味調整のコストはピクセル数に比例）。
+  const S=size||256;
+  // 二段キャッシュ: ノイズ・粒・面まで済んだ「素タイル」と、色味調整後の
+  // 「最終タイル」を分けて持つ。色相・彩度・明るさのドラッグ中は形が
+  // 変わらないので、素タイルを再利用して色味調整だけをかけ直せる
+  // （一番よく動かす操作が、fbm再計算なしの最安コースになる）。
+  const baseKey = type+"_"+scale+"_"+seed+"_"+S;
+  const key = baseKey+"_"+hue+"_"+sat+"_"+light;
   if(texCache.key===key) return texCache.canvas;
-  const S=256, c=document.createElement("canvas"); c.width=c.height=S;
+  let base;
+  if(texBaseCache.key===baseKey){
+    base=texBaseCache.canvas;
+  }else{
+  const c=document.createElement("canvas"); c.width=c.height=S;
+  // 後描きの粒・面の「数」は面積比、「大きさ」は辺比で揃える
+  // （256px基準のチューニング値を低解像度タイルでも同じ見た目密度にする）
+  const q=S/256, q2=q*q;
   const x=c.getContext("2d");
   const img=x.createImageData(S,S), d=img.data;
   const rnd=mulberry32(seed*1013);
@@ -990,10 +1006,10 @@ function makeTexture(type, scale, seed, hue, sat, light){
       }
     }
     // 頂点のギラ: ランダムな頂点に十字スパークを散らす（宝石の輝き）
-    x.shadowColor="#ffffff"; x.shadowBlur=5;
-    x.strokeStyle="rgba(255,255,255,.95)"; x.lineWidth=1;
+    x.shadowColor="#ffffff"; x.shadowBlur=5*q;
+    x.strokeStyle="rgba(255,255,255,.95)"; x.lineWidth=Math.max(.5,q);
     for(let i=0;i<8+grid2;i++){
-      const p=pts[(fr()*pts.length)|0], len=2.5+fr()*4.5;
+      const p=pts[(fr()*pts.length)|0], len=(2.5+fr()*4.5)*q;
       x.beginPath();
       x.moveTo(p.x-len,p.y); x.lineTo(p.x+len,p.y);
       x.moveTo(p.x,p.y-len); x.lineTo(p.x,p.y+len);
@@ -1008,28 +1024,31 @@ function makeTexture(type, scale, seed, hue, sat, light){
     const gr=mulberry32(seed*401);
     const k=Math.sqrt(Math.max(1,scale)/4); // 細かさ4を基準: 上げると粒が増えて小さくなる
     // 1) 暗い粒（影ラメ）: 白粒を引き立てる暗側のコントラスト
-    for(let i=0;i<(260*k)|0;i++){
-      const gx=gr()*S, gy=gr()*S, r0=(.5+gr()*1.5)/k;
+    for(let i=0;i<(260*k*q2)|0;i++){
+      const gx=gr()*S, gy=gr()*S, r0=(.5+gr()*1.5)*q/k;
       x.fillStyle=`rgba(14,17,32,${.35+gr()*.4})`;
       x.beginPath(); x.arc(gx,gy,r0,0,7); x.fill();
     }
     // 2) 白い小粒 多数
-    for(let i=0;i<(430*k)|0;i++){
-      const gx=gr()*S, gy=gr()*S, r0=(.4+gr()*1.4)/k;
+    for(let i=0;i<(430*k*q2)|0;i++){
+      const gx=gr()*S, gy=gr()*S, r0=(.4+gr()*1.4)*q/k;
       x.fillStyle=`rgba(255,255,255,${.55+gr()*.45})`;
       x.beginPath(); x.arc(gx,gy,r0,0,7); x.fill();
     }
     // 3) 強い輝点（にじみ付き）
-    x.shadowColor="#ffffff"; x.shadowBlur=4;
-    for(let i=0;i<(70*k)|0;i++){
+    x.shadowColor="#ffffff"; x.shadowBlur=4*q;
+    for(let i=0;i<(70*k*q2)|0;i++){
       const gx=gr()*S, gy=gr()*S;
       x.fillStyle="rgba(255,255,255,1)";
-      x.beginPath(); x.arc(gx,gy,(1.1+gr()*1.7)/k,0,7); x.fill();
+      x.beginPath(); x.arc(gx,gy,(1.1+gr()*1.7)*q/k,0,7); x.fill();
     }
     // 4) 十字ギラ（少数の大きな輝き）
-    x.strokeStyle="rgba(255,255,255,.95)"; x.lineWidth=.9;
-    for(let i=0;i<12;i++){
-      const gx=gr()*S, gy=gr()*S, len=(2.5+gr()*4)/Math.max(1,k*.8);
+    x.strokeStyle="rgba(255,255,255,.95)"; x.lineWidth=Math.max(.5,.9*q);
+    // 注意: 「(12*q2)|0||1」のようなインライン式は < が | より先に評価されて
+    // 無限ループになる（実際にやらかした）。回数は必ず先に変数へ確定させる。
+    const crossN=Math.max(1,(12*q2)|0);
+    for(let i=0;i<crossN;i++){
+      const gx=gr()*S, gy=gr()*S, len=(2.5+gr()*4)*q/Math.max(1,k*.8);
       x.beginPath();
       x.moveTo(gx-len,gy); x.lineTo(gx+len,gy);
       x.moveTo(gx,gy-len); x.lineTo(gx,gy+len);
@@ -1037,11 +1056,18 @@ function makeTexture(type, scale, seed, hue, sat, light){
     }
     x.shadowBlur=0;
   }
+  texBaseCache.key=baseKey; texBaseCache.canvas=c;
+  base=c;
+  } // ← 素タイル生成ここまで（baseKeyが一致すれば丸ごとスキップ）
+
   // 色味調整（色相・彩度・明るさ）は「後描きの面・粒まで含めた最終結果」に掛ける。
-  // キャッシュされるので実行は調整値の変更時に一度きり。ドラッグ中のlow品質描画は
-  // テクスチャ自体をスキップするため、スライダー操作が重くなることもない。
+  // 素タイルは触らずコピーに適用する（次の調整値変更でも素タイルを再利用するため）。
+  let out=base;
   if(hue!==0 || sat!==100 || light!==0){
-    const fin=x.getImageData(0,0,S,S), fd=fin.data;
+    out=document.createElement("canvas"); out.width=out.height=S;
+    const ox=out.getContext("2d");
+    ox.drawImage(base,0,0);
+    const fin=ox.getImageData(0,0,S,S), fd=fin.data;
     for(let i=0;i<fd.length;i+=4){
       let [h2,s2,l2]=rgbToHsl(fd[i],fd[i+1],fd[i+2]);
       h2=((h2+hue/360)%1+1)%1;
@@ -1050,10 +1076,10 @@ function makeTexture(type, scale, seed, hue, sat, light){
       const [nr,ng,nb]=hslToRgb(h2,s2,l2);
       fd[i]=nr|0; fd[i+1]=ng|0; fd[i+2]=nb|0;
     }
-    x.putImageData(fin,0,0);
+    ox.putImageData(fin,0,0);
   }
-  texCache.key=key; texCache.canvas=c;
-  return c;
+  texCache.key=key; texCache.canvas=out;
+  return out;
 }
 
 /* ---------- グラデ ---------- */
@@ -1660,10 +1686,15 @@ function buildFaceLayer(W,H,offX,offY,L,scale,quality){
   }
 
 
-  // 3) テクスチャ（面内のみ）。ドラッグ中(low)はスキップ（ベベルと同じ方針）
-  if(P.pTex!=="none" && P.pTexInt>0 && quality==="high"){
+  // 3) テクスチャ（面内のみ）。
+  // 【改善】以前はドラッグ中(low)を丸ごとスキップしていたため、グラデや
+  // テクスチャのスライダーを動かしている間は結果が全く見えず、手を離して
+  // 初めて反映される操作感だった。低解像度タイル(112px)ならフレーム内で
+  // 生成できるので、ドラッグ中もリアルタイムでプレビューする。
+  if(P.pTex!=="none" && P.pTexInt>0){
     const adj=getFillAdjust(0);
-    const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed,adj.hue,adj.sat,adj.light);
+    const texSize = quality==="high" ? 256 : 112;
+    const tex=makeTexture(P.pTex,P.pTexScale,P.pSeed,adj.hue,adj.sat,adj.light,texSize);
     const blend=P.pTexBlend||"normal";
     const pw=Math.max(L.maxW,256), ph=Math.max(L.totalH+L.size,256);
     g.globalAlpha=P.pTexInt/100; // 「強さ」＝テクスチャの不透明度
