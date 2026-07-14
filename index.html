@@ -312,7 +312,7 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
           <option value="lighter">加算</option>
         </select>
       </div>
-      <div class="row"><label>強さ</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
+      <div class="row"><label>強さ（影響値）</label><input type="range" id="pTexInt" min="0" max="100" value="60"><input type="number" class="val" data-for="pTexInt"></div>
       <div class="row"><label>細かさ</label><input type="range" id="pTexScale" min="1" max="14" value="4"><input type="number" class="val" data-for="pTexScale"></div>
       <div class="row"><label>輝きの暴れ</label><input type="range" id="pVary" min="0" max="100" value="0"><input type="number" class="val" data-for="pVary"></div>
       <div class="row"><label>メタルツヤ</label><input type="range" id="pMetal" min="0" max="100" value="0"><input type="number" class="val" data-for="pMetal"></div>
@@ -3626,6 +3626,7 @@ const I18N={
   "ダイヤカット（多面体）": "Diamond cut (facets)",
   "強さ": "Strength",
   "合成": "Blend",
+  "強さ（影響値）": "Strength (opacity)",
   "通常（置き換え）": "Normal (replace)",
   "乗算": "Multiply",
   "オーバーレイ": "Overlay",
