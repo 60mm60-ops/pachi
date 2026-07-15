@@ -423,8 +423,8 @@ button.ghost:hover{color:var(--txt); border-color:var(--sub);}
     <details><summary>光り物エフェクト</summary><div class="sec">
       <p class="hint">グロー・光沢・稲妻・スパークル。PSの光彩（外側）＋自作ブラシに相当。</p>
       <label class="chk"><input type="checkbox" id="pGlowOn" checked><span>外側グロー</span></label>
-      <div class="row"><label>グロー色</label><input type="color" id="pGlowC" value="#ff8c00">
-        <input type="range" id="pGlowBlur" min="2" max="100" value="24" style="flex:1"><input type="number" class="val" data-for="pGlowBlur"></div>
+      <div class="row"><label>グロー色</label><input type="color" id="pGlowC" value="#ff8c00"></div>
+      <div class="row"><label>グロー範囲</label><input type="range" id="pGlowBlur" min="2" max="100" value="24"><input type="number" class="val" data-for="pGlowBlur"></div>
       <div class="row"><label>グロー流量</label><input type="range" id="pGlowInt" min="10" max="200" value="100"><input type="number" class="val" data-for="pGlowInt"></div>
       <label class="chk"><input type="checkbox" id="pGlossOn" checked><span>光沢スイープ（斜め帯）</span></label>
       <div class="row"><label>位置</label><input type="range" id="pGlossPos" min="0" max="100" value="35"><input type="number" class="val" data-for="pGlossPos"></div>
@@ -3649,7 +3649,7 @@ const PRESETS = {
     pExDepth:12,pExAngle:93,pExC1:"#e22400",pExC2:"#120100",pBevel:4,pExFlash:6,
     pGlowOn:false,
     pArch:0,pTilt:0,pJitR:5,pJitY:6,pJitSeed:1},
-  "ネオン":{pText:"NEON",pFont:"Pacifico",pSize:185,pSpacing:-9,pLineH:80,
+  "ネオンブルー":{pText:"NEON",pFont:"Pacifico",pSize:185,pSpacing:-9,pLineH:80,
     // ネオン管: 白い管芯＋シアンの光。立体・ベベルは切って「光る管」に徹する。
     // グローは多層フォールオフ＋流量92で、裾の柔らかい後光になる設定。
     pFill:"solid",pFillC1:"#ffffff",
@@ -3657,6 +3657,14 @@ const PRESETS = {
     pExDepth:0,pBevel:0,pRim:0,
     pGlowOn:true,pGlowC:"#01c7fc",pGlowBlur:27,pGlowInt:92,
     pGlossOn:false,pBolt:0,pSparkN:0,
+    pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:1,pBg:"none"},
+  "ネオンピンク":{pText:"NEON",pFont:"Pacifico",pSize:185,pSpacing:-9,pLineH:80,
+    // ブルーの色違い。マゼンタピンクの光＋縁スロット1にピンクを待機（幅0）。
+    pFill:"solid",pFillC1:"#ffffff",
+    ol:[[true,"#f4a4c0",0],[false,"#00a1d8",0],[false,"#ffd76a",0],[false,"#5a2d00",0]],
+    pExDepth:0,pBevel:0,pRim:0,
+    pGlowOn:true,pGlowC:"#e63b7a",pGlowBlur:27,pGlowInt:92,
+    pGlossOn:false,pBolt:0,pSparkN:0,pSparkC:"#ffd7f0",
     pArch:0,pTilt:0,pJitR:0,pJitY:0,pJitSeed:1,pBg:"none"},
   "ピンクグロス":{pText:"ピンクグロス",pFont:"Shippori Mincho B1",pSpacing:-14,pLineH:80,
     pFill:"chromePink",pFillAngle:242,pFillRepeat:5,pVary:35,
@@ -3950,6 +3958,7 @@ const I18N={
   "ダイヤカット（多面体）": "Diamond cut (facets)",
   "強さ": "Strength",
   "合成": "Blend",
+  "グロー範囲": "Glow radius",
   "グロー流量": "Glow amount",
   "スパッタ（飛沫・インク）": "Splatter (ink)",
   "水面（光の網目）": "Water caustics",
