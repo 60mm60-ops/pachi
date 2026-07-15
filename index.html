@@ -2061,16 +2061,21 @@ function drawSplatterBg(g, cw, ch, col, count, lenK, jitter, seed){
   for(let s=0;s<count;s++){
     const cx=(((s*0.6180339887+ox)%1) + (rnd()-.5)*.22)*cw;
     const cy=(((s*0.3819660113+oy)%1) + (rnd()-.5)*.22)*ch;
-    const R=base*(0.07+rnd()*0.11)*(0.5+lenK);
+    // 大きさは1.6乗分布: 小〜中が主体で、ときどきドカンとでかい塊が混ざる。
+    // 上限も従来の約1.6倍（長さスライダー最大で短辺の4割級まで）。
+    const R=base*(0.05+Math.pow(rnd(),1.6)*0.23)*(0.5+lenK);
     const dir=rnd()*Math.PI*2; // この塊の飛翔方向（筋・衛星が片側に集中する）
-    // 本体: 円を重ねた不定形ブロブ（飛翔方向にやや伸ばす）
-    const lobes=6+((rnd()*4)|0);
+    // 本体: 円を重ねた不定形ブロブ（飛翔方向にやや伸ばす）。
+    // 「乱れ」は中心部そのものにも効かせる: 上げるほどローブが遠くまで散り、
+    // 個々のローブも小さくなって、まとまった塊→ちぎれた破片の集まりへ崩れる。
+    const lobes=6+((rnd()*4)|0)+((jitter*5)|0); // 乱すほど破片の数も増やす
     const lobeArr=[];
     g.beginPath();
     for(let i=0;i<lobes;i++){
-      const a=rnd()*Math.PI*2, d=rnd()*R*.55*(1+jitter*.6);
+      const a=rnd()*Math.PI*2;
+      const d=rnd()*R*(.4+jitter*1.2); // 乱れ最大でR×1.6まで飛び散る（ちぎれる）
       const stretch=1+Math.cos(a-dir)*.35; // 方向側に重心
-      const rr=R*(.4+rnd()*.4);
+      const rr=R*(.42-jitter*.18+rnd()*.4); // 乱すほど個々の破片は小さく
       const bx=cx+Math.cos(a)*d*stretch, by=cy+Math.sin(a)*d*stretch;
       lobeArr.push({bx,by,rr});
       g.moveTo(bx+rr,by);
@@ -2662,11 +2667,11 @@ function renderBgLayer(cw,ch){
         P.pBgSpikeJitter/100, P.pSeed);
     }else if(P.pBg==="splatter"){
       // スパッタ: 背景色を敷く(任意)→飛沫。色1=飛沫の色。
-      // 本数スライダー(12〜150)は他タイプと共用のため、塊数へは1/12で
-      // マッピングする（60→5塊。生の値では多すぎて画面が埋まる）。
+      // 本数スライダー(12〜150)は他タイプと共用のため、塊数へは1/6で
+      // マッピングする（60→10塊、最大25塊）。
       if(P.pBgSpikeBgOn){ mg.fillStyle=P.pBgSpikeBgC; mg.fillRect(0,0,cw,ch); }
       drawSplatterBg(mg, cw, ch, P.pBgC1,
-        Math.max(1,Math.round(P.pBgSpikeCount/12)), P.pBgSpikeLen/100, P.pBgSpikeJitter/100, P.pSeed);
+        Math.max(1,Math.round(P.pBgSpikeCount/6)), P.pBgSpikeLen/100, P.pBgSpikeJitter/100, P.pSeed);
     }else if(P.pBg==="water"){
       // 水面: 全面を塗るので「背景色を敷く」は不要。色1=水、色2=光（白推奨）。
       drawWaterBg(mg, cw, ch, P.pBgC1, P.pBgC2,
