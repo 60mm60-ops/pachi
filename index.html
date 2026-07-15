@@ -801,9 +801,13 @@ function readParams(){
     hue:+$("pFillHue").value, sat:+$("pFillSat").value, light:+$("pFillLight").value
   };
   // --- 色わけごとの大きさ・角度 ---
-  // 全体(色わけ1=seg0)の大きさは本体のサイズ設定(pSize)が担うので、ここでは色わけ2以降(seg>0)だけ扱う。
+  // 【変更】以前は「色わけ1(seg0)=全体」とみなし本体サイズに任せていたが、
+  // それだと色わけ1だけ大きくしたいときに全体が連動して2以降も追従してしまう。
+  // 色わけが2つ以上あるときはseg0にも独立した大きさ・角度を持たせる。
+  // （区切りの無い普通のテキストでは従来どおり本体サイズだけが効く）
   if(!P.segShapes) P.segShapes={};
-  if(segEdit>0){
+  const segN=((P.pText||"").match(/[|｜]/g)||[]).length+1;
+  if(segEdit>0 || segN>1){
     P.segShapes[segEdit]={ scale:+$("segScale").value, rot:+$("segRot").value };
   }
   // --- 色わけごとの縁色・側面色 ---
@@ -831,15 +835,17 @@ function updateControlUI(){
   });
   const segEditEl=$("segEdit");
   const segEdit=segEditEl?+segEditEl.value:0;
-  // 大きさ・角度スライダーは色わけ2以降を編集中のときだけ表示する
-  const showShape = segEdit>0;
+  // 大きさ・角度スライダーは、色わけが2つ以上あれば色わけ1(seg0)でも表示する
+  const segN=((P.pText||"").match(/[|｜]/g)||[]).length+1;
+  const showShape = segEdit>0 || segN>1;
   $("segScaleRow").style.display = showShape ? "flex":"none";
   $("segRotRow").style.display = showShape ? "flex":"none";
   // 色わけ用の縁色・側面色ブロックは色わけ2以降を編集中のときだけ表示
   const segLbl = segDisplayName(segEdit);
-  $("segOutlineBlock").style.display = showShape ? "block":"none";
-  $("segSideBlock").style.display = showShape ? "block":"none";
-  if(showShape){ $("segOutlineLabel").textContent=segLbl; $("segSideLabel").textContent=segLbl; }
+  const showSegColors = segEdit>0; // 縁色・側面色はseg0=本体設定のまま（従来どおり）
+  $("segOutlineBlock").style.display = showSegColors ? "block":"none";
+  $("segSideBlock").style.display = showSegColors ? "block":"none";
+  if(showSegColors){ $("segOutlineLabel").textContent=segLbl; $("segSideLabel").textContent=segLbl; }
   $("customFillRow").style.display = (P.pFill==="custom"||P.pFill==="solid") ? "flex":"none";
   // 単色は色1だけ使うので2つ目のスウォッチを隠し、ラベルを変える
   const isSolid=P.pFill==="solid";
@@ -3476,6 +3482,9 @@ function rebuildSegSelector(){
   // 色わけ数が減って消えた上書き設定は掃除
   if(P.segFills){ Object.keys(P.segFills).forEach(k=>{ if(+k>=segCount) delete P.segFills[+k]; }); }
   if(P.segShapes){ Object.keys(P.segShapes).forEach(k=>{ if(+k>=segCount) delete P.segShapes[+k]; }); }
+  // 区切りが無くなったらseg0の独立サイズも破棄する。残すと「見えないスライダー」が
+  // 全体に効き続ける（大きさ・角度の行は非表示なのに拡大されたまま）事故になる。
+  if(segCount===1 && P.segShapes) delete P.segShapes[0];
   if(P.segOutlineColors){ Object.keys(P.segOutlineColors).forEach(k=>{ if(+k>=segCount) delete P.segOutlineColors[+k]; }); }
   if(P.segSideColors){ Object.keys(P.segSideColors).forEach(k=>{ if(+k>=segCount) delete P.segSideColors[+k]; }); }
   // 【バグ修正】選択が強制的に変わった場合（編集中の色わけが「｜」削除で消えた等）、
@@ -3504,13 +3513,16 @@ function loadSegToUI(seg){
   $("pFill").value=s.fill;
   $("pFillC1").value=s.c1; $("pFillC2").value=s.c2;
   $("pFillHue").value=s.hue; $("pFillSat").value=s.sat; $("pFillLight").value=s.light;
-  // 大きさ・角度・縁色・側面色は色わけ2以降だけが持つ(seg0は本体設定が担う)。
-  // seg0でsegOutlineColors[0]等を作ると、全体の縁色変更が効かなくなるため作らない。
-  if(seg>0){
+  // 大きさ・角度は全seg共通で復元（seg0にも独立サイズを持たせたため）。
+  {
     if(!P.segShapes) P.segShapes={};
     const sh=P.segShapes[seg]||{scale:100,rot:0};
     $("segScale").value=sh.scale!==undefined?sh.scale:100;
     $("segRot").value=sh.rot!==undefined?sh.rot:0;
+  }
+  // 縁色・側面色は色わけ2以降だけが持つ(seg0は本体設定が担う)。
+  // seg0でsegOutlineColors[0]等を作ると、全体の縁色変更が効かなくなるため作らない。
+  if(seg>0){
     if(!P.segOutlineColors) P.segOutlineColors={};
     let oc=P.segOutlineColors[seg];
     if(!oc){ oc=[0,1,2,3].map(i=>$("olC"+i).value); P.segOutlineColors[seg]=oc; }
